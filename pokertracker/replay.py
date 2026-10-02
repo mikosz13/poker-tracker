@@ -27,6 +27,8 @@ def hand_replay(db, hand_id, site=SITE):
     ev_rows = db.query("SELECT nick, equity, ev_net, luck, lock_street FROM allin_ev WHERE site = ? AND hand_id = ?",
                        (site, hand_id))
     board = (h["board"] or "").split()
+    # Opponents' IDs are hashes that mean nothing to the player: the replay names them by position only
+    name = {p["nick"]: HERO if p["nick"] == HERO else (p["position"] or f"Seat {p['seat']}") for p in players}
 
     start = {p["nick"]: _n(p["stack"]) for p in players}
     stack = dict(start)
@@ -40,9 +42,9 @@ def hand_replay(db, hand_id, site=SITE):
     def snap(kind, label, acting=None, nxt=None, action=None, reveal=False, result=False):
         steps.append({
             "kind": kind, "label": label, "street": street, "board": board[:shown], "pot": round(pot, 2),
-            "result": result, "next": nxt, "action": action,
+            "result": result, "next": name.get(nxt), "action": action,
             "players": [{
-                "nick": p["nick"], "seat": p["seat"], "position": p["position"], "hero": p["nick"] == HERO,
+                "nick": name[p["nick"]], "seat": p["seat"], "position": p["position"], "hero": p["nick"] == HERO,
                 "stack": round(stack[p["nick"]], 2), "commit": round(commit[p["nick"]], 2),
                 "folded": p["nick"] in folded, "all_in": p["nick"] in allin, "acting": p["nick"] == acting,
                 "cards": (p["hole_cards"] or "").split() if (p["nick"] == HERO or reveal) else [],
@@ -100,9 +102,9 @@ def hand_replay(db, hand_id, site=SITE):
         nick, act, amount = a["nick"], a["action_type"], _n(a["amount"])
         if i == len(actions):                                     # betting is over: equities at the all-in moment
             equity = {r["nick"]: _n(r["equity"]) for r in ev_rows if r["equity"] is not None}
-        text = f"{nick} {VERB.get(act, act)}" + (f" {amount:,.0f}" if amount and act != "folds" else "")
+        text = f"{name[nick]} {VERB.get(act, act)}" + (f" {amount:,.0f}" if amount and act != "folds" else "")
         snap("action", text + (" (all-in)" if a["all_in"] else ""), acting=nick, nxt=next_actor(i),
-             action={"nick": nick, "type": act, "amount": amount, "all_in": bool(a["all_in"])})
+             action={"nick": name[nick], "type": act, "amount": amount, "all_in": bool(a["all_in"])})
 
     # Uncalled bet: whatever the biggest bettor put in beyond the second biggest commitment on the last street
     if len(commit) > 1:
@@ -114,8 +116,8 @@ def hand_replay(db, hand_id, site=SITE):
             stack[nick] += back
             invested[nick] -= back
             pot -= back
-            snap("return", f"Uncalled {back:,.0f} returned to {nick}", acting=nick,
-                 action={"nick": nick, "type": "uncalled", "amount": back, "all_in": False})
+            snap("return", f"Uncalled {back:,.0f} returned to {name[nick]}", acting=nick,
+                 action={"nick": name[nick], "type": "uncalled", "amount": back, "all_in": False})
 
     for st in ("flop", "turn", "river"):                          # run out the board after an all-in
         if BOARD_LEN[st] > BOARD_LEN[street] and len(board) >= BOARD_LEN[st]:
@@ -128,7 +130,7 @@ def hand_replay(db, hand_id, site=SITE):
     commit = {n: 0.0 for n in commit}
     winners = [p["nick"] for p in players if _n(p["net_won"]) > 0]
     snap("result", "Result: " + (", ".join(
-        f"{w} wins {_n(next(p['net_won'] for p in players if p['nick'] == w)):+,.0f}" for w in winners)
+        f"{name[w]} wins {_n(next(p['net_won'] for p in players if p['nick'] == w)):+,.0f}" for w in winners)
         or "no winner recorded"), reveal=bool(h["showdown"]), result=True)
 
     hero_ev = next((r for r in ev_rows if r["nick"] == HERO), None)
@@ -136,7 +138,7 @@ def hand_replay(db, hand_id, site=SITE):
             "small_blind": _n(h["small_blind"]), "big_blind": _n(h["big_blind"]), "ante": _n(h["ante"]),
             "played_at": str(h["played_at"])[:16], "table": h["table_name"], "max_seats": h["max_seats"],
             "total_pot": _n(h["total_pot"]),
-            "collected": {p["nick"]: round(_n(p["net_won"]) + invested[p["nick"]], 2) for p in players},
+            "collected": {name[p["nick"]]: round(_n(p["net_won"]) + invested[p["nick"]], 2) for p in players},
             "hero_allin": None if hero_ev is None else {
                 "street": hero_ev["lock_street"], "equity": _n(hero_ev["equity"]) if hero_ev["equity"] is not None else None,
                 "ev_net": _n(hero_ev["ev_net"]), "luck": _n(hero_ev["luck"])},

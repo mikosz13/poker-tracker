@@ -30,7 +30,15 @@ works offline), no new Python dependencies.
 - Must simply look good: consistent with the rest of the app, light and dark theme, smooth but quick transitions.
 - Works in the default window (1100x820) and down to 380 px wide.
 
-## 5. Done when
+## 5. Player names
+- Hero stays "Hero", highlighted, with Hero's position as a smaller label.
+- Opponents are labelled only by position (UTG, UTG+1, MP, LJ, HJ, CO, BTN, SB, BB; heads-up: BTN/SB and BB)
+  instead of the hashed ID. The log uses the same names, e.g. "CO raises to 2.5 BB".
+- The hashed ID appears nowhere in the replayer (table, log, tooltips, replay data).
+- Names are computed when the replay is built; no database changes.
+- Test: no opponent in the replay data carries a label with its ID.
+
+## 6. Done when
 - All tests pass; new tests cover the points in section 1.
 - Checked visually in the running app on several hands: a normal hand, heads-up, a preflop all-in, a flop all-in
   with 3 players, a hand where Hero folds preflop. Screenshots or a short description of each.

@@ -54,6 +54,7 @@ button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-co
 .st .box{position:relative;z-index:1;min-width:clamp(64px,13cqw,104px);background:var(--bg);color:var(--fg);border:2px solid var(--line);border-radius:10px;padding:3px 8px;text-align:center;
   box-shadow:0 2px 6px rgba(0,0,0,.25);transition:border-color .15s,box-shadow .15s}
 .st .nick{font-size:.78rem;max-width:12ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin:0 auto}
+.st:not(.hero) .nick{font-weight:700;letter-spacing:.02em}
 .st .stk{font-weight:700;font-size:.9rem;white-space:nowrap}
 .st .pt{position:absolute;top:-9px;left:-6px;font-size:.66rem;font-weight:700;background:var(--card);color:var(--muted);border-radius:6px;padding:0 5px;border:1px solid var(--line)}
 .st.hero .box{border-color:var(--blue)}.st.hero .nick{font-weight:700;color:var(--blue)}
@@ -332,7 +333,7 @@ function drawStep() {
     const res = p.net != null ? ` <span style="font-size:.78rem">${sgn(p.net / bb, 1)}</span>` : "";
     return `<div class="${cls}" style="${at(seatPoint(r, p.seat))}" title="${esc(p.nick)}: ${num(p.stack, 0)} chips">
         <div class="hc">${hole}</div>
-        <div class="box"><span class="pt">${esc(p.position || "")}</span>
+        <div class="box">${p.hero ? `<span class="pt">${esc(p.position || "")}</span>` : ""}
           ${p.equity != null && !s.result ? `<span class="badge eq">${num(100 * p.equity, 0)}%</span>` : ""}
           <div class="nick">${esc(p.nick)}</div><div class="stk">${bbs(p.stack, bb)} BB${res}</div>
           ${p.all_in && !s.result ? `<span class="badge ai">ALL-IN</span>` : ""}</div></div>${bet}`;

@@ -6,6 +6,8 @@
   action log grouped by street where clicking a line jumps to that step. Light/dark theme, works down to 380 px.
 - Replayer starts at the first decision: antes and blinds are already in the pot instead of being steps. Uncalled
   bets are shown being returned, so the pot that is left equals the total pot paid out.
+- Replayer names opponents by position (UTG ... BB, heads-up BTN/SB and BB) instead of their hashed IDs, on the
+  table and in the log; Hero stays "Hero" with the position as a small label. No database changes.
 - Tests close their in-memory databases (no more ResourceWarnings on macOS Python 3.12).
 - README: the "what it is not" list no longer says there is no replayer.
 - docs/CHECKPOINT.md: results and feedback from the first run on a real Mac.
