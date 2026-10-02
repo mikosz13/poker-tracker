@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "pokertracker-dev",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-c",
+        "import time; from pokertracker.server import serve_in_background; s, u = serve_in_background('sqlite:///dev.db', 8765); print(u, flush=True); time.sleep(10**9)"
+      ],
+      "port": 8765
+    }
+  ]
+}
