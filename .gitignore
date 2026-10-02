@@ -6,3 +6,4 @@ exports/
 *.egg-info/
 *.db.bak-*
 .DS_Store
+CLAUDE.md
