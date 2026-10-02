@@ -53,7 +53,7 @@ python -m pokertracker app --browser   # same app in your default browser
 ```
 
 Screens: dashboard (last session, ROI, luck, late reg vs start, buy-in, positions), tournament list with
-filters, tournament details, a step-by-step **hand replayer** (arrow keys work), import, and a page that explains
+filters, tournament details, a **hand replayer** on a table view (arrow keys, space for autoplay, clickable action log), import, and a page that explains
 how luck is calculated. The app runs a small server on `127.0.0.1` only; imports require a per-launch token.
 Data lives in the per-user folder (`~/Library/Application Support/PokerTracker` on macOS,
 `%APPDATA%\PokerTracker` on Windows); `--db` or `DATABASE_URL` override it.

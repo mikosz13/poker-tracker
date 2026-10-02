@@ -114,7 +114,8 @@ def hand_replay(db, hand_id, site=SITE):
             stack[nick] += back
             invested[nick] -= back
             pot -= back
-            snap("return", f"Uncalled {back:,.0f} returned to {nick}", acting=nick)
+            snap("return", f"Uncalled {back:,.0f} returned to {nick}", acting=nick,
+                 action={"nick": nick, "type": "uncalled", "amount": back, "all_in": False})
 
     for st in ("flop", "turn", "river"):                          # run out the board after an all-in
         if BOARD_LEN[st] > BOARD_LEN[street] and len(board) >= BOARD_LEN[st]:
