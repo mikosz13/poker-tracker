@@ -1,0 +1,26 @@
+[project]
+name = "pokertracker"
+version = "0.2.0"
+description = "Tournament tracker for GGPoker: hand histories + summaries -> SQL database -> ROI and play statistics"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+postgres = ["psycopg[binary]>=3.1"]
+app = ["pywebview>=5"]
+
+[project.scripts]
+pokertracker = "pokertracker.cli:main"
+
+[project.gui-scripts]
+pokertracker-app = "pokertracker.app:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pokertracker"]
+
+[tool.setuptools.package-data]
+pokertracker = ["sql/*.sql", "web/*"]

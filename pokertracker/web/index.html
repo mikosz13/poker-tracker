@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poker Tracker</title>
+<style>
+:root{--bg:#fff;--fg:#14161a;--muted:#6b7280;--card:#f3f4f6;--line:#e5e7eb;--blue:#2f6fed;--orange:#e67e22;--pos:#0a7d2c;--neg:#c0392b;--red:#c0392b;--felt:#1f6f4a}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
+nav{max-width:960px;margin:0 auto;display:flex;gap:4px;padding:8px 12px;overflow-x:auto}
+nav a{padding:6px 10px;border-radius:8px;color:var(--fg);text-decoration:none;white-space:nowrap}
+nav a.on{background:var(--card);font-weight:600}
+main{max-width:960px;margin:0 auto;padding:12px}
+h1{font-size:1.3rem;margin:.2em 0 .4em}h2{font-size:1.02rem;margin:1.4em 0 .5em}
+a{color:var(--blue)}.m{color:var(--muted);font-size:.88rem}
+.k{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.k div{background:var(--card);border-radius:10px;padding:10px}.k b{display:block;font-size:1.2rem}
+.box{background:var(--card);border-radius:12px;padding:12px}
+.scroll{overflow-x:auto}table{border-collapse:collapse;width:100%}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
+.pos{color:var(--pos)}.neg{color:var(--neg)}
+.card{display:inline-block;min-width:1.9em;padding:1px 4px;margin:1px;border:1px solid var(--line);border-radius:5px;background:var(--bg);text-align:center;font-weight:600}
+.card.red{color:var(--red)}
+svg.chart{width:100%;height:auto;background:var(--card);border-radius:10px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+select,input,button{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+.felt{background:var(--felt);color:#fff;border-radius:14px;padding:12px;text-align:center}
+.felt .card{color:#14161a;background:#fff}.felt .card.red{color:#c0392b}
+.seat{display:grid;grid-template-columns:3.6em 1fr auto auto;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--line)}
+.seat.fold{opacity:.4}.seat.act{background:var(--card);border-radius:8px;font-weight:600}
+.seat .hero{font-weight:700}.chip{font-size:.85rem;color:var(--orange)}
+.ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.tag{display:inline-block;font-size:.78rem;background:var(--card);border-radius:6px;padding:1px 6px;margin:1px}
+.warn{border-left:4px solid var(--orange);padding:8px 10px;background:var(--card);border-radius:6px}
+</style>
+</head>
+<body>
+<header><nav id="nav">
+  <a href="#/">Dashboard</a><a href="#/tournaments">Tournaments</a><a href="#/import">Import</a><a href="#/luck">How luck works</a>
+</nav></header>
+<main id="app">Loading…</main>
+<script>
+const TOKEN = "__TOKEN__";
+const app = document.getElementById("app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const SUIT = {c:"♣", d:"♦", h:"♥", s:"♠"};
+const num = (x, d=1) => x == null ? "–" : Number(x).toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d});
+const sgn = (x, d=1, unit="") => x == null ? "–" :
+  `<span class="${Number(x) >= 0 ? "pos" : "neg"}">${Number(x) >= 0 ? "+" : ""}${num(x, d)}${unit}</span>`;
+const money = x => x == null ? "–" : "$" + num(x, 2);
+function cards(t) {
+  const a = Array.isArray(t) ? t : String(t || "").split(" ").filter(Boolean);
+  return a.length ? a.map(c => `<span class="card ${"dh".includes(c[1]) ? "red" : ""}">${esc(c[0])}${SUIT[c[1]] || ""}</span>`).join("") : '<span class="m">–</span>';
+}
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  const j = await r.json();
+  if (!r.ok) throw new Error(j.error || r.status);
+  return j;
+}
+function chart(series, colors = ["var(--blue)", "var(--orange)"]) {
+  const vals = series.flat();
+  if (vals.length < 2) return '<p class="m">Not enough data for a chart yet.</p>';
+  const w = 300, h = 110, lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), span = (hi - lo) || 1;
+  const y = v => (h - 8 - (v - lo) / span * (h - 16)).toFixed(1);
+  const lines = series.map((s, k) => `<polyline fill="none" stroke="${colors[k]}" stroke-width="2" points="${
+    s.map((v, i) => `${(i * w / Math.max(s.length - 1, 1)).toFixed(1)},${y(v)}`).join(" ")}"/>`).join("");
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="currentColor" stroke-opacity=".25"/>${lines}</svg>`;
+}
+const table = (head, rows) => `<div class="scroll"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+const luckLink = '<a href="#/luck">How is luck calculated?</a>';
+
+// ---- Dashboard -------------------------------------------------------------
+async function viewDashboard() {
+  const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard"), api("/api/status")]);
+  const banner = st.running ? `<p class="warn">Importing ${st.done}/${st.total} files… <a href="#/import">details</a>. The numbers below will update when it finishes.</p>` : "";
+  if (!d.tournaments && !d.hands) {
+    app.innerHTML = banner + `<h1>Welcome</h1><p>No data yet. Go to <a href="#/import">Import</a> and point the app at the folder where you save PokerCraft exports.</p>`;
+    return;
+  }
+  let h = "<h1>Dashboard</h1>" + banner;
+  if (s) {
+    h += `<div class="box"><b>Last session</b> <span class="m">${esc(s.from)} – ${esc(s.to)}</span>
+      <div class="k" style="margin-top:8px"><div>Tournaments<b>${s.count}</b></div><div>Hands<b>${s.hands}</b></div>
+      <div>Profit<b>${s.profit == null ? "–" : sgn(s.profit, 2, " $")}</b></div><div>All-in luck<b>${sgn(s.luck_bb, 1, " BB")}</b></div></div>
+      ${table(["Tournament", "Place", "Profit $", "Luck BB"], s.tournaments.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
+        <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
+        <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`))}</div>`;
+  }
+  const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
+  h += `<h2>All tournaments</h2><div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
+    <div>ROI<b>${roi}</b></div><div>In the money<b>${d.itm}/${d.tournaments}</b></div>
+    <div>Knockouts<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : num(d.knockouts.per_tournament, 2) + " per tournament"}</span></div></div>
+    <p class="m">cost ${money(d.cost)} · cash ${money(d.cash)}${d.tickets ? ` · tickets ${money(d.tickets)} (not in ROI)` : ""} · ${d.hands} hands</p>`;
+  if (d.tournaments < 30) h += `<p class="warn">Small sample (${d.tournaments} tournaments). Tournament results this small are mostly variance.</p>`;
+  h += `<h2>Cash profit, cumulative</h2>${chart([d.profit_curve])}`;
+  h += `<h2>Luck</h2>${chart([d.bb_actual, d.bb_adjusted])}
+    <p class="m"><span style="color:var(--blue)">■</span> actual result in BB &nbsp; <span style="color:var(--orange)">■</span> luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
+  if (d.allins.count) h += `<p>${d.allins.count} all-ins: actual ${sgn(d.allins.net_bb)} BB, expected ${sgn(d.allins.ev_bb)} BB, luck ${sgn(d.allins.luck_bb)} BB.</p>`;
+  const tagRows = pre => d.tags.filter(t => t.tag.startsWith(pre)).map(t =>
+    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+  const entry = tagRows("entry:");
+  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ROI"], entry)}`;
+  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "Profit $", "ROI"], d.by_buyin.map(b =>
+    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
+  if (d.positions.length) h += `<h2>By position</h2>${table(["Position", "Hands", "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
+    `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
+  const other = d.tags.filter(t => !t.tag.startsWith("entry:")).map(t =>
+    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ROI"], other)}`;
+  app.innerHTML = h;
+}
+
+// ---- Tournaments ------------------------------------------------------------
+let filters = {buyin: "", format: "", entry: ""};
+async function viewTournaments() {
+  const all = await api("/api/tournaments");
+  const opts = (vals, cur, label) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
+    .sort((a, b) => a - b).map(v => `<option ${String(v) === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
+  const draw = () => {
+    const rows = all.filter(t => (!filters.buyin || String(t.buyin_total) === filters.buyin)
+      && (!filters.format || t.format === filters.format)
+      && (!filters.entry || t.tags.includes("entry:" + filters.entry)));
+    const done = rows.filter(t => t.profit != null);
+    const cost = done.reduce((a, t) => a + Number(t.total_cost), 0), profit = done.reduce((a, t) => a + Number(t.profit), 0);
+    document.getElementById("list").innerHTML = `<p class="m">${rows.length} tournaments · profit ${sgn(profit, 2, " $")} · ROI ${cost ? sgn(100 * profit / cost, 0, "%") : "–"}</p>` +
+      table(["Date", "Tournament", "Buy-in", "Place", "Profit $", "KOs", "Luck BB"], rows.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
+        <td>${esc(t.date.slice(0, 10))}</td><td>${esc(t.name)}</td><td>${t.buyin_total == null ? "–" : money(t.buyin_total)}</td>
+        <td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td><td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}${t.prize_is_ticket ? " +ticket" : ""}</td>
+        <td>${t.hands ? (t.knockouts || 0) : "–"}</td><td>${t.luck_bb == null ? "–" : sgn(t.luck_bb)}</td></tr>`));
+  };
+  app.innerHTML = `<h1>Tournaments</h1><div class="filters">
+    <select id="fb">${opts(all.map(t => t.buyin_total), filters.buyin, "All buy-ins")}</select>
+    <select id="ff">${opts(all.map(t => t.format), filters.format, "All formats")}</select>
+    <select id="fe"><option value="">Any entry</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>From the start</option>
+      <option value="late" ${filters.entry === "late" ? "selected" : ""}>Late registration</option></select></div><div id="list"></div>`;
+  for (const [id, key] of [["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
+    document.getElementById(id).onchange = e => { filters[key] = e.target.value; draw(); };
+  draw();
+}
+
+// ---- Tournament detail -------------------------------------------------------
+async function viewTournament(id) {
+  const d = await api(`/api/tournament/${id}`);
+  let h = `<p><a href="#/tournaments">← Tournaments</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
+  const r = d.result;
+  if (r) h += `<div class="k"><div>Place<b>${r.place}/${r.players}</b></div><div>Prize<b>${money(r.prize)}${r.ticket ? " ticket" : ""}</b></div>
+    <div>Cost<b>${money(r.cost)}</b></div><div>ROI (cash)<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
+  else h += `<p class="m">No summary imported yet, so no result or ROI.</p>`;
+  h += `<p>${d.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</p>`;
+  h += d.entries.map(e => `<p class="m">Entry ${e.entry_no}: level ${e.level}, ${num(e.stack_bb, 0)} BB${e.fresh ? "" : " · earlier hands missing from the export"}</p>`).join("");
+  if (!d.hands) { app.innerHTML = h + '<p class="m">No hand history imported for this tournament.</p>'; return; }
+  const s = d.stack, a = d.allins;
+  h += `<div class="k"><div>Hands<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>Net<b>${sgn(d.net_bb, 0, " BB")}</b></div>
+    <div>Knockouts<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">+${d.knockouts.shared} shared</span>` : ""}</b></div></div>`;
+  h += `<h2>Stack in BB</h2>${chart([s.path])}<p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands</p>`;
+  h += `<h2>Positions</h2>${table(["Position", "Hands", "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
+  if (!d.best_position) h += `<p class="m">Fewer than 8 hands per position, too small to rank.</p>`;
+  else h += `<p class="m">Best: ${esc(d.best_position.position)}${d.worst_position ? ` · worst: ${esc(d.worst_position.position)}` : ""} (positions with 8+ hands)</p>`;
+  const moments = (title, list) => list.length ? `<h2>${title}</h2>` + table(["Cards", "Pos", "Board", "BB", ""], list.map(m =>
+    `<tr class="click" onclick="location.hash='#/hand/${m.hand_id}'"><td>${cards(m.hole_cards)}</td><td>${esc(m.position)}</td><td>${cards(m.board)}</td><td>${sgn(m.net_bb)}</td><td>▶</td></tr>`)) : "";
+  h += moments("Biggest wins", d.biggest_wins) + moments("Biggest losses", d.biggest_losses);
+  if (d.strongest_showdown) h += `<h2>Strongest showdown hand</h2><p><a href="#/hand/${d.strongest_showdown.hand_id}">${esc(d.strongest_showdown.hand)}</a>: ${cards(d.strongest_showdown.hole_cards)} on ${cards(d.strongest_showdown.board)}</p>`;
+  if (a.count) h += `<h2>All-ins</h2><p>${a.count} all-ins: actual ${sgn(a.net_bb)} BB, expected ${sgn(a.ev_bb)} BB, luck ${sgn(a.luck_bb)} BB. Won ${a.won} (expected ${num(a.expected_won)}). ${luckLink}</p>` +
+    a.notable.map(n => `<p><a href="#/hand/${n.hand_id}">${esc(n.kind)}</a>: ${cards(n.hole_cards)} on ${cards(n.board)} (${esc(n.street)}), equity ${num(100 * n.equity, 1)}%, luck ${sgn(n.luck_bb)} BB</p>`).join("");
+  h += `<h2>All hands (${d.hand_list.length})</h2>` + table(["Time", "Lvl", "Pos", "Cards", "Board", "BB"], d.hand_list.map(x =>
+    `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(String(x.played_at).slice(11, 16))}</td><td>${x.level}</td><td>${esc(x.position)}</td>
+     <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
+  app.innerHTML = h;
+}
+
+// ---- Replayer -----------------------------------------------------------------
+let replay = null, step = 0;
+async function viewHand(id) {
+  replay = await api(`/api/hand/${id}`); step = 0;
+  const r = replay, [i, n] = r.position_in_tournament;
+  app.innerHTML = `<p><a href="#/t/${r.tournament_id}">← Tournament</a></p>
+    <h1>Hand ${i} of ${n}</h1><p class="m">Level ${r.level} · blinds ${num(r.small_blind, 0)}/${num(r.big_blind, 0)} ante ${num(r.ante, 0)} · table ${esc(r.table)} · ${esc(r.played_at)}</p>
+    <div id="felt"></div>
+    <div class="ctrl"><button id="b0" title="Start">⏮</button><button id="b1" title="Back (←)">◀</button><button id="b2" class="primary" title="Next (→)">▶</button><button id="b3" title="End">⏭</button></div>
+    <div id="seats"></div>
+    <p class="ctrl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">← previous hand</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">next hand →</a>` : ""}</p>`;
+  const go = k => { step = Math.max(0, Math.min(r.steps.length - 1, k)); drawStep(); };
+  document.getElementById("b0").onclick = () => go(0);
+  document.getElementById("b1").onclick = () => go(step - 1);
+  document.getElementById("b2").onclick = () => go(step + 1);
+  document.getElementById("b3").onclick = () => go(r.steps.length - 1);
+  drawStep();
+}
+function drawStep() {
+  const s = replay.steps[step], bb = replay.big_blind;
+  document.getElementById("felt").innerHTML = `<div class="felt"><div style="min-height:2.2em">${s.board.length ? cards(s.board) : "&nbsp;"}</div>
+    <div>${s.result ? `Total pot ${num(replay.total_pot, 0)} <span style="opacity:.75">(${num(replay.total_pot / bb, 1)} BB) · paid out</span>`
+      : `Pot ${num(s.pot, 0)} <span style="opacity:.75">(${num(s.pot / bb, 1)} BB)</span>`}</div>
+    <div style="margin-top:6px;font-weight:600">${esc(s.label)}</div><div style="opacity:.75;font-size:.85rem">step ${step + 1}/${replay.steps.length}</div></div>`;
+  document.getElementById("seats").innerHTML = s.players.map(p => `<div class="seat ${p.folded ? "fold" : ""} ${p.acting ? "act" : ""}">
+    <span class="m">${esc(p.position || "")}</span><span class="${p.hero ? "hero" : ""}">${esc(p.nick)}${p.all_in ? " · all-in" : ""}</span>
+    <span>${p.cards.length ? cards(p.cards) : ""}</span>
+    <span>${num(p.stack, 0)} <span class="m">(${num(p.stack / bb, 1)} BB)</span>${p.commit ? ` <span class="chip">● ${num(p.commit, 0)}</span>` : ""}${p.net != null ? ` ${sgn(p.net, 0)}` : ""}</span></div>`).join("");
+}
+document.addEventListener("keydown", e => {
+  if (!replay || !location.hash.startsWith("#/hand/")) return;
+  if (e.key === "ArrowRight") document.getElementById("b2").click();
+  if (e.key === "ArrowLeft") document.getElementById("b1").click();
+});
+
+// ---- Import -----------------------------------------------------------------
+let poller = null;
+const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported automatically" : "Done"}</b>
+  <span class="m">${esc(String(r.finished_at || "").replace("T", " "))}</span><br>
+  ${r.files} files read (${r.hand_files} hand histories, ${r.summary_files} summaries), ${r.unchanged} unchanged ·
+  ${r.hands_new} new hands, ${r.hands_duplicate} already imported · ${r.allins} all-ins analysed · ${r.tournaments} tournaments
+  <p><a href="#/">Open the dashboard →</a></p>${r.skipped.length ? `<p class="m">Skipped: ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
+async function viewImport() {
+  const st = await api("/api/settings");
+  app.innerHTML = `<h1>Import</h1>
+    <p>Paste the folder where you save your PokerCraft exports (hand histories and tournament summaries: .txt, .zip or .pdf).
+       Files that were already imported and did not change are skipped, so importing the whole folder again is quick.</p>
+    <div class="filters"><input id="folder" style="flex:1;min-width:240px" placeholder="/Users/you/Downloads/PokerCraft" value="${esc(st.import_folder || "")}">
+    <button id="go" class="primary">Import</button></div>
+    <p><label><input type="checkbox" id="watch" ${st.watch ? "checked" : ""}> Watch this folder and import new exports automatically while the app is open</label><br>
+       <label><input type="checkbox" id="rescan"> Re-read every file (only needed after an app update)</label></p>
+    <div id="out"></div><p class="m">Database: ${esc(st.database)}</p>`;
+  const out = document.getElementById("out"), btn = document.getElementById("go");
+  const show = s => {
+    if (s.running) {
+      btn.disabled = true;
+      out.innerHTML = `<div class="box"><b>Importing${s.source === "auto" ? " (automatic)" : ""}…</b>
+        <progress max="${s.total || 1}" value="${s.done}" style="width:100%"></progress>
+        <p class="m">${s.done} of ${s.total} files${s.current ? " · " + esc(s.current) : ""}. All-in equity is computed exactly,
+        so a first import of many tournaments takes a while.</p></div>`;
+      return;
+    }
+    btn.disabled = false;
+    if (s.error) out.innerHTML = `<p class="warn">Import failed: ${esc(s.error)}</p>`;
+    else if (s.result || s.last_import) out.innerHTML = resultBox(s.result || s.last_import);
+  };
+  const poll = async () => {
+    const s = await api("/api/status");
+    show(s);
+    clearTimeout(poller);
+    if (s.running && location.hash === "#/import") poller = setTimeout(poll, 700);
+  };
+  btn.onclick = async () => {
+    try {
+      await api("/api/import", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+        body: JSON.stringify({path: document.getElementById("folder").value, rescan: document.getElementById("rescan").checked})});
+      poll();
+    } catch (err) { out.innerHTML = `<p class="warn">${esc(err.message)}</p>`; }
+  };
+  document.getElementById("watch").onchange = e => api("/api/watch", {method: "POST",
+    headers: {"Content-Type": "application/json", "X-Token": TOKEN}, body: JSON.stringify({enabled: e.target.checked})});
+  poll();
+}
+
+// ---- How luck works ------------------------------------------------------------
+function viewLuck() {
+  app.innerHTML = `<h1>How luck is calculated</h1>
+  <p>An <b>all-in</b> here means: all the chips are in the middle, cards are still to come, and nobody can act any more.
+     From that moment the result depends only on the cards that are dealt, so it is a clean measure of luck.</p>
+  <div class="box"><p><b>Equity</b>: your share of the pot if this exact situation were played out over and over. It is not estimated:
+     the app goes through <i>every</i> possible remaining board (up to 1,712,304 of them preflop) with the real cards of everyone involved.
+     Ties split the pot, and side pots are handled.</p>
+  <p><b>Expected (EV)</b>: equity × pot, minus what you put in. What you win <i>on average</i> in this spot.</p>
+  <p><b>Actual</b>: what really happened.</p>
+  <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p></div>
+  <h2>Example</h2>
+  <p>You have ${cards("As Ah")} against ${cards("Kd Kc")}, 100 BB each, all-in before the flop. Your equity is about 81%.</p>
+  <p>Expected = 0.81 × 200 − 100 = <b>+62 BB</b>. If you win: actual +100 BB, luck <span class="pos">+38 BB</span>.
+     If you lose: actual −100 BB, luck <span class="neg">−162 BB</span>.</p>
+  <h2>Reading it</h2>
+  <p>Good decisions show up as a positive <b>expected</b> number: you get your chips in as the favourite.
+     <b>Luck</b> swings up and down and tends towards zero over many tournaments. The orange line on the dashboard is your result with
+     that luck removed.</p>
+  <p class="m">Limits: measured in chips and big blinds, not dollars (no payout structures needed). Only all-ins where every player's
+     cards are known count, as in PokerTracker. A "bad beat" is losing with 80%+ equity, a "suckout" winning with 20% or less.</p>`;
+}
+
+// ---- Router -----------------------------------------------------------------
+async function route() {
+  const h = location.hash || "#/";
+  document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
+    a.getAttribute("href") === h || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));
+  if (!h.startsWith("#/hand/")) replay = null;
+  try {
+    let m;
+    if (h === "#/" || h === "#") await viewDashboard();
+    else if (h === "#/tournaments") await viewTournaments();
+    else if ((m = h.match(/^#\/t\/(\d+)$/))) await viewTournament(m[1]);
+    else if ((m = h.match(/^#\/hand\/(\w+)$/))) await viewHand(m[1]);
+    else if (h === "#/import") await viewImport();
+    else if (h === "#/luck") viewLuck();
+    else app.innerHTML = "<p>Page not found.</p>";
+  } catch (err) { app.innerHTML = `<p class="warn">Something went wrong: ${esc(err.message)}</p>`; }
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", route);
+route();
+</script>
+</body>
+</html>

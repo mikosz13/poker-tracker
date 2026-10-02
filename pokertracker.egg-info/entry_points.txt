@@ -1,0 +1,5 @@
+[console_scripts]
+pokertracker = pokertracker.cli:main
+
+[gui_scripts]
+pokertracker-app = pokertracker.app:main
