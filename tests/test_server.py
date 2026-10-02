@@ -77,6 +77,15 @@ class ServerTests(unittest.TestCase):
         settings = json.loads(self.get("/api/settings")[1])
         self.assertEqual(settings["import_folder"], str(self.exports))
 
+    def test_deck_colours_setting(self):
+        four = lambda: json.loads(self.get("/api/settings")[1])["four_color"]
+        self.assertTrue(four())                                   # four colours by default
+        self.assertEqual(self.post("/api/display", {"four_color": False}), (200, {"four_color": False}))
+        self.assertFalse(four())
+        self.assertEqual(self.post("/api/display", {"four_color": False}, token=False)[0], 403)
+        self.post("/api/display", {"four_color": True})
+        self.assertTrue(four())
+
     def test_watched_folder_imports_new_files(self):
         self.post("/api/import", {"path": str(self.exports)})
         self.wait_idle()

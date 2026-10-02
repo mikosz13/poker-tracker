@@ -222,7 +222,8 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     return self._send(200 if d else 404, d or {"error": "hand not found"})
                 if path == "/api/settings":
                     return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
-                                            "watch": get_setting(db, "watch") == "1"})
+                                            "watch": get_setting(db, "watch") == "1",
+                                            "four_color": get_setting(db, "four_color") != "0"})
                 if path == "/api/status":
                     return self._send(200, status_payload(db))
             self._send(404, {"error": "not found"})
@@ -244,6 +245,11 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
+            if self.path == "/api/display":                       # four-colour deck (default) or classic two colours
+                with Database(url) as db:
+                    set_setting(db, "four_color", "1" if body.get("four_color", True) else "0")
+                    db.commit()
+                    return self._send(200, {"four_color": get_setting(db, "four_color") != "0"})
             self._send(404, {"error": "not found"})
 
     class Server(ThreadingHTTPServer):

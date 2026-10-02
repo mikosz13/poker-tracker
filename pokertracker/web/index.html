@@ -44,6 +44,8 @@ button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-co
 .pc{--w:clamp(26px,5.6cqw,40px);width:var(--w);height:calc(var(--w)*1.4);border-radius:calc(var(--w)*.14);background:#fff;color:#14161a;display:inline-flex;flex-direction:column;
   align-items:center;justify-content:center;line-height:1;font-weight:700;font-size:calc(var(--w)*.46);box-shadow:0 1px 3px rgba(0,0,0,.35);flex:none}
 .pc i{font-style:normal;font-size:.95em}.pc.s-s{color:#14161a}.pc.s-h{color:#c62828}.pc.s-d{color:#1f62c9}.pc.s-c{color:#1b7f37}
+body.two-color .card.s-d{color:var(--s-h)}body.two-color .card.s-c{color:var(--s-s)}
+body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .pc.slot{background:transparent;border:1.5px dashed rgba(255,255,255,.28);box-shadow:none}
 .pc.back{background:repeating-linear-gradient(45deg,var(--blue) 0 3px,color-mix(in srgb,var(--blue) 70%,#fff) 3px 6px);border:2px solid #fff}
 .pc.new{animation:deal .22s ease-out}
@@ -281,6 +283,7 @@ function renderHand() {
         <button id="b2" title="Next (→)">▶</button><button id="b3" title="End (End)">⏭</button>
         <select id="spd" title="Autoplay speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select>
         <span class="m" id="cnt"></span>
+        <label class="m" title="Diamonds blue and clubs green, as on GGPoker"><input type="checkbox" id="deck4" ${document.body.classList.contains("two-color") ? "" : "checked"}> 4-colour deck</label>
       </div>
       <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">← previous hand</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">next hand →</a>` : ""}</p>
     </div><div class="log" id="log">${log}</div></div>`;
@@ -292,8 +295,15 @@ function renderHand() {
   document.getElementById("b3").onclick = () => { stopPlay(); go(r.steps.length - 1); };
   document.getElementById("bp").onclick = togglePlay;
   document.getElementById("spd").onchange = () => { if (playTimer) { stopPlay(); togglePlay(); } };
+  document.getElementById("deck4").onchange = e => setDeck(e.target.checked);
   document.getElementById("log").onclick = e => { const li = e.target.closest(".li"); if (li) { stopPlay(); go(+li.dataset.k); } };
   drawStep();
+}
+
+async function setDeck(fourColor) {
+  document.body.classList.toggle("two-color", !fourColor);
+  try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                   body: JSON.stringify({four_color: fourColor})}); } catch (e) { /* still applied for this session */ }
 }
 
 function togglePlay() {
@@ -450,7 +460,7 @@ async function route() {
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", route);
-route();
+api("/api/settings").then(st => document.body.classList.toggle("two-color", st.four_color === false)).catch(() => {}).finally(route);
 </script>
 </body>
 </html>
