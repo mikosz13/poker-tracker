@@ -141,3 +141,36 @@ Seat 1: aaaa1111 (button) showed [7s 7d] and lost
 Seat 2: bbbb2222 (small blind) showed [Ac Qd] and lost
 Seat 3: Hero (big blind) showed [Ks Kh] and won (7,000)
 """
+
+# 8-max, a 8-chip stack is all-in on the ante; the SB folds, Hero's uncalled 50 comes back and Hero wins at showdown
+HAND_SHORT = """Poker Hand #TM1000000020: Tournament #900004, Bounty Hunters $10 Hold'em No Limit - Level3(50/100(10)) - 2026/01/04 10:00:00
+Table '1' 8-max Seat #2 is the button
+Seat 2: dddd4444 (8 in chips)
+Seat 4: eeee5555 (2,000 in chips)
+Seat 6: Hero (3,000 in chips)
+dddd4444: posts the ante 8 and is all-in
+eeee5555: posts the ante 10
+Hero: posts the ante 10
+eeee5555: posts small blind 50
+Hero: posts big blind 100
+*** HOLE CARDS ***
+Dealt to dddd4444 
+Dealt to eeee5555 
+Dealt to Hero [Qs Qh]
+eeee5555: folds
+Uncalled bet (50) returned to Hero
+dddd4444: shows [9c 4d]
+Hero: shows [Qs Qh]
+*** FLOP *** [2c 7d Th]
+*** TURN *** [2c 7d Th] [3s]
+*** RIVER *** [2c 7d Th 3s] [Kd]
+*** SHOWDOWN ***
+Hero collected 104 from pot
+Hero collected 24 from pot
+*** SUMMARY ***
+Total pot 128 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0
+Board [2c 7d Th 3s Kd]
+Seat 2: dddd4444 (button) showed [9c 4d] and lost
+Seat 4: eeee5555 (small blind) folded before Flop
+Seat 6: Hero (big blind) showed [Qs Qh] and won (128)
+"""
