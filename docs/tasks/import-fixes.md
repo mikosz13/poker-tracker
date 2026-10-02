@@ -9,20 +9,22 @@ pokertracker/migrations.py first.
   registrations into tournaments whose starting stack is not 10,000: Bounty Hunters Deepstack Turbo and Mini Heater
   (20,000), Daily Hyper (6,000), MEGA satellites (5,000), WSOP $54 Sunday (25,000).
 - Cause: without a level-1 hand of Hero in that tournament the starting stack defaults to 10,000.
-- "History incomplete" is flagged only when the summary reports more entries than were detected in the hand
-  histories. The starting stack no longer decides it.
+- No "history incomplete" flag at all: entries always come from the hand histories, also when the summary reports a
+  different number. Cost and ROI still come from the summary (re-entries included), as decided for ROI.
 - The starting stack is determined from the data instead of the 10,000 constant: the most common stack at the first
   hand of an entry among tournaments with the same name and buy-in. When it cannot be determined, it is "unknown",
   without any flag.
 - Existing databases are repaired by a migration (recompute entries), not by deleting anything.
 - Tests: a late registration into a tournament whose starting stack is not 10,000 (e.g. 20,000) is not flagged and
-  gets the right starting stack; a tournament whose summary reports more entries than the hands contain is flagged;
-  a starting stack that cannot be determined is "unknown" and not flagged.
+  gets the right starting stack; a summary with more entries than the hands contain gives no flag and the entries
+  from the hands; a starting stack that cannot be determined is "unknown".
 
 ## 2. Ignore formats that are never analysed
-- Sit & Go (including AoF and FlipNGo), PLO / any Omaha, and tournaments not in dollars (e.g. Zodiac in ¥) are
-  ignored completely: no summaries, no hands, no statistics.
-- Rules, not a list of names: game is not "Hold'em No Limit", the name says "Sit & Go", or the currency is not $.
+- Anything outside No-Limit Hold'em tournaments in dollars is never imported: Sit & Go (including AoF and FlipNGo),
+  PLO / any Omaha or other games, tournaments not in dollars (e.g. Zodiac in ¥) and cash-game hands. No summaries,
+  no hands, no statistics.
+- Rules, not a list of names: no "Tournament #" (cash game), the name says "Sit & Go", the game is not
+  "Hold'em No Limit", or the currency is not $.
 - Skipped files and tournaments are counted with their reason (Sit & Go, PLO, currency other than $) in the import
   summary (CLI and stored import result) and shown in the app, instead of "unrecognised summary format".
 - Rows that are already in the database for such tournaments (Zodiac: 7 hands, FlipNGo: 1 hand) are removed by

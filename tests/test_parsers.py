@@ -46,14 +46,12 @@ class HandParserTests(unittest.TestCase):
     def test_reentry_detected_after_bust(self):
         entries = detect_entries(parse_hands(HISTORY))
         self.assertEqual([e["entry_no"] for e in entries], [1, 2])
-        self.assertTrue(all(e["starts_fresh"] for e in entries))
         self.assertEqual(entries[1]["first_hand_id"], "TM1000000003")
 
-    def test_late_entry_with_partial_stack_is_flagged(self):
-        # Hero shows up at level 5 with 4,845 chips: not a fresh starting stack, so earlier hands are missing
+    def test_late_entry_starts_where_hero_first_appears(self):
         late = HAND_2.replace("Level1(", "Level5(")
         entries = detect_entries([parse_hand(late)])
-        self.assertEqual((len(entries), entries[0]["entry_level"], entries[0]["starts_fresh"]), (1, 5, False))
+        self.assertEqual((len(entries), entries[0]["entry_level"], entries[0]["start_stack"]), (1, 5, 4845))
 
 
 class SummaryParserTests(unittest.TestCase):

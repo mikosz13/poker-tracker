@@ -41,6 +41,10 @@ def main(argv=None):
                 print(f"{path}: {s.files} files ({s.hand_files} hand histories, {s.summary_files} summaries) | "
                       f"{s.unchanged} unchanged | hands: {s.hands_new} new, {s.hands_duplicate} duplicates | all-ins with EV: {s.allins} | "
                       f"tournaments: {len(s.tournaments)}")
+                if s.ignored:
+                    print("  not imported (out of scope): " + ", ".join(
+                        f"{n} {reason}" + (" files" if reason == "cash game" else "")
+                        for reason, n in s.ignored_counts().items()))
                 for msg in s.skipped:
                     print(f"  skipped {msg}")
         elif args.cmd == "report":

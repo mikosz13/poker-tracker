@@ -2,17 +2,28 @@
 import re
 from dataclasses import dataclass
 
+from .scope import tournament_reason
+
 AMT = r"\d[\d,]*(?:\.\d+)?"
 HEADER = re.compile(r"Tournament #(?P<id>\d+), (?P<name>.+?)(?: \$?" + AMT + r")?, (?P<game>Hold'em No Limit.*)")
 BUYIN = re.compile(
     r"Buy-in: \$?(?P<prize>" + AMT + r")\+\$?(?P<fee>" + AMT + r")(?:\+\$?(?P<bounty>" + AMT + r"))?"
 )
+FIRST_LINE = re.compile(r"Tournament #(?P<id>\d+), (?P<name>.+), (?P<game>[^,]+)$")   # any game, any currency
 PLAYERS = re.compile(r"(?P<n>\d+) Players")
 POOL = re.compile(r"Total Prize Pool: \$?(?P<pool>" + AMT + r")")
 STARTED = re.compile(r"Tournament started (?P<ts>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})")
 PLACE = re.compile(r"You finished the tournament in (?P<place>\d+)(?:st|nd|rd|th) place")
 REENTRIES = re.compile(r"You made (?P<n>\d+) re-entries")
 RECEIVED = re.compile(r"received a total of \$?(?P<prize>" + AMT + r")(?P<ticket> Entry)?")
+
+
+class OutOfScope(ValueError):
+    """A summary of something the tracker never imports (Sit & Go, PLO, not in $ ...)."""
+
+    def __init__(self, reason, tournament_id):
+        super().__init__(f"{reason}: tournament #{tournament_id}")
+        self.reason, self.tournament_id = reason, tournament_id
 
 
 def money(s):
@@ -40,6 +51,11 @@ class Tournament:
 
 
 def parse_summary(text: str) -> Tournament:
+    first = next((l.strip() for l in text.lstrip("\ufeff").splitlines() if l.strip()), "")
+    if m := FIRST_LINE.match(first):
+        buyin = next((l for l in text.splitlines() if l.startswith("Buy-in:")), "")
+        if reason := tournament_reason(m["name"], m["game"], buyin):
+            raise OutOfScope(reason, int(m["id"]))
     h, b = HEADER.search(text), BUYIN.search(text)
     if not (h and b):
         raise ValueError("Unrecognized tournament summary format")
