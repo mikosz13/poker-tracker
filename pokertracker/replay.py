@@ -3,6 +3,8 @@
 Every step is a full snapshot (board, pot, stacks, chips committed on the street, who acted), so the UI only
 draws snapshots and never re-implements poker accounting.
 """
+from .equity import card_int, equity as exact_equity, parse_cards
+
 SITE = "GGPoker"
 HERO = "Hero"
 BOARD_LEN = {"preflop": 0, "flop": 3, "turn": 4, "river": 5}
@@ -36,7 +38,8 @@ def hand_replay(db, hand_id, site=SITE):
     invested = {p["nick"]: 0.0 for p in players}
     folded, allin = set(), set()
     pot, street, shown = 0.0, "preflop", 0
-    equity = {}                                # nick -> main-pot equity, known from the moment betting closes
+    equity = {}                                # nick -> main-pot equity, from the moment betting closes; per street after
+    hole = {p["nick"]: p["hole_cards"] for p in players}
     revealed = False                           # all-in and showdown: shown cards are face up from the moment betting closes
     steps = []
 
@@ -54,10 +57,14 @@ def hand_replay(db, hand_id, site=SITE):
             } for p in players]})
 
     def deal_to(new_street):
-        nonlocal street, shown, commit
+        nonlocal street, shown, commit, equity
         street = new_street
         shown = min(BOARD_LEN[new_street], len(board))
         commit = {n: 0.0 for n in commit}
+        if equity and all(hole.get(n) for n in equity):   # after the all-in: exact main-pot equity again with the new board
+            names = list(equity)
+            values = exact_equity([parse_cards(hole[n]) for n in names], [card_int(c) for c in board[:shown]])
+            equity = {n: round(float(v), 6) for n, v in zip(names, values)}
         snap("deal", f"{new_street.capitalize()}: {' '.join(board[:shown])}", nxt=next_actor(i))
 
     def next_actor(k):

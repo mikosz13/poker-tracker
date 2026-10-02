@@ -62,7 +62,8 @@ button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-co
 .st.nxt .box{border-style:dashed;border-color:#f5b301}
 .st.fold{opacity:.38}.st.win .box{border-color:var(--pos);box-shadow:0 0 0 3px color-mix(in srgb,var(--pos) 35%,transparent)}
 .badge{position:absolute;bottom:-9px;left:50%;transform:translateX(-50%);font-size:.62rem;font-weight:800;border-radius:6px;padding:0 5px;white-space:nowrap}
-.badge.ai{background:var(--neg);color:#fff}.badge.eq{background:#f5b301;color:#14161a;right:-8px;left:auto;transform:none;bottom:auto;top:-9px}
+.badge.ai{background:var(--neg);color:#fff}.badge.eq.chg{animation:pulse .5s ease-out}
+@keyframes pulse{0%{transform:scale(1.45);box-shadow:0 0 0 4px rgba(245,179,1,.45)}100%{transform:none;box-shadow:none}}.badge.eq{background:#f5b301;color:#14161a;right:-8px;left:auto;transform:none;bottom:auto;top:-9px}
 .seat0{position:absolute;transform:translate(-50%,-50%);width:clamp(30px,6cqw,44px);height:clamp(18px,3.4cqw,26px);border-radius:8px;border:1.5px dashed var(--line);opacity:.6}
 .bet{position:absolute;transform:translate(-50%,-50%);font-size:.78rem;font-weight:700;color:#fff;background:rgba(0,0,0,.42);border-radius:10px;padding:1px 7px 1px 4px;white-space:nowrap;transition:opacity .18s;z-index:1}
 .bet::before{content:"";display:inline-block;width:.8em;height:.8em;border-radius:50%;background:#f5b301;border:2px dashed #fff;margin-right:4px;vertical-align:-1px}
@@ -320,10 +321,11 @@ function drawStep() {
     ? `Pot ${bbs(r.total_pot, bb)} BB <small>(${num(r.total_pot, 0)}) paid out</small>`
     : `Pot ${bbs(s.pot, bb)} BB <small>(${num(s.pot, 0)})</small>`;
   const hero = s.players.find(p => p.hero);
-  document.getElementById("eq").innerHTML = hero && hero.equity != null && r.hero_allin
-    ? `Hero all-in equity <b>${num(100 * hero.equity, 1)}%</b>` + (s.result
-      ? ` · luck ${sgn(r.hero_allin.luck / bb, 1, " BB")} <a href="#/luck" style="color:#fff">how?</a>` : "")
-    : "";
+  document.getElementById("eq").innerHTML = !(hero && hero.equity != null && r.hero_allin) ? ""
+    : s.result ? `Hero all-in equity <b>${num(100 * r.hero_allin.equity, 1)}%</b> · luck ${sgn(r.hero_allin.luck / bb, 1, " BB")}
+        <a href="#/luck" style="color:#fff">how?</a>`
+    : `Hero equity <b>${num(100 * hero.equity, 1)}%</b>${prev && prev.players.find(p => p.hero).equity == null ? " at the all-in" : ""}`;
+  const eqChanged = p => { const q = prev && prev.players.find(x => x.nick === p.nick); return q && q.equity != null && q.equity !== p.equity; };
   document.getElementById("seats").innerHTML = s.players.map(p => {
     const won = s.result && (r.collected[p.nick] || 0) > 0;
     const cls = ["st", p.hero && "hero", p.folded && "fold", p.acting && "act", !p.acting && s.next === p.nick && "nxt", won && "win"].filter(Boolean).join(" ");
@@ -334,7 +336,7 @@ function drawStep() {
     return `<div class="${cls}" style="${at(seatPoint(r, p.seat))}" title="${esc(p.nick)}: ${num(p.stack, 0)} chips">
         <div class="hc">${hole}</div>
         <div class="box">${p.hero ? `<span class="pt">${esc(p.position || "")}</span>` : ""}
-          ${p.equity != null && !s.result ? `<span class="badge eq">${num(100 * p.equity, 0)}%</span>` : ""}
+          ${p.equity != null && !s.result ? `<span class="badge eq ${eqChanged(p) ? "chg" : ""}">${num(100 * p.equity, 0)}%</span>` : ""}
           <div class="nick">${esc(p.nick)}</div><div class="stk">${bbs(p.stack, bb)} BB${res}</div>
           ${p.all_in && !s.result ? `<span class="badge ai">ALL-IN</span>` : ""}</div></div>${bet}`;
   }).join("");
@@ -414,7 +416,9 @@ function viewLuck() {
      Ties split the pot, and side pots are handled.</p>
   <p><b>Expected (EV)</b>: equity × pot, minus what you put in. What you win <i>on average</i> in this spot.</p>
   <p><b>Actual</b>: what really happened.</p>
-  <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p></div>
+  <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p>
+  <p>Luck always uses the equity <b>at the moment of the all-in</b>. The replayer also shows how the equity changes as the
+     flop, turn and river come, but those numbers are only for watching; they do not change your luck.</p></div>
   <h2>Example</h2>
   <p>You have ${cards("As Ah")} against ${cards("Kd Kc")}, 100 BB each, all-in before the flop. Your equity is about 81%.</p>
   <p>Expected = 0.81 × 200 − 100 = <b>+62 BB</b>. If you win: actual +100 BB, luck <span class="pos">+38 BB</span>.

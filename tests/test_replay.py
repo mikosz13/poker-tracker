@@ -108,6 +108,40 @@ class ReplayTests(unittest.TestCase):
         self.assertAlmostEqual(r["hero_allin"]["equity"], hero(r["steps"][lock])["equity"])
 
 
+    def test_equity_is_recomputed_on_every_street_after_the_all_in(self):
+        from pokertracker.equity import card_int
+        from tests.refeval import ref5
+        import itertools
+        r = hand_replay(self.db, "TM1000000010")                  # KK vs 77 vs AQ, all-in on 2c 8d 9h
+        deals = {s["street"]: s for s in r["steps"] if s["kind"] == "deal" and s["street"] in ("turn", "river")}
+        holes = {"Hero": ["Ks", "Kh"], "BTN": ["7s", "7d"], "SB": ["Ac", "Qd"]}
+
+        def brute(board):                                         # independent slow reference over every runout
+            known = {card_int(c) for c in board} | {card_int(c) for h in holes.values() for c in h}
+            deck = [c for c in range(52) if c not in known]
+            wins = dict.fromkeys(holes, 0.0)
+            runs = list(itertools.combinations(deck, 5 - len(board)))
+            for run in runs:
+                full = [card_int(c) for c in board] + list(run)
+                score = {n: max(ref5(list(c)) for c in itertools.combinations([card_int(x) for x in h] + full, 5))
+                         for n, h in holes.items()}
+                best = [n for n in score if score[n] == max(score.values())]
+                for n in best:
+                    wins[n] += 1 / len(best)
+            return {n: w / len(runs) for n, w in wins.items()}
+
+        for street, step in deals.items():
+            got = {p["nick"]: p["equity"] for p in step["players"] if p["equity"] is not None}
+            self.assertAlmostEqual(sum(got.values()), 1.0, places=5)
+            for n, v in brute(step["board"]).items():
+                self.assertAlmostEqual(got[n], v, places=5, msg=(street, n))
+        river = {p["nick"]: p["equity"] for p in deals["river"]["players"] if p["equity"] is not None}
+        self.assertEqual(river, {"Hero": 1.0, "BTN": 0.0, "SB": 0.0})   # KK holds on 2c 8d 9h Jc 3s
+        turn = {p["nick"]: p["equity"] for p in deals["turn"]["players"] if p["equity"] is not None}
+        self.assertNotEqual(turn["Hero"], r["hero_allin"]["equity"])    # the turn moved it
+        self.assertAlmostEqual(r["hero_allin"]["equity"],                # luck still uses the all-in moment
+                               self.db.scalar("SELECT equity FROM allin_ev WHERE hand_id = 'TM1000000010' AND nick = 'Hero'"))
+
     def test_no_early_reveal_without_an_all_in(self):
         r = hand_replay(self.db, "TM1000000001")                  # opponent wins without showdown
         for s in r["steps"]:

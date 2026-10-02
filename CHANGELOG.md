@@ -16,6 +16,8 @@
   table and in the log; Hero stays "Hero" with the position as a small label. No database changes.
 - Replayer: when the betting closes with a player all-in, the cards shown at showdown are face up from that moment,
   together with the equities, instead of only at the end.
+- Replayer: after an all-in the equity of every player is recomputed exactly on the flop, turn and river (main pot),
+  like on GGPoker. Luck still uses the equity at the all-in moment; "How luck works" says so.
 - Tests close their in-memory databases (no more ResourceWarnings on macOS Python 3.12).
 - README: the "what it is not" list no longer says there is no replayer.
 - docs/CHECKPOINT.md: results and feedback from the first run on a real Mac.
