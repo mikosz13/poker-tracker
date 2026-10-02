@@ -28,20 +28,12 @@ def build_report(db) -> str:
 
     trs = db.query(
         "SELECT tr.*, "
-        "(SELECT COUNT(*) FROM entries e WHERE e.site = tr.site AND e.tournament_id = tr.tournament_id) AS entries_found, "
-        "(SELECT COUNT(*) FROM entries e WHERE e.site = tr.site AND e.tournament_id = tr.tournament_id "
-        " AND NOT e.starts_fresh) AS entries_partial, "
         "(SELECT COUNT(*) FROM hands h WHERE h.site = tr.site AND h.tournament_id = tr.tournament_id) AS hands "
         "FROM tournament_results tr ORDER BY tr.started_at")
     if trs:
         out.append("TOURNAMENTS")
         for r in trs:
-            expected = 1 + int(r["reentries"] or 0)
-            notes = []
-            if int(r["hands"]) == 0:
-                notes.append("no hand history")
-            elif int(r["entries_found"]) < expected or int(r["entries_partial"]):
-                notes.append(f"history incomplete ({int(r['entries_found'])}/{expected} entries)")
+            notes = ["no hand history"] if int(r["hands"]) == 0 else []
             prize = f"${_f(r['prize_won'])}" + (" ticket" if float(r["ticket_value"]) else "")
             out.append(f"  {str(r['started_at'])[:10]}  {str(r['name'])[:34]:<34} {r['format']:<9} "
                        f"{r['finish_place']}/{r['players']}  cost ${_f(r['total_cost'])}  won {prize}"

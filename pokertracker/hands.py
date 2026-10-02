@@ -5,8 +5,9 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .scope import hand_reason
+
 HERO = "Hero"
-DEFAULT_STARTING_STACK = 10_000
 
 AMT = r"\d[\d,]*(?:\.\d+)?"
 HEADER = re.compile(r"Poker Hand #(?P<id>\w+): Tournament #(?P<tid>\d+), (?P<name>.+?) Hold'em No Limit")
@@ -98,6 +99,8 @@ def parse_hand(block: str) -> Hand | None:
     head, idx = lines[0], 1
     if not LEVEL.search(head):
         head, idx = head + " " + lines[1], 2
+    if hand_reason(head):                 # Sit & Go, PLO, not in $, cash: never imported
+        return None
     h, lv, tb = HEADER.match(head), LEVEL.search(head), TABLE.match(lines[idx])
     if not (h and lv and tb):
         return None
@@ -155,6 +158,20 @@ def parse_hand(block: str) -> Hand | None:
     return hand
 
 
+def out_of_scope(text: str):
+    """{reason: {tournament id, or 'cash' per file}} for the hands in an export that are never imported."""
+    found = {}
+    for block in re.split(r"\n(?=Poker Hand #)", text.replace("\f", "").strip()):
+        lines = [l.strip() for l in block.splitlines() if l.strip()][:2]
+        if not lines or not lines[0].startswith("Poker Hand #"):
+            continue
+        head = lines[0] if LEVEL.search(lines[0]) or len(lines) < 2 else lines[0] + " " + lines[1]
+        if reason := hand_reason(head):
+            tid = re.search(r"Tournament #(\d+)", head)
+            found.setdefault(reason, set()).add(int(tid[1]) if tid else "cash")
+    return found
+
+
 def parse_hands(text: str):
     """Return Hand objects from an export, oldest first (GG exports newest first)."""
     blocks = re.split(r"\n(?=Poker Hand #)", text.replace("\f", "").strip())
@@ -173,22 +190,33 @@ def entries_from_rows(rows):
     """Split Hero's hands of one tournament into entries (late reg / re-entries).
 
     rows: chronological tuples (hand_id, level, played_at, big_blind, stack, net_won).
-    Entry #1 starts at Hero's first hand; a new entry starts on the first hand after Hero's stack hit zero.
-    If Hero played from level 1, that stack is the starting stack (satellites 5,000; Bounty Hunters 10,000),
-    otherwise the default is assumed. starts_fresh=False means earlier hands of the entry are missing.
+    Entry #1 starts at Hero's first hand; a new entry starts on the first hand after Hero's stack hit zero. The hands
+    are the source of truth for entries; the tournament's starting stack is worked out separately (starting_stacks).
     """
-    lvl1 = [r for r in rows if r[1] == 1]
-    starting = lvl1[0][4] if lvl1 else DEFAULT_STARTING_STACK
     entries, prev_after = [], None
     for hand_id, level, played_at, bb, stack, net in rows:
         if prev_after is None or prev_after <= 0.5:
             entries.append({
                 "entry_no": len(entries) + 1, "entry_level": level, "entered_at": played_at,
-                "start_stack": stack, "start_stack_bb": round(stack / bb, 2),
-                "starts_fresh": abs(stack - starting) < 1, "first_hand_id": hand_id,
+                "start_stack": stack, "start_stack_bb": round(stack / bb, 2), "first_hand_id": hand_id,
             })
         prev_after = stack + net
     return entries
+
+
+def starting_stack(first_stacks):
+    """The tournament's starting stack: the most common first-hand stack of entries (same name and buy-in).
+
+    Needs at least two entries agreeing and no tie; otherwise None ("unknown"). Late registration on GGPoker gets the
+    full starting stack, so late entries count as well.
+    """
+    counts = {}
+    for x in first_stacks:
+        counts[x] = counts.get(x, 0) + 1
+    ranked = sorted(counts.items(), key=lambda kv: -kv[1])
+    if not ranked or ranked[0][1] < 2 or (len(ranked) > 1 and ranked[1][1] == ranked[0][1]):
+        return None
+    return ranked[0][0]
 
 
 def detect_entries(hands, hero=HERO):

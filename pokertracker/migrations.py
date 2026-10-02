@@ -4,8 +4,9 @@ schema.sql always describes the latest schema, so a new database starts at LATES
 step above its stored version, in order, each one committed together with the new version number.
 """
 from .hands import position_labels
+from .scope import tournament_reason
 
-LATEST = 1
+LATEST = 2
 
 
 def repair_positions(db):
@@ -37,7 +38,35 @@ def _v1_button_seat(db):
     repair_positions(db)
 
 
-MIGRATIONS = {1: _v1_button_seat}
+def _v2_scope_and_entries(db):
+    """Remove tournaments that are never analysed, recompute entries and add the data-derived starting stack.
+
+    0.3.0 imported some Sit & Go and non-dollar tournaments whose hand format happened to parse, and flagged late
+    registrations as "history incomplete" when the starting stack was not 10,000.
+    """
+    from .importer import refresh_entries, refresh_starting_stacks     # here, to avoid an import cycle
+    if not db.has_column("tournaments", "starting_stack"):
+        db.execute("ALTER TABLE tournaments ADD COLUMN starting_stack NUMERIC")
+    out = [(r["site"], r["tournament_id"]) for r in db.query("SELECT site, tournament_id, name FROM tournaments")
+           if tournament_reason(r["name"])]
+    remove_tournaments(db, out)
+    for r in db.query("SELECT DISTINCT site, tournament_id FROM hands"):
+        refresh_entries(db, r["tournament_id"])
+    refresh_starting_stacks(db)
+
+
+def remove_tournaments(db, keys):
+    """Delete every row of these (site, tournament_id) tournaments; the equity cache is shared and stays."""
+    for site, tid in keys:
+        hands = "(SELECT hand_id FROM hands WHERE site = ? AND tournament_id = ?)"
+        for table in ("allin_ev", "actions", "hand_players"):
+            db.execute(f"DELETE FROM {table} WHERE site = ? AND hand_id IN {hands}", (site, site, tid))
+        for table in ("hands", "entries", "tournament_tags", "tournament_structure", "tournaments"):
+            db.execute(f"DELETE FROM {table} WHERE site = ? AND tournament_id = ?", (site, tid))
+    return len(keys)
+
+
+MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries}
 
 
 def migrate(db, fresh):

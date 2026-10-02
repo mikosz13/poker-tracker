@@ -17,14 +17,14 @@ to type in by hand.
 
 What it cares about:
 
-- **Late registration and re-entries are part of the story.** Every entry is detected with the level you joined
-  at, and the tracker tells you when the export is missing part of a tournament instead of quietly being wrong.
+- **Late registration and re-entries are part of the story.** Every entry is detected from your hands with the level
+  you joined at, and the tournament's starting stack is worked out from your entries (or shown as unknown).
 - **A ticket is not cash.** Satellite seats are reported next to your ROI, never mixed into it.
 - **Luck is measured, not felt.** All-in EV is computed exactly over every possible runout, so "I ran bad"
   becomes a number in big blinds.
 - **Trust, but verify.** Formulas are in plain code, data is in plain SQL, and the test suite checks the maths
   against brute force and known results.
-- **Honest by default.** Small samples, incomplete histories and unknown cards are flagged, never guessed.
+- **Honest by default.** Small samples and unknown cards are flagged, never guessed.
 
 What it is not: no HUD, no ICM, no solver, no cash games. If you need those, PokerTracker 4 is the
 right tool. If you just want to know how your tournaments really go, this is for you.
@@ -124,8 +124,11 @@ No payout structures are needed anywhere: ROI uses the buy-in and the prize from
 is in chips.
 
 Domain details handled:
-- **Late registration and re-entries**: entries are derived from Hero's hands (a new entry starts after the stack hits zero);
-  the tournament is flagged "history incomplete" if the summary says more entries than the hand histories contain.
+- **Late registration and re-entries**: entries are derived from Hero's hands (a new entry starts after the stack hits zero).
+  The hands are the source of truth for entries; cost and ROI come from the summary, re-entries included. The starting
+  stack is the most common first-hand stack of entries in tournaments with the same name and buy-in, or unknown.
+- **Only No-Limit Hold'em tournaments in dollars**: Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games, tournaments
+  in other currencies and cash-game hands are never imported; the import result says how many were left out and why.
 - **Satellites**: prizes that are tickets are stored with their face value and excluded from cash ROI.
 - **Bounty formats**: buy-in split (prize + fee + bounty) kept; ROI uses the full cost including re-entries.
 

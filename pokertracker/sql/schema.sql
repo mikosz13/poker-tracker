@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     prize_is_ticket BOOLEAN NOT NULL DEFAULT FALSE,
     reentries       INTEGER,
     has_summary     BOOLEAN NOT NULL DEFAULT FALSE,
+    starting_stack  NUMERIC,                 -- most common first-hand stack for this name + buy-in; NULL = unknown
     PRIMARY KEY (site, tournament_id)
 );
 
@@ -78,7 +79,7 @@ CREATE TABLE IF NOT EXISTS entries (
     entered_at      TIMESTAMP NOT NULL,
     start_stack     NUMERIC NOT NULL,
     start_stack_bb  NUMERIC,
-    starts_fresh    BOOLEAN NOT NULL,        -- FALSE = earlier hands of this entry are missing from the export
+    starts_fresh    BOOLEAN NOT NULL,        -- unused since schema 2 (always TRUE): entries come from the hands
     first_hand_id   TEXT,
     PRIMARY KEY (site, tournament_id, entry_no)
 );

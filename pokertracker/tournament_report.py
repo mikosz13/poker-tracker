@@ -81,9 +81,10 @@ def tournament_data(db, tournament_id, site=SITE):
             "tags": [r["tag"] for r in db.query("SELECT tag FROM tournament_tags WHERE site = ? AND tournament_id = ? "
                                                 "ORDER BY tag", (site, tournament_id))],
             "entries": [{"entry_no": int(e["entry_no"]), "level": int(e["entry_level"]),
-                         "stack_bb": _f(e["start_stack_bb"]), "fresh": bool(e["starts_fresh"])}
+                         "stack_bb": _f(e["start_stack_bb"])}
                         for e in db.query("SELECT * FROM entries WHERE site = ? AND tournament_id = ? ORDER BY entry_no",
                                           (site, tournament_id))],
+            "starting_stack": None if t["starting_stack"] is None else _f(t["starting_stack"]),
             "hands": len(rows)}
     if res:
         r = res[0]
@@ -167,8 +168,10 @@ def render_text(d) -> str:
     if d["tags"]:
         out.append("  tags: " + ", ".join(d["tags"]))
     for e in d["entries"]:
-        out.append(f"  entry #{e['entry_no']}: level {e['level']}, {e['stack_bb']:.0f} BB"
-                   + ("" if e["fresh"] else " (history incomplete)"))
+        out.append(f"  entry #{e['entry_no']}: level {e['level']}, {e['stack_bb']:.0f} BB")
+    if d["entries"]:
+        st = d["starting_stack"]
+        out.append(f"  starting stack: {'unknown' if st is None else f'{st:,.0f}'}")
     if not d["hands"]:
         return "\n".join(out + ["  no hand history imported"])
     s = d["stack"]
@@ -254,9 +257,10 @@ def render_html(d) -> str:
     if d["tags"]:
         parts.append(f"<p class=m>{e(', '.join(d['tags']))}</p>")
     if d["entries"]:
+        st = "unknown" if d["starting_stack"] is None else f"{d['starting_stack']:,.0f}"
         parts.append("<p class=m>" + "; ".join(
-            f"entry {x['entry_no']}: level {x['level']}, {x['stack_bb']:.0f} BB" + ("" if x["fresh"] else " (incomplete)")
-            for x in d["entries"]) + "</p>")
+            f"entry {x['entry_no']}: level {x['level']}, {x['stack_bb']:.0f} BB" for x in d["entries"])
+            + f" · starting stack {st}</p>")
     if d["hands"]:
         s, a = d["stack"], d["allins"]
         ko = d["knockouts"]

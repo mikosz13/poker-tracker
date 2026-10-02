@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from .classify import refresh_classification
-from .hands import HERO, entries_from_rows, parse_hands
-from .summary import Tournament, parse_summary
+from .hands import HERO, entries_from_rows, out_of_scope, parse_hands, starting_stack
+from .summary import OutOfScope, Tournament, parse_summary
 
 SITE = "GGPoker"
 
@@ -23,6 +23,14 @@ class ImportStats:
     unchanged: int = 0
     tournaments: set = field(default_factory=set)
     skipped: list = field(default_factory=list)
+    ignored: dict = field(default_factory=dict)     # reason -> {tournament id, or 'cash'}: never imported
+
+    def ignored_counts(self):
+        """{reason: how many tournaments (or cash-game files)} that were left out on purpose."""
+        return {reason: len(ids) for reason, ids in sorted(self.ignored.items())}
+
+    def ignore(self, reason, key):
+        self.ignored.setdefault(reason, set()).add(key)
 
 
 def classify(text: str):
@@ -235,7 +243,21 @@ def refresh_entries(db, tournament_id):
         "INSERT INTO entries (site, tournament_id, entry_no, entry_level, entered_at, start_stack, "
         "start_stack_bb, starts_fresh, first_hand_id) VALUES (?,?,?,?,?,?,?,?,?)",
         [(SITE, tournament_id, e["entry_no"], e["entry_level"], e["entered_at"], e["start_stack"],
-          e["start_stack_bb"], e["starts_fresh"], e["first_hand_id"]) for e in entries])
+          e["start_stack_bb"], True, e["first_hand_id"]) for e in entries])
+
+
+def refresh_starting_stacks(db):
+    """Set tournaments.starting_stack for every name + buy-in group from Hero's entries (NULL when unknown)."""
+    groups = {}
+    for r in db.query("SELECT t.site, t.tournament_id, t.name, t.buyin_total, e.start_stack FROM tournaments t "
+                      "LEFT JOIN entries e ON e.site = t.site AND e.tournament_id = t.tournament_id"):
+        g = groups.setdefault((r["site"], r["name"], None if r["buyin_total"] is None else float(r["buyin_total"])),
+                              {"ids": set(), "stacks": []})
+        g["ids"].add(r["tournament_id"])
+        if r["start_stack"] is not None:
+            g["stacks"].append(float(r["start_stack"]))
+    db.executemany("UPDATE tournaments SET starting_stack = ? WHERE site = ? AND tournament_id = ?",
+                   [(starting_stack(g["stacks"]), site, tid) for (site, _, _), g in groups.items() for tid in g["ids"]])
 
 
 def _import_one(db, stats, label, text, equity):
@@ -244,9 +266,14 @@ def _import_one(db, stats, label, text, equity):
     kind = classify(text or "")
     if kind == "hands":
         stats.hand_files += 1
+        ignored = out_of_scope(text)
+        for reason, ids in ignored.items():
+            for key in ids:
+                stats.ignore(reason, label if key == "cash" else key)
         hands = parse_hands(text)
         if not hands:
-            stats.skipped.append(f"{label}: no hands recognised")
+            if not ignored:                       # a file of only out-of-scope hands is not a problem
+                stats.skipped.append(f"{label}: no hands recognised")
             return set(), set()
         new, dup, allins, warnings = _store_hands(db, hands, equity)
         stats.hands_new += new
@@ -259,6 +286,9 @@ def _import_one(db, stats, label, text, equity):
     if kind == "summary":
         try:
             t = parse_summary(text)
+        except OutOfScope as e:
+            stats.ignore(e.reason, e.tournament_id)
+            return set(), set()
         except ValueError:
             stats.skipped.append(f"{label}: unrecognised summary format")
             return set(), set()
@@ -273,6 +303,8 @@ def _import_one(db, stats, label, text, equity):
 def _refresh(db, hand_tids, all_tids):
     for tid in sorted(hand_tids):
         refresh_entries(db, tid)
+    if hand_tids or all_tids:
+        refresh_starting_stacks(db)
     for tid in sorted(all_tids):
         refresh_classification(db, SITE, tid)
 

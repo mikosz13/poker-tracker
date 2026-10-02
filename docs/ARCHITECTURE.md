@@ -21,6 +21,7 @@ flowchart LR
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
+| `scope.py` | What is never imported: Sit & Go, PLO/Omaha and other games, non-dollar tournaments, cash games |
 | `sql/schema.sql`, `sql/views.sql` | Portable DDL and analytics views (same SQL on SQLite and PostgreSQL) |
 | `migrations.py` | Upgrades an existing database in place on startup (schema version in the database) |
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |
@@ -40,7 +41,7 @@ flowchart LR
 - **Upgrade databases, never rebuild them.** `schema.sql` always describes the latest schema; an older database runs
   the numbered steps in `migrations.py` on startup. A rebuild would throw away the equity cache and require the
   original export files, which PokerCraft only keeps for 90 days.
-- **Say "unknown" instead of guessing.** Small samples, incomplete histories, unknown cards and shared knockouts
+- **Say "unknown" instead of guessing.** Small samples, unknown starting stacks, unknown cards and shared knockouts
   are flagged rather than estimated.
 
 ## Testing

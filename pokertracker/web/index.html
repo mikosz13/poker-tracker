@@ -198,7 +198,8 @@ async function viewTournament(id) {
     <div>Cost<b>${money(r.cost)}</b></div><div>ROI (cash)<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
   else h += `<p class="m">No summary imported yet, so no result or ROI.</p>`;
   h += `<p>${d.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</p>`;
-  h += d.entries.map(e => `<p class="m">Entry ${e.entry_no}: level ${e.level}, ${num(e.stack_bb, 0)} BB${e.fresh ? "" : " · earlier hands missing from the export"}</p>`).join("");
+  h += d.entries.map(e => `<p class="m">Entry ${e.entry_no}: level ${e.level}, ${num(e.stack_bb, 0)} BB</p>`).join("");
+  if (d.entries.length) h += `<p class="m">Starting stack: ${d.starting_stack == null ? "unknown" : num(d.starting_stack, 0)}</p>`;
   if (!d.hands) { app.innerHTML = h + '<p class="m">No hand history imported for this tournament.</p>'; return; }
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>Hands<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>Net<b>${sgn(d.net_bb, 0, " BB")}</b></div>
@@ -373,6 +374,8 @@ const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported au
   <span class="m">${esc(String(r.finished_at || "").replace("T", " "))}</span><br>
   ${r.files} files read (${r.hand_files} hand histories, ${r.summary_files} summaries), ${r.unchanged} unchanged ·
   ${r.hands_new} new hands, ${r.hands_duplicate} already imported · ${r.allins} all-ins analysed · ${r.tournaments} tournaments
+  ${Object.keys(r.ignored || {}).length ? `<p class="m">Not imported (outside No-Limit Hold'em tournaments in $): ${
+    Object.entries(r.ignored).map(([why, n]) => `${n} ${esc(why)}${why === "cash game" ? " files" : ""}`).join(", ")}</p>` : ""}
   <p><a href="#/">Open the dashboard →</a></p>${r.skipped.length ? `<p class="m">Skipped: ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {
   const st = await api("/api/settings");

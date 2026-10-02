@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+- Only No-Limit Hold'em tournaments in dollars are imported. Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games,
+  tournaments in other currencies (e.g. Zodiac in ¥) and cash-game hands are never imported; the import result (CLI and
+  app) counts them by reason instead of reporting "unrecognised summary format".
+- No more "history incomplete" flag: entries always come from the hands (cost and ROI still from the summary). 0.3.0
+  flagged late registrations whenever the starting stack was not 10,000.
+- The starting stack is learned from the data: the most common first-hand stack of entries for the same tournament
+  name and buy-in, shown in the tournament details and reports, or "unknown".
+- Database upgrade (schema 2, automatic, backup first): removes out-of-scope tournaments imported by 0.3.0, recomputes
+  entries and starting stacks; the equity cache is kept.
+
 ## 0.3.0 (2026-10-03)
 - Position names fixed: the first player to act is always UTG (0.2.0 started at UTG+1 on 8-handed tables and at MP
   on 7-handed ones). Per-position statistics, reports and the replayer use the new names.
