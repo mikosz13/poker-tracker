@@ -18,6 +18,8 @@
   together with the equities, instead of only at the end.
 - Replayer: after an all-in the equity of every player is recomputed exactly on the flop, turn and river (main pot),
   like on GGPoker. Luck still uses the equity at the all-in moment; "How luck works" says so.
+- Four-colour deck everywhere cards are shown (app and HTML report): spades black, hearts red, diamonds blue,
+  clubs green, so flush draws are visible at a glance.
 - Tests close their in-memory databases (no more ResourceWarnings on macOS Python 3.12).
 - README: the "what it is not" list no longer says there is no replayer.
 - docs/CHECKPOINT.md: results and feedback from the first run on a real Mac.

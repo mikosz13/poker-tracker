@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Poker Tracker</title>
 <style>
-:root{--bg:#fff;--fg:#14161a;--muted:#6b7280;--card:#f3f4f6;--line:#e5e7eb;--blue:#2f6fed;--orange:#e67e22;--pos:#0a7d2c;--neg:#c0392b;--red:#c0392b;--felt:#1f6f4a;--rail:#5a3d2b}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d}}
+:root{--bg:#fff;--fg:#14161a;--muted:#6b7280;--card:#f3f4f6;--line:#e5e7eb;--blue:#2f6fed;--orange:#e67e22;--pos:#0a7d2c;--neg:#c0392b;--red:#c0392b;--felt:#1f6f4a;--rail:#5a3d2b;--s-s:#14161a;--s-h:#c62828;--s-d:#1f62c9;--s-c:#1b7f37}
+@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
 header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
@@ -24,7 +24,7 @@ th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white
 th:first-child,td:first-child{text-align:left}tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 .card{display:inline-block;min-width:1.9em;padding:1px 4px;margin:1px;border:1px solid var(--line);border-radius:5px;background:var(--bg);text-align:center;font-weight:600}
-.card.red{color:var(--red)}
+.card.s-s{color:var(--s-s)}.card.s-h{color:var(--s-h)}.card.s-d{color:var(--s-d)}.card.s-c{color:var(--s-c)}
 svg.chart{width:100%;height:auto;background:var(--card);border-radius:10px}
 .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
 select,input,button{font:inherit;padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
@@ -43,7 +43,7 @@ button{cursor:pointer}button.primary{background:var(--blue);color:#fff;border-co
 .eqline{font-size:.8rem;margin-top:3px;opacity:.92}
 .pc{--w:clamp(26px,5.6cqw,40px);width:var(--w);height:calc(var(--w)*1.4);border-radius:calc(var(--w)*.14);background:#fff;color:#14161a;display:inline-flex;flex-direction:column;
   align-items:center;justify-content:center;line-height:1;font-weight:700;font-size:calc(var(--w)*.46);box-shadow:0 1px 3px rgba(0,0,0,.35);flex:none}
-.pc i{font-style:normal;font-size:.95em}.pc.red{color:#d0302b}
+.pc i{font-style:normal;font-size:.95em}.pc.s-s{color:#14161a}.pc.s-h{color:#c62828}.pc.s-d{color:#1f62c9}.pc.s-c{color:#1b7f37}
 .pc.slot{background:transparent;border:1.5px dashed rgba(255,255,255,.28);box-shadow:none}
 .pc.back{background:repeating-linear-gradient(45deg,var(--blue) 0 3px,color-mix(in srgb,var(--blue) 70%,#fff) 3px 6px);border:2px solid #fff}
 .pc.new{animation:deal .22s ease-out}
@@ -98,7 +98,7 @@ const sgn = (x, d=1, unit="") => x == null ? "–" :
 const money = x => x == null ? "–" : "$" + num(x, 2);
 function cards(t) {
   const a = Array.isArray(t) ? t : String(t || "").split(" ").filter(Boolean);
-  return a.length ? a.map(c => `<span class="card ${"dh".includes(c[1]) ? "red" : ""}">${esc(c[0])}${SUIT[c[1]] || ""}</span>`).join("") : '<span class="m">–</span>';
+  return a.length ? a.map(c => `<span class="card s-${esc(c[1])}">${esc(c[0])}${SUIT[c[1]] || ""}</span>`).join("") : '<span class="m">–</span>';
 }
 async function api(path, opts) {
   const r = await fetch(path, opts);
@@ -223,7 +223,7 @@ let replay = null, step = 0, playTimer = null;
 const SPEEDS = {slow: 1500, normal: 900, fast: 450};
 const VERBS = {folds: "folds", checks: "checks", calls: "calls", bets: "bets", raises: "raises to"};
 const bbs = (x, bb) => num(x / bb, Math.abs(x / bb) >= 100 ? 0 : 1);
-const pcard = (c, cls = "") => `<span class="pc ${"dh".includes(c[1]) ? "red" : ""} ${cls}">${esc(c[0])}<i>${SUIT[c[1]] || ""}</i></span>`;
+const pcard = (c, cls = "") => `<span class="pc s-${esc(c[1])} ${cls}">${esc(c[0])}<i>${SUIT[c[1]] || ""}</i></span>`;
 
 function seatPoint(r, seat, f = 1) {
   // Seats are numbered clockwise; slot 0 (Hero) is bottom centre, angles grow clockwise on screen.

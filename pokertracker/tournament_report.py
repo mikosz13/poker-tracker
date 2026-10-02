@@ -212,16 +212,16 @@ CSS = ("body{font:16px/1.4 system-ui,sans-serif;margin:0 auto;max-width:640px;pa
        ".k{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.k div{background:#f3f3f3;border-radius:8px;padding:8px}"
        ".k b{display:block;font-size:1.15rem}table{border-collapse:collapse;width:100%}td,th{padding:4px 6px;text-align:right;"
        "border-bottom:1px solid #ddd}td:first-child,th:first-child{text-align:left}.p{color:#0a7d2c}.n{color:#c0392b}"
-       ".r{color:#c0392b}svg{width:100%;height:auto;background:#f3f3f3;border-radius:8px}"
+       ".sh{color:#c62828}.sd{color:#1f62c9}.sc{color:#1b7f37}svg{width:100%;height:auto;background:#f3f3f3;border-radius:8px}"
        "@media(prefers-color-scheme:dark){body{background:#111;color:#eee}.k div,svg{background:#222}"
-       "td,th{border-color:#333}.m{color:#aaa}.p{color:#4cd37b}.n{color:#ff7b6b}}")
+       "td,th{border-color:#333}.m{color:#aaa}.p{color:#4cd37b}.n{color:#ff7b6b}.sh{color:#ff6b6b}.sd{color:#5aa2ff}.sc{color:#4cd37b}}")
 SUITS = {"c": "♣", "d": "♦", "h": "♥", "s": "♠"}
 
 
 def _cards(text):
     out = []
     for c in (text or "").split():
-        cls = ' class="r"' if c[1] in "dh" else ""
+        cls = f' class="s{c[1]}"' if c[1] in "hdc" else ""      # four-colour deck; spades keep the text colour
         out.append(f"<span{cls}>{html.escape(c[0] + SUITS[c[1]])}</span>")
     return " ".join(out) or "preflop"
 
