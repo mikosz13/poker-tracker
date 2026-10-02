@@ -54,8 +54,37 @@ class Database:
         self.conn.commit()
 
     def init_schema(self):
+        """Create missing tables, upgrade an older database in place, then (re)create the views."""
+        from .migrations import migrate
+        fresh = not self.has_table("hands")
         self.script((SQL_DIR / "schema.sql").read_text())
+        migrate(self, fresh)
         self.script((SQL_DIR / "views.sql").read_text())
+
+    def has_table(self, name: str) -> bool:
+        if self.kind == "sqlite":
+            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?"
+        else:
+            sql = ("SELECT COUNT(*) FROM information_schema.tables "
+                   "WHERE table_schema = current_schema() AND table_name = ?")
+        return bool(self.scalar(sql, (name,)))
+
+    def has_column(self, table: str, column: str) -> bool:
+        if self.kind == "sqlite":
+            return any(r["name"] == column for r in self.query(f"PRAGMA table_info({table})"))
+        return bool(self.scalar("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() "
+                                "AND table_name = ? AND column_name = ?", (table, column)))
+
+    def backup(self, suffix: str):
+        """Copy a file-based SQLite database next to itself (no-op otherwise); returns the backup path."""
+        path = self.url[len("sqlite:///"):] if self.kind == "sqlite" else ""
+        if not path or path == ":memory:":
+            return None
+        target = f"{path}.{suffix}"
+        with sqlite3.connect(target) as dst:
+            self.conn.backup(dst)
+        dst.close()
+        return target
 
     def execute(self, sql: str, params=()):
         self.conn.cursor().execute(self._q(sql), params)

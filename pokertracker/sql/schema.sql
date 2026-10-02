@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS hands (
     played_at      TIMESTAMP NOT NULL,
     table_name     TEXT,
     max_seats      INTEGER,
+    button_seat    INTEGER,
     board          TEXT,
     total_pot      NUMERIC,
     rake           NUMERIC,
@@ -130,6 +131,11 @@ CREATE TABLE IF NOT EXISTS imported_files (
     path   TEXT PRIMARY KEY,
     size   BIGINT NOT NULL,
     mtime  NUMERIC NOT NULL
+);
+
+-- Version of this schema the database is at; older databases are upgraded by pokertracker/migrations.py.
+CREATE TABLE IF NOT EXISTS schema_version (
+    version  INTEGER NOT NULL
 );
 
 -- Small key/value store for the app (e.g. the last import folder).

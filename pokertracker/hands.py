@@ -30,7 +30,11 @@ POT = re.compile(r"Total pot (?P<pot>" + AMT + r") \| Rake (?P<rake>" + AMT + r"
 BOARD = re.compile(r"^Board \[(?P<b>[^\]]+)\]")
 
 STREET_MAP = {"HOLE CARDS": "preflop", "FLOP": "flop", "TURN": "turn", "RIVER": "river"}
-LATE_LABELS = ["UTG", "UTG+1", "MP", "LJ", "HJ", "CO"]
+# Labels of the players before the button, by how many there are. The first to act preflop is always UTG.
+EARLY_LABELS = {
+    0: [], 1: ["UTG"], 2: ["UTG", "CO"], 3: ["UTG", "HJ", "CO"], 4: ["UTG", "LJ", "HJ", "CO"],
+    5: ["UTG", "UTG+1", "LJ", "HJ", "CO"], 6: ["UTG", "UTG+1", "MP", "LJ", "HJ", "CO"],
+}
 
 
 def num(s):
@@ -66,20 +70,24 @@ class Hand:
         return self.collected[nick] - self.invested[nick]
 
 
+def position_labels(seats, button):
+    """Seat number -> position label for the occupied seats, or {} if the button is not on an occupied seat."""
+    seats = sorted(seats)
+    if button not in seats or len(seats) < 2:
+        return {}
+    i = seats.index(button)
+    ring = seats[i:] + seats[:i]          # button first, clockwise
+    if len(ring) == 2:
+        return {ring[0]: "BTN/SB", ring[1]: "BB"}
+    early = EARLY_LABELS.get(len(ring) - 3)
+    if early is None:                     # more than 9 players: never seen on GGPoker
+        return {}
+    return dict(zip(ring, ["BTN", "SB", "BB"] + early))
+
+
 def assign_positions(hand: Hand):
-    order = sorted(hand.seats.items(), key=lambda kv: kv[1][0])
-    seats = [s for _, (s, _) in order]
-    nicks = [n for n, _ in order]
-    if hand.button not in seats:
-        return
-    i = seats.index(hand.button)
-    ring = nicks[i:] + nicks[:i]          # button first, clockwise
-    n = len(ring)
-    if n == 2:
-        hand.positions = {ring[0]: "BTN/SB", ring[1]: "BB"}
-        return
-    late = LATE_LABELS[max(0, len(LATE_LABELS) - (n - 3)):] if n > 3 else []
-    hand.positions = dict(zip(ring, ["BTN", "SB", "BB"] + late))
+    by_seat = position_labels([seat for seat, _ in hand.seats.values()], hand.button)
+    hand.positions = {nick: by_seat[seat] for nick, (seat, _) in hand.seats.items() if seat in by_seat}
 
 
 def parse_hand(block: str) -> Hand | None:

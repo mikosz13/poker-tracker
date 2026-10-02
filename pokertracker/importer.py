@@ -96,7 +96,7 @@ def _mark_imported(db, f: Path):
 
 def _hand_row(h):
     return (SITE, h.hand_id, h.tournament_id, h.level, h.sb, h.bb, h.ante, h.played_at, h.table,
-            h.max_seats, h.board, h.total_pot, h.rake, h.showdown)
+            h.max_seats, h.button, h.board, h.total_pot, h.rake, h.showdown)
 
 
 def _player_rows(h):
@@ -149,11 +149,11 @@ def _store_hands(db, hands, equity=True):
           h.buyin_total) for tid, h in seen.items()])
     db.executemany(
         "INSERT INTO hands (site, hand_id, tournament_id, level, small_blind, big_blind, ante, played_at, "
-        "table_name, max_seats, board, total_pot, rake, showdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
-        "ON CONFLICT (site, hand_id) DO NOTHING", [_hand_row(h) for h in hands])
+        "table_name, max_seats, button_seat, board, total_pot, rake, showdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+        "ON CONFLICT (site, hand_id) DO UPDATE SET button_seat = excluded.button_seat", [_hand_row(h) for h in hands])
     db.executemany(
         "INSERT INTO hand_players (site, hand_id, nick, seat, position, hole_cards, stack, stack_bb, net_won, "
-        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO NOTHING",
+        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO UPDATE SET position = excluded.position",
         [r for h in hands for r in _player_rows(h)])
     db.executemany(
         "INSERT INTO actions (site, hand_id, action_order, nick, street, action_type, amount, all_in) "

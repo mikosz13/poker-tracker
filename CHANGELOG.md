@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Position names fixed: the first player to act is always UTG (0.2.0 started at UTG+1 on 8-handed tables and at MP
+  on 7-handed ones). Per-position statistics, reports and the replayer use the new names.
+- Existing databases are upgraded in place on startup (schema version stored in the database). The first upgrade
+  stores the button seat and recomputes positions from data already in the database, keeping the equity cache;
+  a SQLite database is copied to `<name>.bak-v0` first. Re-importing files also refreshes positions of hands that
+  are already stored.
 - Replayer v2: oval table with seats rotated so Hero sits at the bottom, cards, bets in front of players, dealer
   button, all-in badges and equity at the all-in moment; autoplay (3 speeds), space = play/pause, Home/End, and an
   action log grouped by street where clicking a line jumps to that step. Light/dark theme, works down to 380 px.

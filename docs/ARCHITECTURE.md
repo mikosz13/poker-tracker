@@ -22,6 +22,7 @@ flowchart LR
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
 | `sql/schema.sql`, `sql/views.sql` | Portable DDL and analytics views (same SQL on SQLite and PostgreSQL) |
+| `migrations.py` | Upgrades an existing database in place on startup (schema version in the database) |
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |
 | `tournament_report.py`, `dashboard.py` | Report data + text/HTML rendering |
 | `server.py`, `app.py`, `web/index.html` | Local-only HTTP API, background import job, folder watcher, desktop window |
@@ -36,6 +37,9 @@ flowchart LR
   for anyone who wants a server (tested in CI).
 - **Local web UI in a native window.** One UI for macOS and Windows, reuses the HTML reports, no frontend build
   step. The server binds to 127.0.0.1 and write actions need a per-launch token.
+- **Upgrade databases, never rebuild them.** `schema.sql` always describes the latest schema; an older database runs
+  the numbered steps in `migrations.py` on startup. A rebuild would throw away the equity cache and require the
+  original export files, which PokerCraft only keeps for 90 days.
 - **Say "unknown" instead of guessing.** Small samples, incomplete histories, unknown cards and shared knockouts
   are flagged rather than estimated.
 

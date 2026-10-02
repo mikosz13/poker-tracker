@@ -4,3 +4,5 @@ data/
 exports/
 *.pdf
 *.egg-info/
+*.db.bak-*
+.DS_Store
