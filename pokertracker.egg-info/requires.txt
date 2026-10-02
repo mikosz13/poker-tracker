@@ -1,7 +1,0 @@
-numpy>=1.24
-
-[app]
-pywebview>=5
-
-[postgres]
-psycopg[binary]>=3.1
