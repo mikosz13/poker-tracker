@@ -101,7 +101,7 @@ def parse_hand(block: str) -> Hand | None:
     h, lv, tb = HEADER.match(head), LEVEL.search(head), TABLE.match(lines[idx])
     if not (h and lv and tb):
         return None
-    np_ = NAME_PRICE.match(h["name"])       # 'Bounty Hunters $54' -> name + price; satellites have no price
+    np_ = NAME_PRICE.match(h["name"])       # 'Bounty Hunters $10' -> name + price; satellites have no price
     name, price = (np_["name"], num(np_["price"])) if np_ else (h["name"], None)
     hand = Hand(h["id"], int(h["tid"]), name, price, int(lv["lvl"]), num(lv["sb"]), num(lv["bb"]),
                 num(lv["ante"]), lv["ts"].replace("/", "-"), tb["name"], int(tb["max"]), int(tb["button"]))

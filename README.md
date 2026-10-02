@@ -8,7 +8,7 @@ how do I play at different stack depths?*
 
 I play tournaments on GGPoker as a hobby: mostly Bounty Hunters, now and then a satellite. Like most
 recreational players I had simple questions and no honest answers. Am I actually winning? Was that deep run
-skill or a heater? Do I do worse when I register late? Does the $54 suit me better than the $21.60?
+skill or a heater? Do I do worse when I register late?
 
 The serious tools that answer this are paid and built to do everything for everyone. Plenty of people who play
 for fun will never pay for a tracker, so they play blind. This project is the opposite trade-off: free, narrow,
