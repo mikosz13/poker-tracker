@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-10-03)
 - Position names fixed: the first player to act is always UTG (0.2.0 started at UTG+1 on 8-handed tables and at MP
   on 7-handed ones). Per-position statistics, reports and the replayer use the new names.
 - Existing databases are upgraded in place on startup (schema version stored in the database). The first upgrade

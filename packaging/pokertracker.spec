@@ -1,9 +1,11 @@
 # PyInstaller build description for the desktop app: `pyinstaller --noconfirm packaging/pokertracker.spec`
 # Produces dist/PokerTracker.app on macOS and dist/PokerTracker/PokerTracker.exe on Windows.
+import re
 import sys
 from pathlib import Path
 
 root = Path(SPECPATH).parent
+version = re.search(r'__version__ = "([^"]+)"', (root / "pokertracker" / "__init__.py").read_text())[1]
 
 a = Analysis(
     [str(root / "packaging" / "launch.py")],
@@ -23,5 +25,5 @@ if sys.platform == "darwin":
         coll,
         name="PokerTracker.app",
         bundle_identifier="io.github.pokertracker",
-        info_plist={"NSHighResolutionCapable": True, "CFBundleShortVersionString": "0.2.0"},
+        info_plist={"NSHighResolutionCapable": True, "CFBundleShortVersionString": version},
     )
