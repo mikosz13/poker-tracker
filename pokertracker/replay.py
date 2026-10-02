@@ -37,6 +37,7 @@ def hand_replay(db, hand_id, site=SITE):
     folded, allin = set(), set()
     pot, street, shown = 0.0, "preflop", 0
     equity = {}                                # nick -> main-pot equity, known from the moment betting closes
+    revealed = False                           # all-in and showdown: shown cards are face up from the moment betting closes
     steps = []
 
     def snap(kind, label, acting=None, nxt=None, action=None, reveal=False, result=False):
@@ -47,7 +48,7 @@ def hand_replay(db, hand_id, site=SITE):
                 "nick": name[p["nick"]], "seat": p["seat"], "position": p["position"], "hero": p["nick"] == HERO,
                 "stack": round(stack[p["nick"]], 2), "commit": round(commit[p["nick"]], 2),
                 "folded": p["nick"] in folded, "all_in": p["nick"] in allin, "acting": p["nick"] == acting,
-                "cards": (p["hole_cards"] or "").split() if (p["nick"] == HERO or reveal) else [],
+                "cards": (p["hole_cards"] or "").split() if (p["nick"] == HERO or reveal or revealed) else [],
                 "equity": equity.get(p["nick"]),
                 "net": round(_n(p["net_won"]), 2) if result else None,
             } for p in players]})
@@ -102,6 +103,7 @@ def hand_replay(db, hand_id, site=SITE):
         nick, act, amount = a["nick"], a["action_type"], _n(a["amount"])
         if i == len(actions):                                     # betting is over: equities at the all-in moment
             equity = {r["nick"]: _n(r["equity"]) for r in ev_rows if r["equity"] is not None}
+            revealed = bool(h["showdown"]) and bool(allin)
         text = f"{name[nick]} {VERB.get(act, act)}" + (f" {amount:,.0f}" if amount and act != "folds" else "")
         snap("action", text + (" (all-in)" if a["all_in"] else ""), acting=nick, nxt=next_actor(i),
              action={"nick": name[nick], "type": act, "amount": amount, "all_in": bool(a["all_in"])})

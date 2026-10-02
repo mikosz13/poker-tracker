@@ -99,10 +99,19 @@ class ReplayTests(unittest.TestCase):
         lock = [i for i, s in enumerate(r["steps"]) if s["kind"] == "action"][-1]
         hero = lambda s: next(p for p in s["players"] if p["nick"] == "Hero")
         self.assertIsNone(hero(r["steps"][lock - 1])["equity"])
+        sb = lambda s: next(p for p in s["players"] if p["nick"] == "SB")
+        self.assertEqual(sb(r["steps"][lock - 1])["cards"], [])     # face down while betting is open ...
+        self.assertEqual(sb(r["steps"][lock])["cards"], ["Ac", "Qd"])   # ... face up together with the equity
+        self.assertTrue(all(sb(s)["cards"] == ["Ac", "Qd"] for s in r["steps"][lock:]))
         self.assertGreater(hero(r["steps"][lock])["equity"], 0.5)   # KK vs 77 vs AQ on 2-8-9
         self.assertEqual(r["hero_allin"]["street"], "flop")
         self.assertAlmostEqual(r["hero_allin"]["equity"], hero(r["steps"][lock])["equity"])
 
+
+    def test_no_early_reveal_without_an_all_in(self):
+        r = hand_replay(self.db, "TM1000000001")                  # opponent wins without showdown
+        for s in r["steps"]:
+            self.assertTrue(all(p["cards"] == [] for p in s["players"] if not p["hero"]))
 
     def test_opponents_are_named_by_position_never_by_id(self):
         positions = {"UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB", "BB", "BTN/SB"}

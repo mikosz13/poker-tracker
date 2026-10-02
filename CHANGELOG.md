@@ -14,6 +14,8 @@
   bets are shown being returned, so the pot that is left equals the total pot paid out.
 - Replayer names opponents by position (UTG ... BB, heads-up BTN/SB and BB) instead of their hashed IDs, on the
   table and in the log; Hero stays "Hero" with the position as a small label. No database changes.
+- Replayer: when the betting closes with a player all-in, the cards shown at showdown are face up from that moment,
+  together with the equities, instead of only at the end.
 - Tests close their in-memory databases (no more ResourceWarnings on macOS Python 3.12).
 - README: the "what it is not" list no longer says there is no replayer.
 - docs/CHECKPOINT.md: results and feedback from the first run on a real Mac.
