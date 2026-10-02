@@ -9,18 +9,22 @@ pokertracker/migrations.py first.
   registrations into tournaments whose starting stack is not 10,000: Bounty Hunters Deepstack Turbo and Mini Heater
   (20,000), Daily Hyper (6,000), MEGA satellites (5,000), WSOP $54 Sunday (25,000).
 - Cause: without a level-1 hand of Hero in that tournament the starting stack defaults to 10,000.
-- Fix: recognise the starting stack without assuming 10,000 (e.g. learn it per tournament name from entries that
-  did start at level 1 or from re-entries, and treat Hero's first hand of an entry as fresh when it looks like a
-  full starting stack). Keep flagging real gaps: an entry whose first hand is clearly mid-tournament, and the
-  existing check "summary says more entries than the hands contain".
+- "History incomplete" is flagged only when the summary reports more entries than were detected in the hand
+  histories. The starting stack no longer decides it.
+- The starting stack is determined from the data instead of the 10,000 constant: the most common stack at the first
+  hand of an entry among tournaments with the same name and buy-in. When it cannot be determined, it is "unknown",
+  without any flag.
 - Existing databases are repaired by a migration (recompute entries), not by deleting anything.
-- Tests with late-reg entries at 6,000 / 20,000 / 25,000 and a real gap.
+- Tests: a late registration into a tournament whose starting stack is not 10,000 (e.g. 20,000) is not flagged and
+  gets the right starting stack; a tournament whose summary reports more entries than the hands contain is flagged;
+  a starting stack that cannot be determined is "unknown" and not flagged.
 
 ## 2. Ignore formats that are never analysed
 - Sit & Go (including AoF and FlipNGo), PLO / any Omaha, and tournaments not in dollars (e.g. Zodiac in ¥) are
   ignored completely: no summaries, no hands, no statistics.
 - Rules, not a list of names: game is not "Hold'em No Limit", the name says "Sit & Go", or the currency is not $.
-- The import result lists them as "ignored (Sit & Go / PLO / not in $)" instead of "unrecognised summary format".
+- Skipped files and tournaments are counted with their reason (Sit & Go, PLO, currency other than $) in the import
+  summary (CLI and stored import result) and shown in the app, instead of "unrecognised summary format".
 - Rows that are already in the database for such tournaments (Zodiac: 7 hands, FlipNGo: 1 hand) are removed by
   a migration.
 - Tests for each rule.
