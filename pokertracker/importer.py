@@ -161,7 +161,8 @@ def _store_hands(db, hands, equity=True):
         "ON CONFLICT (site, hand_id) DO UPDATE SET button_seat = excluded.button_seat", [_hand_row(h) for h in hands])
     db.executemany(
         "INSERT INTO hand_players (site, hand_id, nick, seat, position, hole_cards, stack, stack_bb, net_won, "
-        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO UPDATE SET position = excluded.position",
+        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO UPDATE SET position = excluded.position, "
+        "hole_cards = excluded.hole_cards",
         [r for h in hands for r in _player_rows(h)])
     db.executemany(
         "INSERT INTO actions (site, hand_id, action_order, nick, street, action_type, amount, all_in) "

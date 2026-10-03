@@ -67,3 +67,16 @@ class ImportTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ReimportHoleCardsTests(unittest.TestCase):
+    def test_reimport_refreshes_hole_cards_of_stored_hands(self):
+        from tests.fixtures import HAND_1
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", HAND_1)])
+        db.execute("UPDATE hand_players SET hole_cards = 'Kh' WHERE nick = 'Hero'")   # what 0.4.0 could store
+        db.commit()
+        import_texts(db, [("h", HAND_1)])
+        self.assertEqual(db.scalar("SELECT hole_cards FROM hand_players WHERE nick = 'Hero'"), "Ah Kh")
