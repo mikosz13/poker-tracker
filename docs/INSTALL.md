@@ -6,9 +6,14 @@ Free desktop app for GGPoker tournament players. Your data never leaves your com
 
 1. Download `PokerTracker-macOS.zip` from the latest release and unzip it.
 2. Move `PokerTracker.app` to Applications.
-3. First start: right-click the app and choose **Open**, then **Open** again. The app is not signed with a paid
-   Apple developer certificate, so macOS asks once. If it is still blocked: System Settings → Privacy & Security →
-   **Open Anyway**.
+3. First start: macOS blocks it once, because the app is not signed with a paid Apple developer certificate. The
+   message says Apple could not verify that "PokerTracker" is free of malware. Click **Done** (not "Move to Bin"),
+   then open **System Settings → Privacy & Security**, scroll down to **Security**, click **Open Anyway** next to
+   PokerTracker and confirm with your password or Touch ID. Start the app again and choose **Open Anyway** once more.
+   macOS remembers this, so it happens only once.
+   - On older macOS versions (before 15) right-clicking the app and choosing **Open**, then **Open** again, also works.
+   - Alternative in Terminal, if you moved the app to Applications:
+     `xattr -dr com.apple.quarantine /Applications/PokerTracker.app`
 
 ## Windows 10 / 11
 
