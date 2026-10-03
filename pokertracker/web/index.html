@@ -148,8 +148,9 @@ const PERIODS = [["24h", "24 h"], ["3d", "3 days"], ["1w", "1 week"], ["2w", "2 
 const pct = x => x == null ? "–" : num(x, 1) + "%";
 
 async function viewDashboard(period) {
-  const q = period ? `?period=${encodeURIComponent(period)}` : "";
+  const mine = routeSeq, q = period ? `?period=${encodeURIComponent(period)}` : "";
   const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
+  if (mine !== routeSeq) return;                         // the user went elsewhere while this was loading
   const banner = st.running ? `<p class="warn">Importing ${st.done}/${st.total} files… <a href="#/import">details</a>. The numbers below will update when it finishes.</p>` : "";
   if (!d.tournaments && !d.hands && d.period === "max") {
     app.innerHTML = banner + `<h1>Welcome</h1><p>No data yet. Go to <a href="#/import">Import</a> and point the app at the folder where you save PokerCraft exports.</p>`;
@@ -224,7 +225,7 @@ function handsBox(sh) {
   return `<div class="box"><h3>Best &amp; worst starting hand</h3>${body}
     ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.</p>` : ""}</div>`;
 }
-const SEATS = ["BB", "SB", "BTN", "CO", "HJ", "LJ", "MP", "UTG+1", "UTG"];
+const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
 function positionBox(list, rank) {
   const by = Object.fromEntries(list.map(p => [p.position, p]));
   const ring = SEATS.filter(p => by[p]);
@@ -255,9 +256,9 @@ function bindPeriods() {
 
 // ---- Time charts: a date axis, a labelled value axis and a tooltip; drawn at the real width so text stays readable
 let charts = [];
-function addChart(id, pts, series, fmtY, tip) {
+function addChart(id, pts, series, fmtY, tip, opts = {}) {
   const box = document.getElementById(id);
-  const draw = () => drawTimeChart(box, pts, series, fmtY, tip);
+  const draw = () => drawTimeChart(box, pts, series, fmtY, tip, opts);
   charts.push({box, draw});
   draw();
 }
@@ -270,17 +271,27 @@ function niceStep(raw) {
   const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p;
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
 }
-function drawTimeChart(box, pts, series, fmtY, tip) {
+function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   if (pts.length < 2) { box.innerHTML = '<p class="m" style="padding:8px 12px">Not enough data for a chart in this period yet.</p>'; return; }
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
-  const L = 58, R = 14, T = 12, B = 26, iw = W - L - R, ih = H - T - B;
+  const L = 58, R = 14, B = 26, iw = W - L - R;
   const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
   let t0 = Math.min(...ts), t1 = Math.max(...ts);
   if (t1 === t0) t1 = t0 + 3600e3;
   const vals = series.flatMap(s => pts.map(p => p[s.key]));
   const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
   const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
-  const x = t => L + (t - t0) / (t1 - t0) * iw, y = v => T + (hi - v) / (hi - lo) * ih;
+  const x = t => L + (t - t0) / (t1 - t0) * iw;
+  // annotation labels go in rows above the plot so that labels close in time do not overlap
+  const rowEnds = [], placed = (opts.markers || []).filter(m => !m.dot).map(m => {
+    const mx = x(ts[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
+    const a = end ? mx - w - 4 : mx + 4, b = a + w;
+    let row = rowEnds.findIndex(e => a > e + 8);
+    if (row < 0) row = rowEnds.length < 3 ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
+    rowEnds[row] = b;
+    return {...m, mx, row, end};
+  });
+  const T = 12 + rowEnds.length * 15, ih = H - T - B, y = v => T + (hi - v) / (hi - lo) * ih;
   let g = "";
   for (let v = lo; v <= hi + step / 2; v += step) {
     g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line);stroke-width:${Math.abs(v) < step / 2 ? 1.6 : 1}"/>
@@ -296,9 +307,17 @@ function drawTimeChart(box, pts, series, fmtY, tip) {
     prevLab = lab;
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
   }
+  // annotations: a dashed line and a label at the point they belong to; "dot" ones mark a single point (e.g. a bust)
+  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(ts[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
+      text-anchor="middle" style="fill:var(--neg);font-size:14px;font-weight:700">✕</text>`).join("") + placed.map(m => {
+    const ly = 12 + m.row * 15;
+    return `<line x1="${m.mx}" x2="${m.mx}" y1="${ly - 4}" y2="${T + ih}" style="stroke:var(--orange);stroke-dasharray:4 3"/>
+      <text x="${m.mx + (m.end ? -4 : 4)}" y="${ly + 4}" text-anchor="${m.end ? "end" : "start"}"
+        style="fill:var(--orange);font-size:11px;font-weight:700">${m.title ? `<title>${esc(m.title)}</title>` : ""}${esc(m.label)}</text>`;
+  }).join("");
   const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
     points="${pts.map((p, i) => `${x(ts[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
-  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">${g}${lines}
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${marks}${lines}
     <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
       ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
     <rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip"></div>`;
@@ -318,6 +337,11 @@ function drawTimeChart(box, pts, series, fmtY, tip) {
     tipEl.style.left = Math.max(4, Math.min(r.width - w - 4, left + (left > r.width / 2 ? -w - 12 : 12))) + "px";
     tipEl.style.top = "8px";
   };
+  const nearest = e => {
+    const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
+    return ts.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(ts[best]) - mx) ? k : best, 0);
+  };
+  if (opts.onPick) svg.addEventListener("click", e => opts.onPick(pts[nearest(e)]));
   svg.addEventListener("pointermove", show);
   svg.addEventListener("pointerdown", show);
   svg.addEventListener("pointerleave", () => { hov.style.display = "none"; tipEl.style.display = "none"; });
@@ -326,7 +350,8 @@ function drawTimeChart(box, pts, series, fmtY, tip) {
 // ---- Tournaments ------------------------------------------------------------
 let filters = {buyin: "", format: "", entry: ""};
 async function viewTournaments() {
-  const all = await api("/api/tournaments");
+  const mine = routeSeq, all = await api("/api/tournaments");
+  if (mine !== routeSeq) return;
   const opts = (vals, cur, label) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option ${String(v) === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
   const draw = () => {
@@ -352,8 +377,23 @@ async function viewTournaments() {
 }
 
 // ---- Tournament detail -------------------------------------------------------
+function stackChart(d) {
+  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i]));
+  const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
+    i: idx[e.first_hand_id],
+    label: `${e.entry_no === 1 ? (e.level > 1 ? "Late reg" : "Start") : "Re-entry " + e.entry_no} · L${e.level} · ${num(e.stack_bb, 0)} BB`,
+    title: `Entry ${e.entry_no} at level ${e.level} with ${num(e.stack, 0)} chips (${num(e.stack_bb, 1)} BB)`
+      + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? ", the full starting stack" : "")}));
+  pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
+  charts = [];
+  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => `${num(v, 0)} BB`,
+    p => `Level ${p.level} · ${esc(p.position || "")} ${p.cards ? cards(p.cards) : ""}<br>hand ${sgn(p.net_bb)} BB · stack ${num(p.before_bb, 0)} → <b>${num(p.after_bb, 0)} BB</b>`,
+    {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
+}
+
 async function viewTournament(id) {
-  const d = await api(`/api/tournament/${id}`);
+  const mine = routeSeq, d = await api(`/api/tournament/${id}`);
+  if (mine !== routeSeq) return;
   let h = `<p><a href="#/tournaments">← Tournaments</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
   if (r) h += `<div class="k"><div>Place<b>${r.place}/${r.players}</b></div><div>Prize<b>${money(r.prize)}${r.ticket ? " ticket" : ""}</b></div>
@@ -366,7 +406,7 @@ async function viewTournament(id) {
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>Hands<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>Net<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>Knockouts<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">+${d.knockouts.shared} shared</span>` : ""}</b></div></div>`;
-  h += `<h2>Stack in BB</h2>${chart([s.path])}<p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands</p>`;
+  h += `<h2>Stack in BB</h2><div class="tchart" id="c-stack"></div><p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands · click the chart to replay a hand</p>`;
   h += `<h2>Positions</h2>${table(["Position", "Hands", "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   if (!d.best_position) h += `<p class="m">Fewer than 8 hands per position, too small to rank.</p>`;
   else h += `<p class="m">Best: ${esc(d.best_position.position)}${d.worst_position ? ` · worst: ${esc(d.worst_position.position)}` : ""} (positions with 8+ hands)</p>`;
@@ -380,6 +420,7 @@ async function viewTournament(id) {
     `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(String(x.played_at).slice(11, 16))}</td><td>${x.level}</td><td>${esc(x.position)}</td>
      <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
   app.innerHTML = h;
+  stackChart(d);
 }
 
 // ---- Replayer -----------------------------------------------------------------
@@ -418,7 +459,9 @@ function logLine(s, r) {
 
 async function viewHand(id) {
   stopPlay();
-  replay = await api(`/api/hand/${id}`); step = 0;
+  const mine = routeSeq, r = await api(`/api/hand/${id}`);
+  if (mine !== routeSeq) return;
+  replay = r; step = 0;
   renderHand();
 }
 function renderHand() {
@@ -540,7 +583,8 @@ const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported au
     Object.entries(r.ignored).map(([why, n]) => `${n} ${esc(why)}${why === "cash game" ? " files" : ""}`).join(", ")}</p>` : ""}
   <p><a href="#/">Open the dashboard →</a></p>${r.skipped.length ? `<p class="m">Skipped: ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {
-  const st = await api("/api/settings");
+  const mine = routeSeq, st = await api("/api/settings");
+  if (mine !== routeSeq) return;
   app.innerHTML = `<h1>Import</h1>
     <p>Paste the folder where you save your PokerCraft exports (hand histories and tournament summaries: .txt, .zip or .pdf).
        Files that were already imported and did not change are skipped, so importing the whole folder again is quick.</p>
@@ -614,7 +658,9 @@ function viewLuck() {
 }
 
 // ---- Router -----------------------------------------------------------------
+let routeSeq = 0;                                       // views drawn after a newer route started are dropped
 async function route() {
+  routeSeq++;
   const h = location.hash || "#/";
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
     a.getAttribute("href") === h || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));
