@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Fix: a database still on schema 1 (0.3.0) failed to upgrade, because step 2 used a column that only step 3 added.
+  All columns are now added before the upgrade steps run. The whole upgrade from 0.2.0 is tested on SQLite and PostgreSQL.
+- docs/INSTALL.md: first start on current macOS ("Open Anyway" in Privacy & Security).
+- CI and release workflows use the current action versions (Node.js 24).
 - Dashboard period: 24 h, 3 days, 1, 2 or 4 weeks, 3 or 6 months, or max. Every number, chart and table on the dashboard
   uses it ("Last session" does not); the choice is remembered.
 - Cash profit and result/luck charts on a date axis, with labelled values and a tooltip per tournament.
