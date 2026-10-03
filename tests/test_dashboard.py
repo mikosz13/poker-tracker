@@ -86,6 +86,30 @@ class PeriodTests(unittest.TestCase):
                                places=1)
 
 
+class IncompleteEntryTests(unittest.TestCase):
+    def test_left_out_of_late_reg_vs_start_and_counted(self):
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        more = SUMMARY_BOUNTY.replace("You made 1 re-entries", "You made 2 re-entries")   # hands show 2 entries
+        import_texts(db, [("h", HISTORY), ("b", more)])
+        self.assertEqual(db.scalar("SELECT entries_found FROM tournaments WHERE tournament_id = 900001"), 2)
+        d = dashboard_data(db)
+        self.assertEqual(d["entry_incomplete"], 1)
+        self.assertFalse([t for t in d["tags"] if t["tag"].startswith("entry:")])
+        self.assertTrue(any(t["tag"].startswith("format:") for t in d["tags"]))      # other categories keep it
+        self.assertAlmostEqual(d["cost"], 30.0)                                      # money still from the summary
+
+    def test_complete_history_is_kept(self):
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", HISTORY), ("b", SUMMARY_BOUNTY)])
+        d = dashboard_data(db)
+        self.assertEqual(d["entry_incomplete"], 0)
+        self.assertTrue([t for t in d["tags"] if t["tag"].startswith("entry:")])
+
+
 def datetime_after(now):
     from datetime import timedelta
     return now + timedelta(days=30)                                  # nothing in the last 24 h

@@ -23,6 +23,11 @@ def period_start(period, now=None):
     return ((now or datetime.now()) - span).strftime("%Y-%m-%d %H:%M:%S")
 
 
+# A tournament whose summary reports more entries (1 + re-entries) than were found in Hero's hands
+INCOMPLETE = ("1 + COALESCE(r.reentries, 0) > COALESCE((SELECT t.entries_found FROM tournaments t "
+              "WHERE t.site = r.site AND t.tournament_id = r.tournament_id), 0)")
+
+
 def _pct(part, whole):
     return round(100 * part / whole, 1) if whole else None
 
@@ -88,8 +93,14 @@ def dashboard_data(db, site=SITE, period="max", now=None):
                  for r in db.query(
                      "SELECT g.tag, COUNT(*) AS n, SUM(r.total_cost) AS cost, SUM(r.cash_won) AS cash, "
                      "SUM(r.in_the_money) AS itm FROM tournament_results r JOIN tournament_tags g "
-                     f"ON g.site = r.site AND g.tournament_id = r.tournament_id WHERE r.site = ?{r_when} "
+                     "ON g.site = r.site AND g.tournament_id = r.tournament_id "
+                     f"WHERE r.site = ?{r_when} AND NOT (g.tag LIKE 'entry:%' AND {INCOMPLETE}) "
                      "GROUP BY g.tag ORDER BY g.tag", (site, *arg))],
+        # late reg vs start leaves out tournaments whose summary reports more entries than the hands show
+        "entry_incomplete": int(db.scalar(
+            "SELECT COUNT(DISTINCT r.tournament_id) FROM tournament_results r JOIN tournament_tags g "
+            "ON g.site = r.site AND g.tournament_id = r.tournament_id "
+            f"WHERE r.site = ?{r_when} AND g.tag LIKE 'entry:%' AND {INCOMPLETE}", (site, *arg)) or 0),
         "by_buyin": [{"buyin": _f(r["buyin_total"]), "n": int(r["n"]), "cost": _f(r["cost"]), "profit": _f(r["profit"]),
                       "itm": int(r["itm"]), "itm_pct": _pct(int(r["itm"]), int(r["n"])),
                       "roi_pct": 100 * _f(r["profit"]) / _f(r["cost"]) if _f(r["cost"]) else None}

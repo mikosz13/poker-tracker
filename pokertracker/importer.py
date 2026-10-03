@@ -245,6 +245,9 @@ def refresh_entries(db, tournament_id):
         "start_stack_bb, starts_fresh, first_hand_id) VALUES (?,?,?,?,?,?,?,?,?)",
         [(SITE, tournament_id, e["entry_no"], e["entry_level"], e["entered_at"], e["start_stack"],
           e["start_stack_bb"], True, e["first_hand_id"]) for e in entries])
+    # kept next to the summary's re-entries: a summary reporting more entries means part of the history is missing
+    db.execute("UPDATE tournaments SET entries_found = ? WHERE site = ? AND tournament_id = ?",
+               (len(entries) or None, SITE, tournament_id))
 
 
 def refresh_starting_stacks(db):

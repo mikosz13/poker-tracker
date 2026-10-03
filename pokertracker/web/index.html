@@ -171,7 +171,8 @@ async function viewDashboard(period) {
   const tagRows = pre => d.tags.filter(t => t.tag.startsWith(pre)).map(t =>
     `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ITM %", "ROI"], entry)}`;
+  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ITM %", "ROI"], entry)}` +
+    (d.entry_incomplete ? `<p class="m">${d.entry_incomplete} tournament${d.entry_incomplete === 1 ? "" : "s"} with an incomplete entry history left out.</p>` : "");
   if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "ITM %", "Profit $", "ROI"], d.by_buyin.map(b =>
     `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${pct(b.itm_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
   if (d.positions.length) h += `<h2>By position</h2>${table(["Position", "Hands", "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
