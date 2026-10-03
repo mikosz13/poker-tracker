@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     reentries       INTEGER,
     has_summary     BOOLEAN NOT NULL DEFAULT FALSE,
     starting_stack  NUMERIC,                 -- most common first-hand stack for this name + buy-in; NULL = unknown
+    entries_found   INTEGER,                 -- entries detected in Hero's hands; NULL = no hands
     PRIMARY KEY (site, tournament_id)
 );
 

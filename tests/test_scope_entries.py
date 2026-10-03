@@ -161,5 +161,23 @@ class MigrationV2Tests(unittest.TestCase):
         self.assertEqual(db.scalar("SELECT value FROM equity_cache WHERE cache_key = 'k'"), "[[0.5]]")
 
 
+class MigrationV3Tests(unittest.TestCase):
+    def test_upgrade_records_entries_and_drops_single_shown_cards(self):
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("a", late_reg("TM2000000001", 900010))])
+        db.execute("UPDATE tournaments SET entries_found = NULL")
+        db.execute("UPDATE hand_players SET hole_cards = 'Kh' WHERE nick = 'Hero'")      # what 0.4.0 could store
+        db.execute("UPDATE schema_version SET version = 2")
+        db.commit()
+        db.init_schema()
+        self.assertEqual(db.scalar("SELECT version FROM schema_version"), LATEST)
+        self.assertEqual(db.scalar("SELECT entries_found FROM tournaments WHERE tournament_id = 900010"), 1)
+        self.assertIsNone(db.scalar("SELECT hole_cards FROM hand_players WHERE nick = 'Hero'"))   # unknown, not wrong
+        import_texts(db, [("a", late_reg("TM2000000001", 900010))])                         # a re-read repairs it
+        self.assertEqual(db.scalar("SELECT hole_cards FROM hand_players WHERE nick = 'Hero'"), "Ah Kh")
+
+
 if __name__ == "__main__":
     unittest.main()

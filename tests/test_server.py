@@ -80,7 +80,8 @@ class ServerTests(unittest.TestCase):
     def test_deck_colours_setting(self):
         four = lambda: json.loads(self.get("/api/settings")[1])["four_color"]
         self.assertTrue(four())                                   # four colours by default
-        self.assertEqual(self.post("/api/display", {"four_color": False}), (200, {"four_color": False}))
+        status, body = self.post("/api/display", {"four_color": False})
+        self.assertEqual((status, body["four_color"]), (200, False))
         self.assertFalse(four())
         self.assertEqual(self.post("/api/display", {"four_color": False}, token=False)[0], 403)
         self.post("/api/display", {"four_color": True})

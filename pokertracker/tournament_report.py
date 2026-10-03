@@ -81,7 +81,8 @@ def tournament_data(db, tournament_id, site=SITE):
             "tags": [r["tag"] for r in db.query("SELECT tag FROM tournament_tags WHERE site = ? AND tournament_id = ? "
                                                 "ORDER BY tag", (site, tournament_id))],
             "entries": [{"entry_no": int(e["entry_no"]), "level": int(e["entry_level"]),
-                         "stack_bb": _f(e["start_stack_bb"])}
+                         "stack_bb": _f(e["start_stack_bb"]), "stack": _f(e["start_stack"]),
+                         "first_hand_id": e["first_hand_id"]}
                         for e in db.query("SELECT * FROM entries WHERE site = ? AND tournament_id = ? ORDER BY entry_no",
                                           (site, tournament_id))],
             "starting_stack": None if t["starting_stack"] is None else _f(t["starting_stack"]),
@@ -106,7 +107,12 @@ def tournament_data(db, tournament_id, site=SITE):
     peak_idx = max(range(len(path)), key=lambda i: path[i])
     data["stack"] = {"path": path, "start_bb": path[0], "end_bb": path[-1],
                      "peak_bb": path[peak_idx], "peak_after_hands": peak_idx,     # 0 = at the start
-                     "levels": [r["level"] for r in rows] + [last["level"]]}
+                     "levels": [r["level"] for r in rows] + [last["level"]],
+                     # one point per hand for the app's chart: stack after the hand, with what happened in it
+                     "points": [{"at": str(r["played_at"])[:19], "hand_id": r["hand_id"], "level": r["level"],
+                                 "position": r["position"], "cards": r["hole_cards"] or "", "net_bb": round(r["net_bb"], 1),
+                                 "before_bb": round(r["stack_bb"], 1),
+                                 "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1)} for r in rows]}
 
     pos = defaultdict(lambda: {"hands": 0, "net_bb": 0.0, "vpip": 0, "pfr": 0})
     for r in rows:

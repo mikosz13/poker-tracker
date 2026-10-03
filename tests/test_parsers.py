@@ -54,6 +54,17 @@ class HandParserTests(unittest.TestCase):
         self.assertEqual((len(entries), entries[0]["entry_level"], entries[0]["start_stack"]), (1, 5, 4845))
 
 
+class ShownCardsTests(unittest.TestCase):
+    def test_showing_one_card_after_a_fold_keeps_the_dealt_cards(self):
+        text = HAND_1.replace("Hero: folds\n", "Hero: folds\nHero: shows [Kh] (high card King)\n")
+        h = parse_hand(text)
+        self.assertEqual(h.hole_cards["Hero"], "Ah Kh")
+
+    def test_an_opponent_showing_one_card_is_not_a_known_hand(self):
+        text = HAND_1.replace("aaaa1111 collected", "aaaa1111: shows [Qs] (high card Queen)\naaaa1111 collected")
+        self.assertNotIn("aaaa1111", parse_hand(text).hole_cards)
+
+
 class SummaryParserTests(unittest.TestCase):
     def test_bounty_summary(self):
         t = parse_summary(SUMMARY_BOUNTY)

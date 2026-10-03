@@ -44,7 +44,8 @@ class Database:
             raise ValueError(f"Unsupported database URL: {self.url!r}")
 
     def _q(self, sql: str) -> str:
-        return sql.replace("?", "%s") if self.kind == "postgres" else sql
+        # psycopg reads '%' as a placeholder, so a literal one (e.g. LIKE 'entry:%') has to be written '%%'
+        return sql.replace("%", "%%").replace("?", "%s") if self.kind == "postgres" else sql
 
     def script(self, sql: str):
         if self.kind == "sqlite":

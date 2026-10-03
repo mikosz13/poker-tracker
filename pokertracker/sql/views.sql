@@ -96,6 +96,7 @@ CREATE VIEW hero_allins AS
 SELECT a.site, a.hand_id, h.tournament_id, h.level, h.played_at, h.big_blind,
        a.lock_street, a.hole_cards, a.board_at_lock, a.contestants, a.equity, a.result,
        a.collected - a.invested AS net,
+       a.invested * 1.0 / h.big_blind AS invested_bb,
        a.ev_net, a.luck,
        (a.collected - a.invested) * 1.0 / h.big_blind AS net_bb,
        a.ev_net * 1.0 / h.big_blind AS ev_bb,

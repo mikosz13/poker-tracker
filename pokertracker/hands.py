@@ -138,8 +138,10 @@ def parse_hand(block: str) -> Hand | None:
             nick, act = a["nick"], a["act"]
             if act == "shows":
                 hand.showdown = True
-                if sm := SHOWS.match(line):
-                    hand.hole_cards[nick] = sm["cards"]      # opponents' cards are only known when shown
+                if (sm := SHOWS.match(line)) and len(sm["cards"].split()) == 2:
+                    # opponents' cards are only known when shown; showing one card (allowed after a fold) never
+                    # replaces cards that were dealt or shown in full
+                    hand.hole_cards[nick] = sm["cards"]
                 continue
             order += 1
             amount = num(a["a2"] or a["a1"])

@@ -161,7 +161,8 @@ def _store_hands(db, hands, equity=True):
         "ON CONFLICT (site, hand_id) DO UPDATE SET button_seat = excluded.button_seat", [_hand_row(h) for h in hands])
     db.executemany(
         "INSERT INTO hand_players (site, hand_id, nick, seat, position, hole_cards, stack, stack_bb, net_won, "
-        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO UPDATE SET position = excluded.position",
+        "is_hero) VALUES (?,?,?,?,?,?,?,?,?,?) ON CONFLICT (site, hand_id, nick) DO UPDATE SET position = excluded.position, "
+        "hole_cards = excluded.hole_cards",
         [r for h in hands for r in _player_rows(h)])
     db.executemany(
         "INSERT INTO actions (site, hand_id, action_order, nick, street, action_type, amount, all_in) "
@@ -244,6 +245,9 @@ def refresh_entries(db, tournament_id):
         "start_stack_bb, starts_fresh, first_hand_id) VALUES (?,?,?,?,?,?,?,?,?)",
         [(SITE, tournament_id, e["entry_no"], e["entry_level"], e["entered_at"], e["start_stack"],
           e["start_stack_bb"], True, e["first_hand_id"]) for e in entries])
+    # kept next to the summary's re-entries: a summary reporting more entries means part of the history is missing
+    db.execute("UPDATE tournaments SET entries_found = ? WHERE site = ? AND tournament_id = ?",
+               (len(entries) or None, SITE, tournament_id))
 
 
 def refresh_starting_stacks(db):

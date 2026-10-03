@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 2
+LATEST = 3
 
 
 def repair_positions(db):
@@ -66,7 +66,21 @@ def remove_tournaments(db, keys):
     return len(keys)
 
 
-MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries}
+def _v3_entries_found_and_shown_cards(db):
+    """Record how many entries the hands show, and drop hole cards that were a single shown card.
+
+    Before 0.5.0 a player showing one card (allowed after a fold) replaced the dealt cards with that card; the real
+    cards are only in the files, so the wrong value becomes unknown until the files are read again.
+    """
+    from .importer import refresh_entries                               # here, to avoid an import cycle
+    if not db.has_column("tournaments", "entries_found"):
+        db.execute("ALTER TABLE tournaments ADD COLUMN entries_found INTEGER")
+    for r in db.query("SELECT DISTINCT tournament_id FROM hands"):
+        refresh_entries(db, r["tournament_id"])
+    db.execute("UPDATE hand_players SET hole_cards = NULL WHERE LENGTH(hole_cards) = 2")
+
+
+MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards}
 
 
 def migrate(db, fresh):

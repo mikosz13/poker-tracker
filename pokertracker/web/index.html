@@ -80,6 +80,28 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:14px 0}
+.trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
+  background:var(--bg);color:var(--muted);border:1px solid var(--line)}.lv b{display:block;font-size:1rem;margin-bottom:2px}
+.lv.on{color:#fff;font-weight:700;border-color:transparent}.lv.on.up{background:var(--pos)}.lv.on.mid{background:var(--blue)}
+.lv.on.down{background:var(--neg)}
+.hcards{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center}.hcards>div{background:var(--bg);border-radius:10px;
+  padding:8px 4px;border:1px solid var(--line)}.hcards .hc{font-size:1.6rem;font-weight:800;letter-spacing:.04em}
+.ptable{position:relative;height:150px;margin:4px 6px}.ptable .felt{position:absolute;inset:22px 34px;border-radius:50%;
+  border:2px solid var(--line);background:color-mix(in srgb,var(--felt) 22%,transparent)}
+.pc2{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:.72rem;font-weight:700;background:var(--bg);border:2px solid var(--line);color:var(--fg)}
+.pc2.few{opacity:.4}.pc2.best{background:var(--pos);border-color:var(--pos);color:#fff}
+.pc2.worst{background:var(--neg);border-color:var(--neg);color:#fff}
+.seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
+.seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
+.tchart svg{display:block;width:100%}.tchart .tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--fg);
+  border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:.8rem;box-shadow:0 3px 10px rgba(0,0,0,.2);
+  white-space:nowrap;display:none;z-index:2}
+.legend{font-size:.85rem;color:var(--muted);margin:4px 0 0}.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;
+  vertical-align:middle;margin:0 4px 0 10px}
 .tag{display:inline-block;font-size:.78rem;background:var(--card);border-radius:6px;padding:1px 6px;margin:1px}
 .warn{border-left:4px solid var(--orange);padding:8px 10px;background:var(--card);border-radius:6px}
 </style>
@@ -121,10 +143,16 @@ const table = (head, rows) => `<div class="scroll"><table><tr>${head.map(h => `<
 const luckLink = '<a href="#/luck">How is luck calculated?</a>';
 
 // ---- Dashboard -------------------------------------------------------------
-async function viewDashboard() {
-  const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard"), api("/api/status")]);
+const PERIODS = [["24h", "24 h"], ["3d", "3 days"], ["1w", "1 week"], ["2w", "2 weeks"], ["4w", "4 weeks"],
+                 ["3m", "3 months"], ["6m", "6 months"], ["max", "Max"]];
+const pct = x => x == null ? "–" : num(x, 1) + "%";
+
+async function viewDashboard(period) {
+  const mine = routeSeq, q = period ? `?period=${encodeURIComponent(period)}` : "";
+  const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
+  if (mine !== routeSeq) return;                         // the user went elsewhere while this was loading
   const banner = st.running ? `<p class="warn">Importing ${st.done}/${st.total} files… <a href="#/import">details</a>. The numbers below will update when it finishes.</p>` : "";
-  if (!d.tournaments && !d.hands) {
+  if (!d.tournaments && !d.hands && d.period === "max") {
     app.innerHTML = banner + `<h1>Welcome</h1><p>No data yet. Go to <a href="#/import">Import</a> and point the app at the folder where you save PokerCraft exports.</p>`;
     return;
   }
@@ -137,34 +165,193 @@ async function viewDashboard() {
         <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
         <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`))}</div>`;
   }
+  const label = PERIODS.find(p => p[0] === d.period)[1];
+  h += `<h2>${d.period === "max" ? "All tournaments" : "Last " + esc(label)}</h2>
+    <div class="seg" id="periods">${PERIODS.map(([k, t]) => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t}</button>`).join("")}</div>`;
+  if (!d.tournaments && !d.hands) {
+    app.innerHTML = h + `<p class="m">Nothing played in the last ${esc(label)}. Pick a longer period.</p>`;
+    bindPeriods();
+    return;
+  }
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
-  h += `<h2>All tournaments</h2><div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
-    <div>ROI<b>${roi}</b></div><div>In the money<b>${d.itm}/${d.tournaments}</b></div>
+  h += `<div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
+    <div>ROI<b>${roi}</b></div><div>In the money<b>${pct(d.itm_pct)}</b><span class="m">${d.itm} of ${d.tournaments}</span></div>
     <div>Knockouts<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : num(d.knockouts.per_tournament, 2) + " per tournament"}</span></div></div>
     <p class="m">cost ${money(d.cost)} · cash ${money(d.cash)}${d.tickets ? ` · tickets ${money(d.tickets)} (not in ROI)` : ""} · ${d.hands} hands</p>`;
   if (d.tournaments < 30) h += `<p class="warn">Small sample (${d.tournaments} tournaments). Tournament results this small are mostly variance.</p>`;
-  h += `<h2>Cash profit, cumulative</h2>${chart([d.profit_curve])}`;
-  h += `<h2>Luck</h2>${chart([d.bb_actual, d.bb_adjusted])}
-    <p class="m"><span style="color:var(--blue)">■</span> actual result in BB &nbsp; <span style="color:var(--orange)">■</span> luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
+  h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
+  h += `<h2>Cash profit, cumulative</h2><div class="tchart" id="c-profit"></div>`;
+  h += `<h2>Luck</h2><div class="tchart" id="c-luck"></div>
+    <p class="legend"><i style="background:var(--blue);margin-left:0"></i>actual result in BB<i style="background:var(--orange)"></i>luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
   if (d.allins.count) h += `<p>${d.allins.count} all-ins: actual ${sgn(d.allins.net_bb)} BB, expected ${sgn(d.allins.ev_bb)} BB, luck ${sgn(d.allins.luck_bb)} BB.</p>`;
   const tagRows = pre => d.tags.filter(t => t.tag.startsWith(pre)).map(t =>
-    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ROI"], entry)}`;
-  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "Profit $", "ROI"], d.by_buyin.map(b =>
-    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
+  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ITM %", "ROI"], entry)}` +
+    (d.entry_incomplete ? `<p class="m">${d.entry_incomplete} tournament${d.entry_incomplete === 1 ? "" : "s"} with an incomplete entry history left out.</p>` : "");
+  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "ITM %", "Profit $", "ROI"], d.by_buyin.map(b =>
+    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${pct(b.itm_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
   if (d.positions.length) h += `<h2>By position</h2>${table(["Position", "Hands", "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   const other = d.tags.filter(t => !t.tag.startsWith("entry:")).map(t =>
-    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ROI"], other)}`;
+    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ITM %", "ROI"], other)}`;
   app.innerHTML = h;
+  bindPeriods();
+  charts = [];
+  addChart("c-profit", d.profit_points, [{key: "total", color: "var(--blue)"}], v => `${v < 0 ? "−" : ""}$${num(Math.abs(v), 0)}`,
+    p => `<b>${esc(p.name)}</b> $${num(p.buyin, 2)}<br>${sgn(p.profit, 2, " $")} · total ${sgn(p.total, 2, " $")}`);
+  addChart("c-luck", d.bb_points, [{key: "actual", color: "var(--blue)"}, {key: "adjusted", color: "var(--orange)"}],
+    v => `${v < 0 ? "−" : ""}${num(Math.abs(v), 0)} BB`, p => `<b>${esc(p.name || "")}</b><br>result ${sgn(p.net_bb)} BB · luck ${sgn(p.luck_bb)} BB<br>
+      total: actual ${sgn(p.actual)} BB, adjusted ${sgn(p.adjusted)} BB`);
+}
+
+const LEVELS = [["Very lucky", "▲▲", "up"], ["Lucky", "▲", "up"], ["Average", "●", "mid"], ["Bad run", "▼", "down"],
+                ["Worst run", "▼▼", "down"]];
+function luckBox(b) {
+  const scale = `<div class="lscale">${LEVELS.map(([name, sym, cls]) =>
+    `<div class="lv ${cls} ${b.level === name ? "on" : ""}"><b>${sym}</b>${name}</div>`).join("")}</div>`;
+  const note = b.count ? `${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")} · ${b.z >= 0 ? "+" : ""}${num(b.z, 2)} typical swings`
+    + (b.small_sample ? ` · <b>small sample</b>` : "") : "No all-ins with known cards in this period.";
+  return `<div class="box"><h3>Luck</h3>${scale}<p class="m" style="margin:8px 0 0">${note} · ${luckLink}</p></div>`;
+}
+function handsBox(sh) {
+  const kind = h => h.length === 2 ? "pair" : h.endsWith("s") ? "suited" : "offsuit";
+  const card = (title, g) => g ? `<div><span class="m">${title}</span><div class="hc">${esc(g.hand.slice(0, 2))}</div>
+      <span class="m">${kind(g.hand)}</span><br>${sgn(g.net_bb, 1, " BB")}<br><span class="m">${g.hands} hands</span></div>`
+    : `<div><span class="m">${title}</span><div class="hc">–</div></div>`;
+  const body = sh.ranked ? `<div class="hcards">${card("Best hand", sh.best)}${card("Worst hand", sh.worst)}</div>`
+    : `<p class="m">No starting hand has ${sh.min_hands} hands in this period yet, so there is no ranking.</p>`;
+  return `<div class="box"><h3>Best &amp; worst starting hand</h3>${body}
+    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.</p>` : ""}</div>`;
+}
+const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
+function positionBox(list, rank) {
+  const by = Object.fromEntries(list.map(p => [p.position, p]));
+  const ring = SEATS.filter(p => by[p]);
+  const spot = (pos, k, n) => {
+    const t = Math.PI / 2 + (k + .5) * 2 * Math.PI / n, p = by[pos];
+    const cls = rank.best && rank.best.position === pos ? "best" : rank.worst && rank.worst.position === pos ? "worst"
+      : p.hands < rank.min_hands ? "few" : "";
+    return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(t)}%;top:${50 + 38 * Math.sin(t)}%"
+      title="${esc(pos)}: ${sgn(p.bb_per_100, 0).replace(/<[^>]+>/g, "")} bb/100 in ${p.hands} hands">${esc(pos)}</div>`;
+  };
+  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${p.hands} hands)</span>` : "";
+  const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
+      <p style="margin:6px 0 0;font-size:.88rem">${line("Strongest", rank.best)}${rank.worst ? "<br>" + line("Weakest", rank.worst) : ""}</p>
+      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">Heads-up (BTN/SB): ${sgn(by["BTN/SB"].bb_per_100, 0)} bb/100, ${by["BTN/SB"].hands} hands.</p>` : ""}`
+    : `<p class="m">No position has ${rank.min_hands} hands in this period yet, so there is no ranking.</p>`;
+  return `<div class="box"><h3>Strongest &amp; weakest position</h3>${body}</div>`;
+}
+
+function bindPeriods() {
+  document.getElementById("periods").onclick = async e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                     body: JSON.stringify({dashboard_period: b.dataset.p})}); } catch (err) { /* still shown */ }
+    viewDashboard(b.dataset.p);
+  };
+}
+
+// ---- Time charts: a date axis, a labelled value axis and a tooltip; drawn at the real width so text stays readable
+let charts = [];
+function addChart(id, pts, series, fmtY, tip, opts = {}) {
+  const box = document.getElementById(id);
+  const draw = () => drawTimeChart(box, pts, series, fmtY, tip, opts);
+  charts.push({box, draw});
+  draw();
+}
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => charts.forEach(c => document.body.contains(c.box) && c.draw()), 120);
+});
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
+  if (pts.length < 2) { box.innerHTML = '<p class="m" style="padding:8px 12px">Not enough data for a chart in this period yet.</p>'; return; }
+  const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
+  const L = 58, R = 14, B = 26, iw = W - L - R;
+  const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
+  let t0 = Math.min(...ts), t1 = Math.max(...ts);
+  if (t1 === t0) t1 = t0 + 3600e3;
+  const vals = series.flatMap(s => pts.map(p => p[s.key]));
+  const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
+  const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
+  const x = t => L + (t - t0) / (t1 - t0) * iw;
+  // annotation labels go in rows above the plot so that labels close in time do not overlap
+  const rowEnds = [], placed = (opts.markers || []).filter(m => !m.dot).map(m => {
+    const mx = x(ts[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
+    const a = end ? mx - w - 4 : mx + 4, b = a + w;
+    let row = rowEnds.findIndex(e => a > e + 8);
+    if (row < 0) row = rowEnds.length < 3 ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
+    rowEnds[row] = b;
+    return {...m, mx, row, end};
+  });
+  const T = 12 + rowEnds.length * 15, ih = H - T - B, y = v => T + (hi - v) / (hi - lo) * ih;
+  let g = "";
+  for (let v = lo; v <= hi + step / 2; v += step) {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line);stroke-width:${Math.abs(v) < step / 2 ? 1.6 : 1}"/>
+      <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" style="fill:var(--muted);font-size:11px">${fmtY(Math.round(v * 100) / 100)}</text>`;
+  }
+  const spanH = (t1 - t0) / 3600e3, nx = Math.max(2, Math.min(6, Math.floor(iw / 110)));
+  let prevLab = "";
+  for (let k = 0; k <= nx; k++) {
+    const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
+    const lab = spanH <= 36 ? d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"})
+      : d.toLocaleDateString("en-US", {month: "short", day: "numeric"});
+    if (lab === prevLab) continue;                       // a few days on a wide axis: one label per day
+    prevLab = lab;
+    g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
+  }
+  // annotations: a dashed line and a label at the point they belong to; "dot" ones mark a single point (e.g. a bust)
+  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(ts[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
+      text-anchor="middle" style="fill:var(--neg);font-size:14px;font-weight:700">✕</text>`).join("") + placed.map(m => {
+    const ly = 12 + m.row * 15;
+    return `<line x1="${m.mx}" x2="${m.mx}" y1="${ly - 4}" y2="${T + ih}" style="stroke:var(--orange);stroke-dasharray:4 3"/>
+      <text x="${m.mx + (m.end ? -4 : 4)}" y="${ly + 4}" text-anchor="${m.end ? "end" : "start"}"
+        style="fill:var(--orange);font-size:11px;font-weight:700">${m.title ? `<title>${esc(m.title)}</title>` : ""}${esc(m.label)}</text>`;
+  }).join("");
+  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
+    points="${pts.map((p, i) => `${x(ts[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${marks}${lines}
+    <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
+      ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
+    <rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip"></div>`;
+  const svg = box.querySelector("svg"), hov = svg.querySelector("#hover"), tipEl = box.querySelector(".tip");
+  const show = e => {
+    const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
+    let i = 0;
+    ts.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(ts[i]) - mx)) i = k; });
+    const px = x(ts[i]);
+    hov.style.display = "";
+    hov.querySelector("line").setAttribute("x1", px); hov.querySelector("line").setAttribute("x2", px);
+    hov.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", px); c.setAttribute("cy", y(pts[i][series[k].key])); });
+    const when = new Date(ts[i]).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+    tipEl.innerHTML = `<span class="m">${when}</span><br>${tip(pts[i])}`;
+    tipEl.style.display = "block";
+    const left = px * r.width / W, w = tipEl.offsetWidth;
+    tipEl.style.left = Math.max(4, Math.min(r.width - w - 4, left + (left > r.width / 2 ? -w - 12 : 12))) + "px";
+    tipEl.style.top = "8px";
+  };
+  const nearest = e => {
+    const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
+    return ts.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(ts[best]) - mx) ? k : best, 0);
+  };
+  if (opts.onPick) svg.addEventListener("click", e => opts.onPick(pts[nearest(e)]));
+  svg.addEventListener("pointermove", show);
+  svg.addEventListener("pointerdown", show);
+  svg.addEventListener("pointerleave", () => { hov.style.display = "none"; tipEl.style.display = "none"; });
 }
 
 // ---- Tournaments ------------------------------------------------------------
 let filters = {buyin: "", format: "", entry: ""};
 async function viewTournaments() {
-  const all = await api("/api/tournaments");
+  const mine = routeSeq, all = await api("/api/tournaments");
+  if (mine !== routeSeq) return;
   const opts = (vals, cur, label) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option ${String(v) === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
   const draw = () => {
@@ -190,8 +377,23 @@ async function viewTournaments() {
 }
 
 // ---- Tournament detail -------------------------------------------------------
+function stackChart(d) {
+  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i]));
+  const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
+    i: idx[e.first_hand_id],
+    label: `${e.entry_no === 1 ? (e.level > 1 ? "Late reg" : "Start") : "Re-entry " + e.entry_no} · L${e.level} · ${num(e.stack_bb, 0)} BB`,
+    title: `Entry ${e.entry_no} at level ${e.level} with ${num(e.stack, 0)} chips (${num(e.stack_bb, 1)} BB)`
+      + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? ", the full starting stack" : "")}));
+  pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
+  charts = [];
+  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => `${num(v, 0)} BB`,
+    p => `Level ${p.level} · ${esc(p.position || "")} ${p.cards ? cards(p.cards) : ""}<br>hand ${sgn(p.net_bb)} BB · stack ${num(p.before_bb, 0)} → <b>${num(p.after_bb, 0)} BB</b>`,
+    {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
+}
+
 async function viewTournament(id) {
-  const d = await api(`/api/tournament/${id}`);
+  const mine = routeSeq, d = await api(`/api/tournament/${id}`);
+  if (mine !== routeSeq) return;
   let h = `<p><a href="#/tournaments">← Tournaments</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
   if (r) h += `<div class="k"><div>Place<b>${r.place}/${r.players}</b></div><div>Prize<b>${money(r.prize)}${r.ticket ? " ticket" : ""}</b></div>
@@ -204,7 +406,7 @@ async function viewTournament(id) {
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>Hands<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>Net<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>Knockouts<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">+${d.knockouts.shared} shared</span>` : ""}</b></div></div>`;
-  h += `<h2>Stack in BB</h2>${chart([s.path])}<p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands</p>`;
+  h += `<h2>Stack in BB</h2><div class="tchart" id="c-stack"></div><p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands · click the chart to replay a hand</p>`;
   h += `<h2>Positions</h2>${table(["Position", "Hands", "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   if (!d.best_position) h += `<p class="m">Fewer than 8 hands per position, too small to rank.</p>`;
   else h += `<p class="m">Best: ${esc(d.best_position.position)}${d.worst_position ? ` · worst: ${esc(d.worst_position.position)}` : ""} (positions with 8+ hands)</p>`;
@@ -218,6 +420,7 @@ async function viewTournament(id) {
     `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(String(x.played_at).slice(11, 16))}</td><td>${x.level}</td><td>${esc(x.position)}</td>
      <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
   app.innerHTML = h;
+  stackChart(d);
 }
 
 // ---- Replayer -----------------------------------------------------------------
@@ -256,7 +459,9 @@ function logLine(s, r) {
 
 async function viewHand(id) {
   stopPlay();
-  replay = await api(`/api/hand/${id}`); step = 0;
+  const mine = routeSeq, r = await api(`/api/hand/${id}`);
+  if (mine !== routeSeq) return;
+  replay = r; step = 0;
   renderHand();
 }
 function renderHand() {
@@ -378,7 +583,8 @@ const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported au
     Object.entries(r.ignored).map(([why, n]) => `${n} ${esc(why)}${why === "cash game" ? " files" : ""}`).join(", ")}</p>` : ""}
   <p><a href="#/">Open the dashboard →</a></p>${r.skipped.length ? `<p class="m">Skipped: ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {
-  const st = await api("/api/settings");
+  const mine = routeSeq, st = await api("/api/settings");
+  if (mine !== routeSeq) return;
   app.innerHTML = `<h1>Import</h1>
     <p>Paste the folder where you save your PokerCraft exports (hand histories and tournament summaries: .txt, .zip or .pdf).
        Files that were already imported and did not change are skipped, so importing the whole folder again is quick.</p>
@@ -430,6 +636,13 @@ function viewLuck() {
   <p><b>Expected (EV)</b>: equity × pot, minus what you put in. What you win <i>on average</i> in this spot.</p>
   <p><b>Actual</b>: what really happened.</p>
   <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p>
+  <h2>The luck badge</h2>
+  <p>The dashboard sums the luck of every all-in in the period and compares it with how much that luck could swing by
+     chance: an all-in with 50% equity for a big pot swings a lot, one with 95% equity hardly at all. The result is the
+     number of "typical swings" your luck is away from zero.</p>
+  <p>Very lucky: +1.5 or more · Lucky: +0.5 to +1.5 · Average: between −0.5 and +0.5 · Bad run: −0.5 to −1.5 ·
+     Worst run: −1.5 or less. Two lost coinflips are "Average"; losing a series of 80% all-ins is a bad run. With fewer
+     than 20 all-ins the badge says the sample is small.</p>
   <p>Luck always uses the equity <b>at the moment of the all-in</b>. The replayer also shows how the equity changes as the
      flop, turn and river come, but those numbers are only for watching; they do not change your luck.</p></div>
   <h2>Example</h2>
@@ -445,7 +658,9 @@ function viewLuck() {
 }
 
 // ---- Router -----------------------------------------------------------------
+let routeSeq = 0;                                       // views drawn after a newer route started are dropped
 async function route() {
+  routeSeq++;
   const h = location.hash || "#/";
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
     a.getAttribute("href") === h || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));

@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+- Dashboard period: 24 h, 3 days, 1, 2 or 4 weeks, 3 or 6 months, or max. Every number, chart and table on the dashboard
+  uses it ("Last session" does not); the choice is remembered.
+- Cash profit and result/luck charts on a date axis, with labelled values and a tooltip per tournament.
+- ITM as a percentage on the dashboard and in the buy-in, late-reg and category tables.
+- Luck badge (Very lucky … Worst run, or No all-ins): total all-in luck compared with how much it could swing by chance
+  (z-score); "How luck works" explains it.
+- Best and worst starting hand (e.g. ATo, Q9o) and strongest and weakest position on a small table diagram, ranked
+  only with at least 30 hands and always shown with the number of hands; heads-up (BTN/SB) is shown on its own.
+- Tournament page: the stack in BB is a time chart with annotations where each entry starts (late reg or re-entry, level,
+  stack in BB; the full starting stack in the tooltip) and a mark where the stack hit zero. Clicking it replays the hand.
+- Position diagram on the dashboard goes clockwise from the big blind, the way the action moves (as in the replayer).
+- Fix: a page that finished loading after you had already moved on (e.g. the dashboard) no longer replaces the page
+  you opened.
+- Late registration vs start leaves out tournaments whose summary reports more entries than the hands show, with a
+  footnote count.
+- Fix: a player showing one card after folding no longer replaces the dealt cards (16 of Hero's hands were affected).
+  Database upgrade (schema 3) turns such cards into unknown; re-reading the files restores them.
+
 ## 0.4.0 (2026-10-03)
 - Only No-Limit Hold'em tournaments in dollars are imported. Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games,
   tournaments in other currencies (e.g. Zodiac in ¥) and cash-game hands are never imported; the import result (CLI and

@@ -8,6 +8,18 @@ import unittest
 URL = os.environ.get("POKERTRACKER_TEST_POSTGRES")
 
 
+class PlaceholderTests(unittest.TestCase):
+    """Runs everywhere: the SQL handed to psycopg must not contain a bare '%'."""
+
+    def test_literal_percent_is_escaped_for_postgres(self):
+        from pokertracker.db import Database
+        db = Database.__new__(Database)
+        db.kind = "postgres"
+        self.assertEqual(db._q("SELECT ? WHERE tag LIKE 'entry:%'"), "SELECT %s WHERE tag LIKE 'entry:%%'")
+        db.kind = "sqlite"
+        self.assertEqual(db._q("SELECT ? WHERE tag LIKE 'entry:%'"), "SELECT ? WHERE tag LIKE 'entry:%'")
+
+
 @unittest.skipUnless(URL, "set POKERTRACKER_TEST_POSTGRES to a throwaway PostgreSQL database to run these tests")
 class PostgresTests(unittest.TestCase):
     def setUp(self):
