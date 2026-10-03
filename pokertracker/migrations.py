@@ -83,6 +83,19 @@ def _v3_entries_found_and_shown_cards(db):
 MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards}
 
 
+# Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of
+# them, so on an old database they are added before any step runs (e.g. step 2 recomputes entries, which also sets
+# entries_found from step 3).
+COLUMNS = (("hands", "button_seat", "INTEGER"), ("tournaments", "starting_stack", "NUMERIC"),
+           ("tournaments", "entries_found", "INTEGER"))
+
+
+def add_missing_columns(db):
+    for table, column, kind in COLUMNS:
+        if not db.has_column(table, column):
+            db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {kind}")
+
+
 def migrate(db, fresh):
     version = db.scalar("SELECT MAX(version) FROM schema_version")
     if version is None:
@@ -91,6 +104,7 @@ def migrate(db, fresh):
         db.commit()
     if version < LATEST:
         db.backup(f"bak-v{version}")
+        add_missing_columns(db)
     for v in range(version + 1, LATEST + 1):
         MIGRATIONS[v](db)
         db.execute("UPDATE schema_version SET version = ?", (v,))

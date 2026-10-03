@@ -46,4 +46,4 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[postgres]"
-      - run: python -m unittest tests.test_postgres -v
+      - run: python -m unittest tests.test_postgres tests.test_migrations -v
