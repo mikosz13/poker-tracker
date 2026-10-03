@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-10-03)
 - Only No-Limit Hold'em tournaments in dollars are imported. Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games,
   tournaments in other currencies (e.g. Zodiac in ¥) and cash-game hands are never imported; the import result (CLI and
   app) counts them by reason instead of reporting "unrecognised summary format".
