@@ -109,6 +109,10 @@ HTML are rendered from the same data, so the numbers are identical.
 
 ### Dashboard
 
+In the app the dashboard can be limited to the last 24 hours, days, weeks or months. Besides the results it shows a luck
+badge (how far all-in luck is from zero in "typical swings"), the best and worst starting hand and position (only with 30+
+hands) and date-based charts of profit and luck.
+
 `python -m pokertracker dashboard --html dashboard.html` writes a phone-friendly overview of all tournaments:
 cumulative cash profit, actual vs all-in-adjusted result in BB, results per tag and the latest tournaments.
 It warns when the sample is small (fewer than 30 tournaments), because ROI is mostly variance until then.

@@ -80,6 +80,20 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:14px 0}
+.trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
+  background:var(--bg);color:var(--muted);border:1px solid var(--line)}.lv b{display:block;font-size:1rem;margin-bottom:2px}
+.lv.on{color:#fff;font-weight:700;border-color:transparent}.lv.on.up{background:var(--pos)}.lv.on.mid{background:var(--blue)}
+.lv.on.down{background:var(--neg)}
+.hcards{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center}.hcards>div{background:var(--bg);border-radius:10px;
+  padding:8px 4px;border:1px solid var(--line)}.hcards .hc{font-size:1.6rem;font-weight:800;letter-spacing:.04em}
+.ptable{position:relative;height:150px;margin:4px 6px}.ptable .felt{position:absolute;inset:22px 34px;border-radius:50%;
+  border:2px solid var(--line);background:color-mix(in srgb,var(--felt) 22%,transparent)}
+.pc2{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:.72rem;font-weight:700;background:var(--bg);border:2px solid var(--line);color:var(--fg)}
+.pc2.few{opacity:.4}.pc2.best{background:var(--pos);border-color:var(--pos);color:#fff}
+.pc2.worst{background:var(--neg);border-color:var(--neg);color:#fff}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -164,6 +178,7 @@ async function viewDashboard(period) {
     <div>Knockouts<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : num(d.knockouts.per_tournament, 2) + " per tournament"}</span></div></div>
     <p class="m">cost ${money(d.cost)} · cash ${money(d.cash)}${d.tickets ? ` · tickets ${money(d.tickets)} (not in ROI)` : ""} · ${d.hands} hands</p>`;
   if (d.tournaments < 30) h += `<p class="warn">Small sample (${d.tournaments} tournaments). Tournament results this small are mostly variance.</p>`;
+  h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
   h += `<h2>Cash profit, cumulative</h2><div class="tchart" id="c-profit"></div>`;
   h += `<h2>Luck</h2><div class="tchart" id="c-luck"></div>
     <p class="legend"><i style="background:var(--blue);margin-left:0"></i>actual result in BB<i style="background:var(--orange)"></i>luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
@@ -188,6 +203,44 @@ async function viewDashboard(period) {
   addChart("c-luck", d.bb_points, [{key: "actual", color: "var(--blue)"}, {key: "adjusted", color: "var(--orange)"}],
     v => `${v < 0 ? "−" : ""}${num(Math.abs(v), 0)} BB`, p => `<b>${esc(p.name || "")}</b><br>result ${sgn(p.net_bb)} BB · luck ${sgn(p.luck_bb)} BB<br>
       total: actual ${sgn(p.actual)} BB, adjusted ${sgn(p.adjusted)} BB`);
+}
+
+const LEVELS = [["Very lucky", "▲▲", "up"], ["Lucky", "▲", "up"], ["Average", "●", "mid"], ["Bad run", "▼", "down"],
+                ["Worst run", "▼▼", "down"]];
+function luckBox(b) {
+  const scale = `<div class="lscale">${LEVELS.map(([name, sym, cls]) =>
+    `<div class="lv ${cls} ${b.level === name ? "on" : ""}"><b>${sym}</b>${name}</div>`).join("")}</div>`;
+  const note = b.count ? `${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")} · ${b.z >= 0 ? "+" : ""}${num(b.z, 2)} typical swings`
+    + (b.small_sample ? ` · <b>small sample</b>` : "") : "No all-ins with known cards in this period.";
+  return `<div class="box"><h3>Luck</h3>${scale}<p class="m" style="margin:8px 0 0">${note} · ${luckLink}</p></div>`;
+}
+function handsBox(sh) {
+  const kind = h => h.length === 2 ? "pair" : h.endsWith("s") ? "suited" : "offsuit";
+  const card = (title, g) => g ? `<div><span class="m">${title}</span><div class="hc">${esc(g.hand.slice(0, 2))}</div>
+      <span class="m">${kind(g.hand)}</span><br>${sgn(g.net_bb, 1, " BB")}<br><span class="m">${g.hands} hands</span></div>`
+    : `<div><span class="m">${title}</span><div class="hc">–</div></div>`;
+  const body = sh.ranked ? `<div class="hcards">${card("Best hand", sh.best)}${card("Worst hand", sh.worst)}</div>`
+    : `<p class="m">No starting hand has ${sh.min_hands} hands in this period yet, so there is no ranking.</p>`;
+  return `<div class="box"><h3>Best &amp; worst starting hand</h3>${body}
+    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.</p>` : ""}</div>`;
+}
+const SEATS = ["BB", "SB", "BTN", "CO", "HJ", "LJ", "MP", "UTG+1", "UTG"];
+function positionBox(list, rank) {
+  const by = Object.fromEntries(list.map(p => [p.position, p]));
+  const ring = SEATS.filter(p => by[p]);
+  const spot = (pos, k, n) => {
+    const t = Math.PI / 2 + (k + .5) * 2 * Math.PI / n, p = by[pos];
+    const cls = rank.best && rank.best.position === pos ? "best" : rank.worst && rank.worst.position === pos ? "worst"
+      : p.hands < rank.min_hands ? "few" : "";
+    return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(t)}%;top:${50 + 38 * Math.sin(t)}%"
+      title="${esc(pos)}: ${sgn(p.bb_per_100, 0).replace(/<[^>]+>/g, "")} bb/100 in ${p.hands} hands">${esc(pos)}</div>`;
+  };
+  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${p.hands} hands)</span>` : "";
+  const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
+      <p style="margin:6px 0 0;font-size:.88rem">${line("Strongest", rank.best)}${rank.worst ? "<br>" + line("Weakest", rank.worst) : ""}</p>
+      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">Heads-up (BTN/SB): ${sgn(by["BTN/SB"].bb_per_100, 0)} bb/100, ${by["BTN/SB"].hands} hands.</p>` : ""}`
+    : `<p class="m">No position has ${rank.min_hands} hands in this period yet, so there is no ranking.</p>`;
+  return `<div class="box"><h3>Strongest &amp; weakest position</h3>${body}</div>`;
 }
 
 function bindPeriods() {
@@ -234,10 +287,13 @@ function drawTimeChart(box, pts, series, fmtY, tip) {
       <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" style="fill:var(--muted);font-size:11px">${fmtY(Math.round(v * 100) / 100)}</text>`;
   }
   const spanH = (t1 - t0) / 3600e3, nx = Math.max(2, Math.min(6, Math.floor(iw / 110)));
+  let prevLab = "";
   for (let k = 0; k <= nx; k++) {
     const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
     const lab = spanH <= 36 ? d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"})
       : d.toLocaleDateString("en-US", {month: "short", day: "numeric"});
+    if (lab === prevLab) continue;                       // a few days on a wide axis: one label per day
+    prevLab = lab;
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
   }
   const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
@@ -536,6 +592,13 @@ function viewLuck() {
   <p><b>Expected (EV)</b>: equity × pot, minus what you put in. What you win <i>on average</i> in this spot.</p>
   <p><b>Actual</b>: what really happened.</p>
   <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p>
+  <h2>The luck badge</h2>
+  <p>The dashboard sums the luck of every all-in in the period and compares it with how much that luck could swing by
+     chance: an all-in with 50% equity for a big pot swings a lot, one with 95% equity hardly at all. The result is the
+     number of "typical swings" your luck is away from zero.</p>
+  <p>Very lucky: +1.5 or more · Lucky: +0.5 to +1.5 · Average: between −0.5 and +0.5 · Bad run: −0.5 to −1.5 ·
+     Worst run: −1.5 or less. Two lost coinflips are "Average"; losing a series of 80% all-ins is a bad run. With fewer
+     than 20 all-ins the badge says the sample is small.</p>
   <p>Luck always uses the equity <b>at the moment of the all-in</b>. The replayer also shows how the equity changes as the
      flop, turn and river come, but those numbers are only for watching; they do not change your luck.</p></div>
   <h2>Example</h2>

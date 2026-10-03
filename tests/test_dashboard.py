@@ -110,6 +110,23 @@ class IncompleteEntryTests(unittest.TestCase):
         self.assertTrue([t for t in d["tags"] if t["tag"].startswith("entry:")])
 
 
+class PositionRankTests(unittest.TestCase):
+    def test_heads_up_is_not_ranked(self):
+        from unittest import mock
+        from pokertracker import dashboard
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        from tests.fixtures import HAND_1, HAND_2, HAND_3
+        hero_on_button = [h.replace("Seat #1 is the button", "Seat #3 is the button") for h in (HAND_2, HAND_3)]
+        import_texts(db, [("h", "\n\n".join([HAND_1] + hero_on_button))])     # Hero: BB once, BTN/SB twice
+        with mock.patch.object(dashboard, "MIN_HANDS", 1):
+            d = dashboard.dashboard_data(db)
+        self.assertEqual(sorted(p["position"] for p in d["positions"]), ["BB", "BTN/SB"])
+        r = d["position_rank"]
+        self.assertEqual((r["best"]["position"], r["worst"], r["ranked"]), ("BB", None, 1))
+
+
 def datetime_after(now):
     from datetime import timedelta
     return now + timedelta(days=30)                                  # nothing in the last 24 h
