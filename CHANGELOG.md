@@ -9,6 +9,11 @@
   (z-score); "How luck works" explains it.
 - Best and worst starting hand (e.g. ATo, Q9o) and strongest and weakest position on a small table diagram, ranked
   only with at least 30 hands and always shown with the number of hands; heads-up (BTN/SB) is shown on its own.
+- Tournament page: the stack in BB is a time chart with annotations where each entry starts (late reg or re-entry, level,
+  stack in BB; the full starting stack in the tooltip) and a mark where the stack hit zero. Clicking it replays the hand.
+- Position diagram on the dashboard goes clockwise from the big blind, the way the action moves (as in the replayer).
+- Fix: a page that finished loading after you had already moved on (e.g. the dashboard) no longer replaces the page
+  you opened.
 - Late registration vs start leaves out tournaments whose summary reports more entries than the hands show, with a
   footnote count.
 - Fix: a player showing one card after folding no longer replaces the dealt cards (16 of Hero's hands were affected).
