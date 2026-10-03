@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.0 (2026-10-03)
 - Fix: a database still on schema 1 (0.3.0) failed to upgrade, because step 2 used a column that only step 3 added.
   All columns are now added before the upgrade steps run. The whole upgrade from 0.2.0 is tested on SQLite and PostgreSQL.
 - docs/INSTALL.md: first start on current macOS ("Open Anyway" in Privacy & Security).
