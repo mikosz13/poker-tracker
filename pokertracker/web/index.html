@@ -80,6 +80,14 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
+.seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
+.tchart svg{display:block;width:100%}.tchart .tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--fg);
+  border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:.8rem;box-shadow:0 3px 10px rgba(0,0,0,.2);
+  white-space:nowrap;display:none;z-index:2}
+.legend{font-size:.85rem;color:var(--muted);margin:4px 0 0}.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;
+  vertical-align:middle;margin:0 4px 0 10px}
 .tag{display:inline-block;font-size:.78rem;background:var(--card);border-radius:6px;padding:1px 6px;margin:1px}
 .warn{border-left:4px solid var(--orange);padding:8px 10px;background:var(--card);border-radius:6px}
 </style>
@@ -121,10 +129,15 @@ const table = (head, rows) => `<div class="scroll"><table><tr>${head.map(h => `<
 const luckLink = '<a href="#/luck">How is luck calculated?</a>';
 
 // ---- Dashboard -------------------------------------------------------------
-async function viewDashboard() {
-  const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard"), api("/api/status")]);
+const PERIODS = [["24h", "24 h"], ["3d", "3 days"], ["1w", "1 week"], ["2w", "2 weeks"], ["4w", "4 weeks"],
+                 ["3m", "3 months"], ["6m", "6 months"], ["max", "Max"]];
+const pct = x => x == null ? "–" : num(x, 1) + "%";
+
+async function viewDashboard(period) {
+  const q = period ? `?period=${encodeURIComponent(period)}` : "";
+  const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
   const banner = st.running ? `<p class="warn">Importing ${st.done}/${st.total} files… <a href="#/import">details</a>. The numbers below will update when it finishes.</p>` : "";
-  if (!d.tournaments && !d.hands) {
+  if (!d.tournaments && !d.hands && d.period === "max") {
     app.innerHTML = banner + `<h1>Welcome</h1><p>No data yet. Go to <a href="#/import">Import</a> and point the app at the folder where you save PokerCraft exports.</p>`;
     return;
   }
@@ -137,28 +150,120 @@ async function viewDashboard() {
         <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
         <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`))}</div>`;
   }
+  const label = PERIODS.find(p => p[0] === d.period)[1];
+  h += `<h2>${d.period === "max" ? "All tournaments" : "Last " + esc(label)}</h2>
+    <div class="seg" id="periods">${PERIODS.map(([k, t]) => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t}</button>`).join("")}</div>`;
+  if (!d.tournaments && !d.hands) {
+    app.innerHTML = h + `<p class="m">Nothing played in the last ${esc(label)}. Pick a longer period.</p>`;
+    bindPeriods();
+    return;
+  }
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
-  h += `<h2>All tournaments</h2><div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
-    <div>ROI<b>${roi}</b></div><div>In the money<b>${d.itm}/${d.tournaments}</b></div>
+  h += `<div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
+    <div>ROI<b>${roi}</b></div><div>In the money<b>${pct(d.itm_pct)}</b><span class="m">${d.itm} of ${d.tournaments}</span></div>
     <div>Knockouts<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : num(d.knockouts.per_tournament, 2) + " per tournament"}</span></div></div>
     <p class="m">cost ${money(d.cost)} · cash ${money(d.cash)}${d.tickets ? ` · tickets ${money(d.tickets)} (not in ROI)` : ""} · ${d.hands} hands</p>`;
   if (d.tournaments < 30) h += `<p class="warn">Small sample (${d.tournaments} tournaments). Tournament results this small are mostly variance.</p>`;
-  h += `<h2>Cash profit, cumulative</h2>${chart([d.profit_curve])}`;
-  h += `<h2>Luck</h2>${chart([d.bb_actual, d.bb_adjusted])}
-    <p class="m"><span style="color:var(--blue)">■</span> actual result in BB &nbsp; <span style="color:var(--orange)">■</span> luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
+  h += `<h2>Cash profit, cumulative</h2><div class="tchart" id="c-profit"></div>`;
+  h += `<h2>Luck</h2><div class="tchart" id="c-luck"></div>
+    <p class="legend"><i style="background:var(--blue);margin-left:0"></i>actual result in BB<i style="background:var(--orange)"></i>luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
   if (d.allins.count) h += `<p>${d.allins.count} all-ins: actual ${sgn(d.allins.net_bb)} BB, expected ${sgn(d.allins.ev_bb)} BB, luck ${sgn(d.allins.luck_bb)} BB.</p>`;
   const tagRows = pre => d.tags.filter(t => t.tag.startsWith(pre)).map(t =>
-    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ROI"], entry)}`;
-  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "Profit $", "ROI"], d.by_buyin.map(b =>
-    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
+  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ITM %", "ROI"], entry)}`;
+  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "ITM %", "Profit $", "ROI"], d.by_buyin.map(b =>
+    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${pct(b.itm_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
   if (d.positions.length) h += `<h2>By position</h2>${table(["Position", "Hands", "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   const other = d.tags.filter(t => !t.tag.startsWith("entry:")).map(t =>
-    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ROI"], other)}`;
+    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ITM %", "ROI"], other)}`;
   app.innerHTML = h;
+  bindPeriods();
+  charts = [];
+  addChart("c-profit", d.profit_points, [{key: "total", color: "var(--blue)"}], v => `${v < 0 ? "−" : ""}$${num(Math.abs(v), 0)}`,
+    p => `<b>${esc(p.name)}</b> $${num(p.buyin, 2)}<br>${sgn(p.profit, 2, " $")} · total ${sgn(p.total, 2, " $")}`);
+  addChart("c-luck", d.bb_points, [{key: "actual", color: "var(--blue)"}, {key: "adjusted", color: "var(--orange)"}],
+    v => `${v < 0 ? "−" : ""}${num(Math.abs(v), 0)} BB`, p => `<b>${esc(p.name || "")}</b><br>result ${sgn(p.net_bb)} BB · luck ${sgn(p.luck_bb)} BB<br>
+      total: actual ${sgn(p.actual)} BB, adjusted ${sgn(p.adjusted)} BB`);
+}
+
+function bindPeriods() {
+  document.getElementById("periods").onclick = async e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                     body: JSON.stringify({dashboard_period: b.dataset.p})}); } catch (err) { /* still shown */ }
+    viewDashboard(b.dataset.p);
+  };
+}
+
+// ---- Time charts: a date axis, a labelled value axis and a tooltip; drawn at the real width so text stays readable
+let charts = [];
+function addChart(id, pts, series, fmtY, tip) {
+  const box = document.getElementById(id);
+  const draw = () => drawTimeChart(box, pts, series, fmtY, tip);
+  charts.push({box, draw});
+  draw();
+}
+let resizeTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => charts.forEach(c => document.body.contains(c.box) && c.draw()), 120);
+});
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1))), f = raw / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+function drawTimeChart(box, pts, series, fmtY, tip) {
+  if (pts.length < 2) { box.innerHTML = '<p class="m" style="padding:8px 12px">Not enough data for a chart in this period yet.</p>'; return; }
+  const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
+  const L = 58, R = 14, T = 12, B = 26, iw = W - L - R, ih = H - T - B;
+  const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
+  let t0 = Math.min(...ts), t1 = Math.max(...ts);
+  if (t1 === t0) t1 = t0 + 3600e3;
+  const vals = series.flatMap(s => pts.map(p => p[s.key]));
+  const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
+  const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
+  const x = t => L + (t - t0) / (t1 - t0) * iw, y = v => T + (hi - v) / (hi - lo) * ih;
+  let g = "";
+  for (let v = lo; v <= hi + step / 2; v += step) {
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" style="stroke:var(--line);stroke-width:${Math.abs(v) < step / 2 ? 1.6 : 1}"/>
+      <text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" style="fill:var(--muted);font-size:11px">${fmtY(Math.round(v * 100) / 100)}</text>`;
+  }
+  const spanH = (t1 - t0) / 3600e3, nx = Math.max(2, Math.min(6, Math.floor(iw / 110)));
+  for (let k = 0; k <= nx; k++) {
+    const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
+    const lab = spanH <= 36 ? d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"})
+      : d.toLocaleDateString("en-US", {month: "short", day: "numeric"});
+    g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
+  }
+  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
+    points="${pts.map((p, i) => `${x(ts[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img">${g}${lines}
+    <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
+      ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
+    <rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip"></div>`;
+  const svg = box.querySelector("svg"), hov = svg.querySelector("#hover"), tipEl = box.querySelector(".tip");
+  const show = e => {
+    const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
+    let i = 0;
+    ts.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(ts[i]) - mx)) i = k; });
+    const px = x(ts[i]);
+    hov.style.display = "";
+    hov.querySelector("line").setAttribute("x1", px); hov.querySelector("line").setAttribute("x2", px);
+    hov.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", px); c.setAttribute("cy", y(pts[i][series[k].key])); });
+    const when = new Date(ts[i]).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+    tipEl.innerHTML = `<span class="m">${when}</span><br>${tip(pts[i])}`;
+    tipEl.style.display = "block";
+    const left = px * r.width / W, w = tipEl.offsetWidth;
+    tipEl.style.left = Math.max(4, Math.min(r.width - w - 4, left + (left > r.width / 2 ? -w - 12 : 12))) + "px";
+    tipEl.style.top = "8px";
+  };
+  svg.addEventListener("pointermove", show);
+  svg.addEventListener("pointerdown", show);
+  svg.addEventListener("pointerleave", () => { hov.style.display = "none"; tipEl.style.display = "none"; });
 }
 
 // ---- Tournaments ------------------------------------------------------------

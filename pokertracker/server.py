@@ -6,8 +6,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs
 
-from .dashboard import dashboard_data
+from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .importer import changed_files, import_files, list_files
 from .replay import hand_replay
@@ -208,8 +209,11 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 page = (WEB / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
             with Database(url) as db:
-                if path == "/api/dashboard":
-                    return self._send(200, {"dashboard": dashboard_data(db), "session": last_session(db)})
+                if path == "/api/dashboard":                          # ?period=24h|3d|1w|2w|4w|3m|6m|max
+                    query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+                    period = (query.get("period") or [get_setting(db, "dashboard_period") or "max"])[0]
+                    period = period if period in PERIODS else "max"
+                    return self._send(200, {"dashboard": dashboard_data(db, period=period), "session": last_session(db)})
                 if path == "/api/tournaments":
                     return self._send(200, tournaments_list(db))
                 if path.startswith("/api/tournament/"):
@@ -246,11 +250,15 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
-            if self.path == "/api/display":                       # four-colour deck (default) or classic two colours
+            if self.path == "/api/display":                       # deck colours and the dashboard period
                 with Database(url) as db:
-                    set_setting(db, "four_color", "1" if body.get("four_color", True) else "0")
+                    if "four_color" in body:
+                        set_setting(db, "four_color", "1" if body["four_color"] else "0")
+                    if body.get("dashboard_period") in PERIODS:
+                        set_setting(db, "dashboard_period", body["dashboard_period"])
                     db.commit()
-                    return self._send(200, {"four_color": get_setting(db, "four_color") != "0"})
+                    return self._send(200, {"four_color": get_setting(db, "four_color") != "0",
+                                            "dashboard_period": get_setting(db, "dashboard_period") or "max"})
             self._send(404, {"error": "not found"})
 
     class Server(ThreadingHTTPServer):
