@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.1 (2026-10-04)
 - Luck badge says in plain words how rare the result is for a player with average luck ("a run this bad or worse
   happens to about 1 in 6 players"), from the normal distribution. Luck is measured in big blinds, now covered by a test.
 - Strongest and weakest position are chosen among the positions outside the blinds; the small and big blind are shown
