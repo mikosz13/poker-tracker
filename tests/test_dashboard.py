@@ -123,8 +123,23 @@ class PositionRankTests(unittest.TestCase):
         with mock.patch.object(dashboard, "MIN_HANDS", 1):
             d = dashboard.dashboard_data(db)
         self.assertEqual(sorted(p["position"] for p in d["positions"]), ["BB", "BTN/SB"])
+        self.assertEqual(d["position_rank"]["ranked"], 0)            # neither the big blind nor heads-up is ranked
+
+    def test_blinds_are_shown_but_not_ranked(self):
+        from unittest import mock
+        from pokertracker import dashboard
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        from tests.fixtures import HAND_1
+        hero_on_button = HAND_1.replace("TM1000000001", "TM1000000009").replace("Seat #1 is the button",
+                                                                                "Seat #3 is the button")
+        import_texts(db, [("h", "\n\n".join([HAND_1, hero_on_button]))])        # Hero: BB, then BTN
+        with mock.patch.object(dashboard, "MIN_HANDS", 1):
+            d = dashboard.dashboard_data(db)
+        self.assertEqual(sorted(p["position"] for p in d["positions"]), ["BB", "BTN"])
         r = d["position_rank"]
-        self.assertEqual((r["best"]["position"], r["worst"], r["ranked"]), ("BB", None, 1))
+        self.assertEqual((r["best"]["position"], r["worst"], r["ranked"]), ("BTN", None, 1))
 
 
 def datetime_after(now):
