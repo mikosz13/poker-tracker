@@ -1,6 +1,6 @@
 [project]
 name = "pokertracker"
-version = "0.5.0"
+version = "0.5.1"
 description = "Tournament tracker for GGPoker: hand histories + summaries -> SQL database -> ROI and play statistics"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
