@@ -213,7 +213,9 @@ function luckBox(b) {
     `<div class="lv ${cls} ${b.level === name ? "on" : ""}"><b>${sym}</b>${name}</div>`).join("")}</div>`;
   const note = b.count ? `${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")} · ${b.z >= 0 ? "+" : ""}${num(b.z, 2)} typical swings`
     + (b.small_sample ? ` · <b>small sample</b>` : "") : "No all-ins with known cards in this period.";
-  return `<div class="box"><h3>Luck</h3>${scale}<p class="m" style="margin:8px 0 0">${note} · ${luckLink}</p></div>`;
+  const rare = b.count && b.one_in ? `<p style="margin:8px 0 0;font-size:.9rem">A run this ${b.direction === "worse" ? "bad or worse" : "good or better"}
+      happens to about <b>1 in ${b.one_in}</b> players with average luck.</p>` : "";
+  return `<div class="box"><h3>Luck</h3>${scale}${rare}<p class="m" style="margin:6px 0 0">${note} · ${luckLink}</p></div>`;
 }
 function handsBox(sh) {
   const kind = h => h.length === 2 ? "pair" : h.endsWith("s") ? "suited" : "offsuit";
@@ -223,9 +225,13 @@ function handsBox(sh) {
   const body = sh.ranked ? `<div class="hcards">${card("Best hand", sh.best)}${card("Worst hand", sh.worst)}</div>`
     : `<p class="m">No starting hand has ${sh.min_hands} hands in this period yet, so there is no ranking.</p>`;
   return `<div class="box"><h3>Best &amp; worst starting hand</h3>${body}
-    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.</p>` : ""}</div>`;
+    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.
+      With this many hands, a result depends mostly on a few big pots.</p>` : ""}</div>`;
 }
 const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
+const blinds = by => ["SB", "BB"].some(p => by[p]) ? `<p class="m" style="margin:4px 0 0">${["SB", "BB"].filter(p => by[p]).map(p =>
+    `${p === "SB" ? "Small blind" : "Big blind"} ${sgn(by[p].bb_per_100, 0)} bb/100 (${by[p].hands} hands)`).join(" · ")}.
+    Not ranked: the blinds lose money for almost every player.</p>` : "";
 function positionBox(list, rank) {
   const by = Object.fromEntries(list.map(p => [p.position, p]));
   const ring = SEATS.filter(p => by[p]);
@@ -239,6 +245,7 @@ function positionBox(list, rank) {
   const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${p.hands} hands)</span>` : "";
   const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
       <p style="margin:6px 0 0;font-size:.88rem">${line("Strongest", rank.best)}${rank.worst ? "<br>" + line("Weakest", rank.worst) : ""}</p>
+      ${blinds(by)}
       ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">Heads-up (BTN/SB): ${sgn(by["BTN/SB"].bb_per_100, 0)} bb/100, ${by["BTN/SB"].hands} hands.</p>` : ""}`
     : `<p class="m">No position has ${rank.min_hands} hands in this period yet, so there is no ranking.</p>`;
   return `<div class="box"><h3>Strongest &amp; weakest position</h3>${body}</div>`;
@@ -643,6 +650,9 @@ function viewLuck() {
   <p>Very lucky: +1.5 or more · Lucky: +0.5 to +1.5 · Average: between −0.5 and +0.5 · Bad run: −0.5 to −1.5 ·
      Worst run: −1.5 or less. Two lost coinflips are "Average"; losing a series of 80% all-ins is a bad run. With fewer
      than 20 all-ins the badge says the sample is small.</p>
+  <p>Everything is counted in big blinds, so an all-in at 25/50 weighs the same as the same all-in at 500/1,000. Under the
+     badge the app says how rare your result is for a player with average luck, e.g. "a run this bad or worse happens to
+     about 1 in 6 players" (from the normal distribution: −1 typical swing or worse is about 16%).</p>
   <p>Luck always uses the equity <b>at the moment of the all-in</b>. The replayer also shows how the equity changes as the
      flop, turn and river come, but those numbers are only for watching; they do not change your luck.</p></div>
   <h2>Example</h2>

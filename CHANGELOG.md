@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Luck badge says in plain words how rare the result is for a player with average luck ("a run this bad or worse
+  happens to about 1 in 6 players"), from the normal distribution. Luck is measured in big blinds, now covered by a test.
+- Strongest and weakest position are chosen among the positions outside the blinds; the small and big blind are shown
+  on their own with a note that the blinds lose money for almost every player.
+- Best and worst starting hand: a note that with this many hands a result depends mostly on a few big pots.
+
 ## 0.5.0 (2026-10-03)
 - Fix: a database still on schema 1 (0.3.0) failed to upgrade, because step 2 used a column that only step 3 added.
   All columns are now added before the upgrade steps run. The whole upgrade from 0.2.0 is tested on SQLite and PostgreSQL.

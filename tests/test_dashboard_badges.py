@@ -41,6 +41,42 @@ class LuckBadgeTests(unittest.TestCase):
         self.assertEqual(b["z"], 1.0)
 
 
+    def test_how_rare_in_plain_words(self):
+        def badge(z):
+            return luck_badge([{"equity": 0.5, "ev_bb": 0, "invested_bb": 50, "luck_bb": 50 * z}])
+        bad = badge(-1)                                              # P(Z <= -1) = 15.9 %
+        self.assertEqual((bad["direction"], bad["share"], bad["one_in"]), ("worse", 0.159, 6))
+        good = badge(1.5)                                            # P(Z >= 1.5) = 6.7 %
+        self.assertEqual((good["direction"], good["share"], good["one_in"]), ("better", 0.067, 15))
+        self.assertEqual(badge(0)["one_in"], 2)
+
+
+class LuckInBigBlindsTests(unittest.TestCase):
+    """The same all-in at 25/50 and at 250/500 (ten times the chips) must weigh the same."""
+
+    def z(self, levels):
+        from pokertracker.dashboard import dashboard_data
+        from pokertracker.db import Database
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        for k, bb in enumerate(levels):                              # 50 % for a 100 BB pot, lost
+            hid = f"H{k}"
+            db.execute("INSERT INTO hands (site, hand_id, tournament_id, level, small_blind, big_blind, played_at) "
+                       "VALUES ('GGPoker', ?, 1, 1, ?, ?, '2026-01-01 10:00:00')", (hid, bb / 2, bb))
+            db.execute("INSERT INTO allin_ev (site, hand_id, nick, is_hero, lock_street, contestants, equity, "
+                       "invested, collected, ev_net, luck) VALUES ('GGPoker', ?, 'Hero', TRUE, 'preflop', 2, 0.5, ?, 0, 0, ?)",
+                       (hid, 50 * bb, -50 * bb))
+        db.commit()
+        return dashboard_data(db)["luck_badge"]["z"]
+
+    def test_z_is_measured_in_big_blinds(self):
+        one = self.z([50])
+        both = self.z([50, 500])
+        self.assertEqual(one, -1.0)
+        self.assertAlmostEqual(both, round(-2 ** 0.5, 2))            # in chips it would be -11 / sqrt(101) = -1.09
+
+
 class HandClassTests(unittest.TestCase):
     def test_classes(self):
         self.assertEqual([hand_class(c) for c in ("Td 5d", "5d Td", "Qh Tc", "9s 9c", "Ah Kh")],

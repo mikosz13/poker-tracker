@@ -1,5 +1,6 @@
 """Cross-tournament dashboard: profit curve, luck-adjusted curve, results by category."""
 import html
+import math
 from datetime import datetime, timedelta
 
 from .tournament_report import CSS, SITE, _sign
@@ -23,6 +24,7 @@ def period_start(period, now=None):
     return ((now or datetime.now()) - span).strftime("%Y-%m-%d %H:%M:%S")
 
 
+UNRANKED = ("SB", "BB", "BTN/SB")
 MIN_HANDS = 30           # hand classes and positions need this many hands before they are ranked
 SMALL_ALLINS = 20        # below this many all-ins the luck badge says the sample is small
 RANKS = "23456789TJQKA"
@@ -47,10 +49,17 @@ def luck_badge(allins):
             pot = (_f(a["ev_bb"]) + _f(a["invested_bb"])) / eq
             var += eq * (1 - eq) * pot * pot
     z = luck / var ** 0.5 if var > 0 else 0.0
+    # how rare a run like this is for a player with average luck: this bad or worse, or this good or better
+    share = _normal_cdf(z) if z < 0 else 1 - _normal_cdf(z)
     level = ("Very lucky" if z >= 1.5 else "Lucky" if z >= 0.5 else "Average" if z > -0.5
              else "Bad run" if z > -1.5 else "Worst run")
     return {"level": level, "z": round(z, 2), "count": len(rows), "luck_bb": round(luck, 1),
-            "small_sample": len(rows) < SMALL_ALLINS}
+            "small_sample": len(rows) < SMALL_ALLINS, "direction": "worse" if z < 0 else "better",
+            "share": round(share, 3), "one_in": max(1, round(1 / share)) if share > 0 else None}
+
+
+def _normal_cdf(z):
+    return 0.5 * (1 + math.erf(z / math.sqrt(2)))
 
 
 def hand_class(cards):
@@ -175,8 +184,8 @@ def dashboard_data(db, site=SITE, period="max", now=None):
                                        f"SUM(in_the_money) AS itm FROM tournament_results WHERE site = ?{t_when} "
                                        "GROUP BY buyin_total ORDER BY buyin_total", (site, *arg))],
         "positions": positions,
-        # heads-up (BTN/SB) is a different game from a full table: shown on its own, not ranked
-        "position_rank": best_and_worst([p for p in positions if p["position"] != "BTN/SB"], "bb_per_100"),
+        # blinds lose money for almost every player and heads-up (BTN/SB) is a different game: shown, not ranked
+        "position_rank": best_and_worst([p for p in positions if p["position"] not in UNRANKED], "bb_per_100"),
         "recent": [{"date": str(t["started_at"])[:10], "name": t["name"], "buyin": _f(t["buyin_total"]),
                     "place": t["finish_place"], "players": t["players"], "cash": _f(t["cash_won"]),
                     "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])} for t in reversed(trs[-10:])],
