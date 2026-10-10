@@ -45,7 +45,7 @@ def luck_badge(allins):
     var = 0.0
     for a in rows:
         eq = _f(a["equity"])
-        if 0 < eq < 1:
+        if 0 < eq < 1:                    # drawing dead (0) or a lock (1) cannot swing: no variance, no division
             pot = (_f(a["ev_bb"]) + _f(a["invested_bb"])) / eq
             var += eq * (1 - eq) * pot * pot
     z = luck / var ** 0.5 if var > 0 else 0.0
@@ -55,7 +55,9 @@ def luck_badge(allins):
              else "Bad run" if z > -1.5 else "Worst run")
     return {"level": level, "z": round(z, 2), "count": len(rows), "luck_bb": round(luck, 1),
             "small_sample": len(rows) < SMALL_ALLINS, "direction": "worse" if z < 0 else "better",
-            "share": round(share, 3), "one_in": max(1, round(1 / share)) if share > 0 else None}
+            # with no all-in that could have gone either way there is nothing to compare, so no "1 in N"
+            "share": round(share, 3) if var > 0 else None,
+            "one_in": max(1, round(1 / share)) if var > 0 and share > 0 else None}
 
 
 def _normal_cdf(z):

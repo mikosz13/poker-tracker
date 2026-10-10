@@ -41,6 +41,18 @@ class LuckBadgeTests(unittest.TestCase):
         self.assertEqual(b["z"], 1.0)
 
 
+    def test_drawing_dead_and_locks_add_no_variance_and_no_nan(self):
+        import math
+        dead = allin(0.0, 100, False)                                 # equity 0: no division by the equity
+        lock = allin(1.0, 100, True)
+        for rows in ([dead], [lock], [dead, lock], [dead] * 5 + [lock] * 5):
+            b = luck_badge(rows)
+            self.assertTrue(math.isfinite(b["z"]), rows)
+            self.assertEqual((b["z"], b["level"], b["one_in"], b["share"]), (0.0, "Average", None, None))
+        flip = allin(0.5, 100, False)
+        self.assertEqual(luck_badge([dead, lock, flip])["z"], luck_badge([flip])["z"])   # left out of the denominator
+        self.assertEqual(luck_badge([dead, lock, flip])["count"], 3)                      # but still counted
+
     def test_how_rare_in_plain_words(self):
         def badge(z):
             return luck_badge([{"equity": 0.5, "ev_bb": 0, "invested_bb": 50, "luck_bb": 50 * z}])
