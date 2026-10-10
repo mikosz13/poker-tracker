@@ -21,7 +21,12 @@ a{color:var(--blue)}.m{color:var(--muted);font-size:.88rem}
 .box{background:var(--card);border-radius:12px;padding:12px}
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th:first-child,td:first-child{text-align:left}tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
+th:first-child,td:first-child{text-align:left}
+#list th:nth-child(2),#list td:nth-child(2){text-align:left;white-space:normal;min-width:10em}
+@media (max-width:560px){#list th,#list td{padding:6px 4px}#list th:nth-child(2),#list td:nth-child(2){min-width:7em}
+  #list th:nth-child(3),#list td:nth-child(3),#list th:nth-child(6),#list td:nth-child(6){display:none}
+  #list .wide{display:none}}
+#list .narrow{display:none}@media (max-width:560px){#list .narrow{display:inline}}tr.click{cursor:pointer}tr.click:hover{background:var(--card)}
 .pos{color:var(--pos)}.neg{color:var(--neg)}
 .card{display:inline-block;min-width:1.9em;padding:1px 4px;margin:1px;border:1px solid var(--line);border-radius:5px;background:var(--bg);text-align:center;font-weight:600}
 .card.s-s{color:var(--s-s)}.card.s-h{color:var(--s-h)}.card.s-d{color:var(--s-d)}.card.s-c{color:var(--s-c)}
@@ -356,6 +361,13 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
 
 // ---- Tournaments ------------------------------------------------------------
 let filters = {buyin: "", format: "", entry: ""};
+// "Oct 10", with the year only when it is not this year: keeps the date column narrow
+const shortDate = s => {
+  const d = new Date(String(s).slice(0, 10) + "T12:00");
+  if (isNaN(d)) return esc(String(s).slice(0, 10));
+  return d.toLocaleDateString("en-US", {month: "short", day: "numeric",
+    ...(d.getFullYear() !== new Date().getFullYear() ? {year: "numeric"} : {})});
+};
 async function viewTournaments() {
   const mine = routeSeq, all = await api("/api/tournaments");
   if (mine !== routeSeq) return;
@@ -369,8 +381,10 @@ async function viewTournaments() {
     const cost = done.reduce((a, t) => a + Number(t.total_cost), 0), profit = done.reduce((a, t) => a + Number(t.profit), 0);
     document.getElementById("list").innerHTML = `<p class="m">${rows.length} tournaments · profit ${sgn(profit, 2, " $")} · ROI ${cost ? sgn(100 * profit / cost, 0, "%") : "–"}</p>` +
       table(["Date", "Tournament", "Buy-in", "Place", "Profit $", "KOs", "Luck BB"], rows.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
-        <td>${esc(t.date.slice(0, 10))}</td><td>${esc(t.name)}</td><td>${t.buyin_total == null ? "–" : money(t.buyin_total)}</td>
-        <td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td><td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}${t.prize_is_ticket ? " +ticket" : ""}</td>
+        <td>${shortDate(t.date)}</td><td>${esc(t.name)}</td><td>${t.buyin_total == null ? "–" : money(t.buyin_total)}</td>
+        <td>${t.finish_place ?? "–"}<span class="wide">/${t.players ?? "–"}</span></td>
+        <td>${t.profit == null ? '<span class="m" title="no summary imported"><span class="wide">no summary</span><span class="narrow">–</span></span>'
+          : `<span class="wide">${sgn(t.profit, 2)}</span><span class="narrow">${sgn(t.profit, 0)}</span>`}${t.prize_is_ticket ? '<span class="wide"> +ticket</span>' : ""}</td>
         <td>${t.hands ? (t.knockouts || 0) : "–"}</td><td>${t.luck_bb == null ? "–" : sgn(t.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>Tournaments</h1><div class="filters">

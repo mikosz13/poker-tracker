@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Tournament list fits the window: long tournament names wrap and dates are short ("Oct 10"), so the Luck BB column is no
+  longer cut off; on a phone the buy-in and KO columns are hidden and place and profit are shortened.
+
 ## 0.5.1 (2026-10-04)
 - Luck badge says in plain words how rare the result is for a player with average luck ("a run this bad or worse
   happens to about 1 in 6 players"), from the normal distribution. Luck is measured in big blinds, now covered by a test.
