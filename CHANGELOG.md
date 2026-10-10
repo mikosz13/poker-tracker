@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.5.2 (2026-10-11)
 - Luck badge: all-ins drawing dead (equity 0) or locked (equity 1) add no variance, now covered by tests; when a period
   has only such all-ins the badge no longer claims "1 in 2 players".
 - Tournament list fits the window: long tournament names wrap and dates are short ("Oct 10"), so the Luck BB column is no
