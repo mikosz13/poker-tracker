@@ -77,6 +77,11 @@ class ServerTests(unittest.TestCase):
         settings = json.loads(self.get("/api/settings")[1])
         self.assertEqual(settings["import_folder"], str(self.exports))
 
+    def test_analysis_endpoint(self):
+        status, body = self.get("/api/analysis")
+        self.assertEqual(status, 200)
+        self.assertEqual(set(json.loads(body)), {"overview", "leaks", "strengths", "money", "thresholds"})
+
     def test_deck_colours_setting(self):
         four = lambda: json.loads(self.get("/api/settings")[1])["four_color"]
         self.assertTrue(four())                                   # four colours by default
