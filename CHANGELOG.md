@@ -3,6 +3,8 @@
 ## Unreleased
 - Luck badge: all-ins drawing dead (equity 0) or locked (equity 1) add no variance, now covered by tests; when a period
   has only such all-ins the badge no longer claims "1 in 2 players".
+- Tournament list fits the window: long tournament names wrap and dates are short ("Oct 10"), so the Luck BB column is no
+  longer cut off; on a phone the buy-in and KO columns are hidden and place and profit are shortened.
 
 ## 0.5.1 (2026-10-04)
 - Luck badge says in plain words how rare the result is for a player with average luck ("a run this bad or worse
