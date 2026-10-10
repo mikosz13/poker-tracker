@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Luck badge: all-ins drawing dead (equity 0) or locked (equity 1) add no variance, now covered by tests; when a period
+  has only such all-ins the badge no longer claims "1 in 2 players".
+
 ## 0.5.1 (2026-10-04)
 - Luck badge says in plain words how rare the result is for a player with average luck ("a run this bad or worse
   happens to about 1 in 6 players"), from the normal distribution. Luck is measured in big blinds, now covered by a test.
