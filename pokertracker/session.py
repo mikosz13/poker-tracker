@@ -50,13 +50,16 @@ def _hand_story(db, hand_id, site, hero_equity=None):
 def usual_play(db, exclude_ids, site=SITE):
     """Totals of Hero's hands outside the given tournaments: hands, VPIP and PFR counts, sum and sum of squares in BB."""
     ids = sorted(exclude_ids) or [-1]
-    r = db.query("SELECT COUNT(*) AS n, SUM(vpip) AS vpip, SUM(pfr) AS pfr, SUM(net_bb) AS s, SUM(net_bb * net_bb) AS ss "
+    r = db.query("SELECT COUNT(*) AS n, SUM(decided) AS d, SUM(vpip) AS vpip, SUM(pfr) AS pfr, SUM(net_bb) AS s, "
+                 "SUM(net_bb * net_bb) AS ss "
                  f"FROM hero_hands WHERE site = ? AND tournament_id NOT IN ({_placeholders(ids)})", (site, *ids))[0]
-    return {"n": int(r["n"]), "vpip": _f(r["vpip"]), "pfr": _f(r["pfr"]), "sum": _f(r["s"]), "sumsq": _f(r["ss"])}
+    return {"n": int(r["n"]), "decided": int(r["d"] or 0), "vpip": _f(r["vpip"]), "pfr": _f(r["pfr"]),
+            "sum": _f(r["s"]), "sumsq": _f(r["ss"])}
 
 
 def totals(hands):
-    return {"n": len(hands), "vpip": sum(h["vpip"] for h in hands), "pfr": sum(h["pfr"] for h in hands),
+    return {"n": len(hands), "decided": sum(h.get("decided", 1) for h in hands),
+            "vpip": sum(h["vpip"] for h in hands), "pfr": sum(h["pfr"] for h in hands),
             "sum": sum(h["net_bb"] for h in hands), "sumsq": sum(h["net_bb"] ** 2 for h in hands)}
 
 
@@ -66,10 +69,15 @@ def vs_usual(session_hands, usual):
     if n < MIN_HANDS_VS_USUAL or m < MIN_HANDS_VS_USUAL:
         return []
     out = []
+    # VPIP and PFR over hands with a preflop decision (no walks, no all-in forced by a blind or ante)
+    n_d = sum(h.get("decided", 1) for h in session_hands)
+    m_d = usual.get("decided", m)
     for key, label in (("vpip", "VPIP"), ("pfr", "PFR")):
-        p_s = sum(h[key] for h in session_hands) / n
-        p_u = usual[key] / m
-        se = (p_u * (1 - p_u) / n) ** 0.5
+        if not n_d or not m_d:
+            continue
+        p_s = sum(h[key] for h in session_hands) / n_d
+        p_u = usual[key] / m_d
+        se = (p_u * (1 - p_u) / n_d) ** 0.5
         z = (p_s - p_u) / se if se else None
         out.append({"stat": label, "session": round(100 * p_s, 1), "usual": round(100 * p_u, 1), "unit": "%",
                     "z": round(z, 2) if z is not None else None, "confidence": confidence(z)})

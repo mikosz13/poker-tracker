@@ -176,7 +176,28 @@ W turniejach bounty podsumowanie podaje tylko łączną kwotę, a historie rąk 
 za miejsce nie da się oddzielić od knockoutów. Top 10% / 15% pola to fakty (miejsce / liczba graczy), z przedziałem
 95% (bootstrap), bez założeń o strukturze wypłat.
 
-## 10. Odmiana przez liczby (w aplikacji)
+## 10. Format liczb (decyzja 11.10.2026)
+
+- Wskaźniki częstości (VPIP, PFR, ITM, z gotówką, Top % pola, 3-bet, fold to 3-bet itd.): **1 miejsce po przecinku i
+  n**, np. „30,9% (n = 10 124)”; w tabelach n to kolumna „Turnieje” albo „Ręce”.
+- **ROI: 0 miejsc po przecinku wszędzie**, z przedziałem 95%, gdzie jest miejsce, np. „−42% (95%: −77% … +7%)”.
+- Mała próbka (poniżej 10 turniejów albo 30 rąk) jest wyszarzona, z dymkiem „za mało danych”.
+
+## 11. VPIP i PFR: definicje (porównanie z PokerTracker 4)
+
+| Sytuacja | VPIP | PFR | W mianowniku | PT4 |
+|---|---|---|---|---|
+| Spacer w BB (wszyscy spasowali do Hero) | nie | nie | **nie** | tak samo: mianownik = ręce − spacery |
+| BB check w limpowanej puli | nie | nie | tak | tak samo |
+| Complete ze SB (dopłata do BB) | **tak** | nie | tak | tak samo |
+| All-in wymuszony blindem lub ante (bez decyzji) | nie | nie | **nie** | PT4 odejmuje tylko spacery; tu wykluczamy też tę sytuację (decyzja Mika), u Mika 4 ręce na 10 tys. |
+| Limp, potem raise (limp-raise) | **tak** | **tak** | tak | tak samo (każdy raise preflop to PFR) |
+| Fold preflop | nie | nie | tak | tak samo |
+
+Każdy przypadek ma test na ręce w formacie GG (`tests/test_vpip.py`). Rankingi rąk startowych i pozycji liczymy na
+wyniku bez szczęścia w all-inach (wg EV), żeby jeden przegrany coinflip nie decydował.
+
+## 12. Odmiana przez liczby (w aplikacji)
 
 Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama
 reguła w `pokertracker/i18n.py`; testy dla 1, 2, 5, 12, 22, 25).
