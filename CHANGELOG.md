@@ -1,6 +1,8 @@
 # Changelog
 
 ## 0.6.0 (2026-10-11)
+- docs/INSTALL.md starts with a seven-step "Getting started" in English and Polish (download, start, one export
+  folder, import with "Watch this folder", done); README links to it.
 - Last session on the dashboard tells what happened at a glance:
   - a summary sentence (result, all-in luck, busts and the bust worth a look),
   - the session's luck badge,
