@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Dashboard: the last session's tournament list scrolls inside its box (about 8 rows, the column header stays visible)
+  instead of growing the page, with "All tournaments →" opening the tournament list for the dashboard's period. The
+  tournament list has a period filter.
 - Analysis has tabs (Overview, Leaks & strengths, Money). The new Money tab shows ROI with a 95 % bootstrap interval
   for each buy-in tier and format, first entries against re-entries (what re-entries cost and returned, and the average
   starting stack of each), and each group's share of spend and of the result. All groups are judged together like the
