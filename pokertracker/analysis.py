@@ -17,6 +17,7 @@ import numpy as np
 from .dashboard import hand_class
 from .i18n import num, t
 from .places import place_split
+from .tickets import tickets_summary
 from .tournament_report import SITE
 
 HIDE_BELOW = 30          # fewer hands than this: the spot is not tested
@@ -94,7 +95,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
         acts[a["hand_id"]].append(a)
     hands = []
     for r in db.query("SELECT hh.hand_id, hh.tournament_id, hh.played_at, hh.position, hh.stack_bb, hh.net_bb, "
-                      "hh.big_blind, hh.vpip, hh.pfr, hp.hole_cards, ae.ev_net FROM hero_hands hh "
+                      "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, ae.ev_net FROM hero_hands hh "
                       "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
                       "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
                       "LEFT JOIN allin_ev ae ON ae.site = hh.site AND ae.hand_id = hh.hand_id AND ae.is_hero "
@@ -107,7 +108,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
         hands.append({"hand_id": r["hand_id"], "tournament_id": r["tournament_id"], "at": str(r["played_at"])[:16],
                       "position": r["position"], "stack_bb": _f(r["stack_bb"]), "net_bb": net,
                       "adj_bb": _f(r["ev_net"]) / bb if r["ev_net"] is not None else net,
-                      "posted_bb": posted / bb, "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),
+                      "posted_bb": posted / bb, "decided": int(r["decided"]), "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),
                       "cards": r["hole_cards"] or "", "spot": first, "after_3bet": after})
     return hands
 
@@ -381,7 +382,23 @@ def money(db, site=SITE, lang="en"):
             "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs),
             "cash_profit": round(cash_profit, 2), "roi_cash_pct": round(100 * cash_profit / cost, 1) if cost else None,
             "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
-            "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang)}
+            "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang),
+            "by_buyin": _rows_by(db, site, "buyin_total", "SELECT buyin_total AS key, COUNT(*) AS n, SUM(total_cost) AS cost, "
+                                 "SUM(profit) AS profit, SUM(cashed) AS cashed FROM tournament_results WHERE site = ? "
+                                 "GROUP BY buyin_total ORDER BY buyin_total"),
+            "by_tag": _rows_by(db, site, "tag", "SELECT g.tag AS key, COUNT(*) AS n, SUM(r.total_cost) AS cost, "
+                               "SUM(r.profit) AS profit, SUM(r.cashed) AS cashed FROM tournament_results r "
+                               "JOIN tournament_tags g ON g.site = r.site AND g.tournament_id = r.tournament_id "
+                               "WHERE r.site = ? AND g.tag NOT LIKE 'entry:%' GROUP BY g.tag ORDER BY g.tag"),
+            "tickets": tickets_summary(db, site)}
+
+
+def _rows_by(db, site, _key, sql):
+    """Plain per-row results (whole history) for Money's detail tables: tournaments, cost, profit, ROI, cashed."""
+    return [{"key": r["key"], "n": int(r["n"]), "cost": round(_f(r["cost"]), 2), "profit": round(_f(r["profit"]), 2),
+             "roi_pct": round(100 * _f(r["profit"]) / _f(r["cost"]), 1) if _f(r["cost"]) else None,
+             "cashed": int(r["cashed"] or 0), "cashed_pct": round(100 * int(r["cashed"] or 0) / int(r["n"]), 1)}
+            for r in db.query(sql, (site,))]
 
 
 def money_facts(tiers, formats, first, re_entries, lang="en"):
@@ -423,8 +440,9 @@ def overview(hands, db, site=SITE):
             "bounty_cashed": int(t["cashed_b"] or 0), "bounty_n": int(t["n_b"] or 0),
             "bounty_cashed_pct": pct(t["cashed_b"], t["n_b"]),
             "places": place_split(db, site),
-            "vpip_pct": round(100 * sum(h["vpip"] for h in hands) / n, 1) if n else None,
-            "pfr_pct": round(100 * sum(h["pfr"] for h in hands) / n, 1) if n else None,
+            "decided": (d := sum(h["decided"] for h in hands)),
+            "vpip_pct": round(100 * sum(h["vpip"] for h in hands) / d, 1) if d else None,
+            "pfr_pct": round(100 * sum(h["pfr"] for h in hands) / d, 1) if d else None,
             "bb_per_100": round(100 * sum(h["net_bb"] for h in hands) / n, 1) if n else None,
             "bb_per_100_ev": round(100 * sum(h["adj_bb"] for h in hands) / n, 1) if n else None,
             "allins": {"count": int(a["n"]), "actual_bb": round(_f(a["net"]), 1), "ev_bb": round(_f(a["ev"]), 1),

@@ -11,10 +11,22 @@ DROP VIEW IF EXISTS tournament_results;
 DROP VIEW IF EXISTS hero_hands;
 
 -- One row per hand Hero was dealt into, with VPIP / PFR flags and result in big blinds.
+-- decided: Hero had a preflop decision. Not in a walk (everyone folded to Hero's big blind) or when the blind or ante
+-- put Hero all-in; such hands are left out of the VPIP / PFR denominator, as in PokerTracker 4.
+-- VPIP: a call, bet or raise preflop (a small blind completing counts; a big blind checking does not).
+-- PFR: a raise preflop (a limp-raise counts for both).
+-- adj_bb: the result with all-in luck removed (the all-in EV in all-in hands), used to rank hands and positions.
 CREATE VIEW hero_hands AS
 SELECT h.site, h.hand_id, h.tournament_id, h.level, h.played_at, h.big_blind,
        hp.position, hp.stack_bb, hp.net_won,
        hp.net_won * 1.0 / h.big_blind AS net_bb,
+       COALESCE((SELECT ae.ev_net FROM allin_ev ae WHERE ae.site = h.site AND ae.hand_id = h.hand_id AND ae.is_hero),
+                hp.net_won) * 1.0 / h.big_blind AS adj_bb,
+       CASE WHEN EXISTS (
+            SELECT 1 FROM actions a
+            WHERE a.site = h.site AND a.hand_id = h.hand_id AND a.nick = hp.nick
+              AND a.street = 'preflop' AND a.action_type IN ('folds', 'checks', 'calls', 'raises', 'bets')
+       ) THEN 1 ELSE 0 END AS decided,
        CASE WHEN EXISTS (
             SELECT 1 FROM actions a
             WHERE a.site = h.site AND a.hand_id = h.hand_id AND a.nick = hp.nick
@@ -92,10 +104,11 @@ GROUP BY format;
 CREATE VIEW hero_position_stats AS
 SELECT position,
        COUNT(*) AS hands,
-       ROUND(100.0 * SUM(vpip) / COUNT(*), 1) AS vpip_pct,
-       ROUND(100.0 * SUM(pfr) / COUNT(*), 1)  AS pfr_pct,
+       ROUND(100.0 * SUM(vpip) / NULLIF(SUM(decided), 0), 1) AS vpip_pct,
+       ROUND(100.0 * SUM(pfr) / NULLIF(SUM(decided), 0), 1)  AS pfr_pct,
        ROUND(SUM(net_bb), 1)                  AS net_bb,
-       ROUND(100.0 * SUM(net_bb) / COUNT(*), 1) AS bb_per_100
+       ROUND(100.0 * SUM(net_bb) / COUNT(*), 1) AS bb_per_100,
+       ROUND(100.0 * SUM(adj_bb) / COUNT(*), 1) AS bb_per_100_ev
 FROM hero_hands
 GROUP BY position;
 
@@ -106,8 +119,8 @@ SELECT CASE WHEN stack_bb < 10 THEN '1: <10 BB'
             WHEN stack_bb < 40 THEN '4: 25-40 BB'
             ELSE '5: 40+ BB' END AS depth,
        COUNT(*) AS hands,
-       ROUND(100.0 * SUM(vpip) / COUNT(*), 1) AS vpip_pct,
-       ROUND(100.0 * SUM(pfr) / COUNT(*), 1)  AS pfr_pct,
+       ROUND(100.0 * SUM(vpip) / NULLIF(SUM(decided), 0), 1) AS vpip_pct,
+       ROUND(100.0 * SUM(pfr) / NULLIF(SUM(decided), 0), 1)  AS pfr_pct,
        ROUND(SUM(net_bb), 1)                  AS net_bb,
        ROUND(100.0 * SUM(net_bb) / COUNT(*), 1) AS bb_per_100
 FROM hero_hands
@@ -116,8 +129,8 @@ GROUP BY 1;
 CREATE VIEW hero_tournament_stats AS
 SELECT site, tournament_id,
        COUNT(*) AS hands,
-       ROUND(100.0 * SUM(vpip) / COUNT(*), 1) AS vpip_pct,
-       ROUND(100.0 * SUM(pfr) / COUNT(*), 1)  AS pfr_pct,
+       ROUND(100.0 * SUM(vpip) / NULLIF(SUM(decided), 0), 1) AS vpip_pct,
+       ROUND(100.0 * SUM(pfr) / NULLIF(SUM(decided), 0), 1)  AS pfr_pct,
        ROUND(SUM(net_bb), 1)                  AS net_bb
 FROM hero_hands
 GROUP BY site, tournament_id;

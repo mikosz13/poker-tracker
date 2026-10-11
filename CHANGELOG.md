@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+- Consistency:
+  - VPIP and PFR leave out hands without a preflop decision (a walk in the big blind, an all-in forced by the blind or
+    ante), as PokerTracker 4 leaves out walks; checking the big blind is not VPIP, completing the small blind is, and a
+    limp-raise counts for both (tests on GGPoker hands).
+  - Number format: rates (VPIP, PFR, ITM, cashed, top % of the field, …) with one decimal and n; ROI without
+    decimals everywhere. Rows and tiles with fewer than 10 tournaments or 30 hands are greyed, with a tooltip.
+  - Best and worst starting hand and position are ranked by the result with all-in luck removed (EV).
+  - Dashboard: late registration and positions are folded under "More"; by buy-in and by category moved to
+    Analysis → Money (with a link); "Tickets" shows the period, with a link to the whole history in Money.
+- The count column says "Count" in English (it said "Tournaments"); Polish keeps "Turnieje".
 
 ## 0.7.0 (2026-10-11)
 - **Upgrade:** the database goes from schema 3 to 5 on first start (a backup is made next to it first). Then run
