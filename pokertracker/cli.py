@@ -17,6 +17,8 @@ def main(argv=None):
     imp.add_argument("--no-equity", action="store_true", help="skip the all-in EV computation")
     imp.add_argument("--only-new", action="store_true", help="skip files that are unchanged since the last import")
     sub.add_parser("report", help="print results and statistics")
+    rv = sub.add_parser("scope-review", help="show what the scope rules would remove (changes nothing)")
+    rv.add_argument("folder", help="the folder with your PokerCraft exports")
     app = sub.add_parser("app", help="open the desktop app")
     app.add_argument("--browser", action="store_true", help="use the default browser instead of a native window")
     app.add_argument("--port", type=int, default=0)
@@ -45,10 +47,18 @@ def main(argv=None):
                     print("  not imported (out of scope): " + ", ".join(
                         f"{n} {reason}" + (" files" if reason == "cash game" else "")
                         for reason, n in s.ignored_counts().items()))
+                for reason, files in s.ignored_file_lists().items():
+                    print(f"  {reason}: " + ", ".join(files))
+                if s.to_check:
+                    print(f"  WARNING: {len(s.to_check)} summaries could not be read; GG may have changed its file "
+                          "format. Nothing was removed; to check: " + ", ".join(s.to_check))
                 for skipped in s.skipped:
                     print(f"  skipped {skip_text(skipped)}")
         elif args.cmd == "report":
             print(build_report(db))
+        elif args.cmd == "scope-review":
+            from .scope_review import render, review
+            print(render(review(db, args.folder)))
         elif args.cmd == "dashboard":
             with open(args.html, "w", encoding="utf-8") as f:
                 f.write(dashboard_html(dashboard_data(db)))

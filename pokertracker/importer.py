@@ -3,13 +3,19 @@ import json
 import subprocess
 import zipfile
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from .classify import refresh_classification
 from .hands import HERO, entries_from_rows, out_of_scope, parse_hands, starting_stack
-from .summary import OutOfScope, Tournament, parse_summary
+from .migrations import remove_tournaments
+from .scope import FREEROLL, UNRECOGNISED
+from .summary import OutOfScope, Tournament, UnrecognisedSummary, parse_summary
 
 SITE = "GGPoker"
+# Safety fuse: this many unreadable summaries in one import (or more than this share of its summaries) look like a
+# change in GG's file format rather than odd tournaments, so nothing is removed and they are flagged "to check".
+FUSE_COUNT, FUSE_SHARE = 3, 0.20
 
 
 @dataclass
@@ -24,13 +30,24 @@ class ImportStats:
     tournaments: set = field(default_factory=set)
     skipped: list = field(default_factory=list)     # {"file", "code", "detail"}: see SKIP_TEXT
     ignored: dict = field(default_factory=dict)     # reason -> {tournament id, or 'cash'}: never imported
+    ignored_files: dict = field(default_factory=dict)   # reason -> {file}: where they were seen
+    summaries_read: int = 0
+    unrecognised: list = field(default_factory=list)    # (tournament id, name, file) waiting for the fuse
+    to_check: list = field(default_factory=list)        # files the fuse kept: possibly a new GG format
+    excluded: dict = None                               # tournament id -> reason, loaded once per import
 
     def ignored_counts(self):
         """{reason: how many tournaments (or cash-game files)} that were left out on purpose."""
         return {reason: len(ids) for reason, ids in sorted(self.ignored.items())}
 
-    def ignore(self, reason, key):
+    def ignore(self, reason, key, file=None):
         self.ignored.setdefault(reason, set()).add(key)
+        if file:
+            self.ignored_files.setdefault(reason, set()).add(file)
+
+    def ignored_file_lists(self):
+        """{reason: [files]} for the reasons a whole tournament is left out by its summary."""
+        return {r: sorted(self.ignored_files[r]) for r in (FREEROLL, UNRECOGNISED) if r in self.ignored_files}
 
     def skip(self, file, code, detail=""):
         self.skipped.append({"file": file, "code": code, "detail": detail})
@@ -277,8 +294,42 @@ def refresh_starting_stacks(db):
                    [(starting_stack(g["stacks"]), site, tid) for (site, _, _), g in groups.items() for tid in g["ids"]])
 
 
+def excluded_tournaments(db, site=SITE):
+    return {int(r["tournament_id"]): r["reason"] for r in
+            db.query("SELECT tournament_id, reason FROM excluded_tournaments WHERE site = ?", (site,))}
+
+
+def exclude_tournament(db, tournament_id, reason, name=None, file=None, site=SITE):
+    """Leave a whole tournament out: remember why and where it was seen, and remove everything stored about it."""
+    row = db.query("SELECT files FROM excluded_tournaments WHERE site = ? AND tournament_id = ?", (site, tournament_id))
+    files = sorted(set(filter(None, (row[0]["files"] or "").split("\n") if row else [])) | ({file} if file else set()))
+    db.execute("INSERT INTO excluded_tournaments (site, tournament_id, name, reason, files, excluded_at) "
+               "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (site, tournament_id) DO UPDATE SET reason = excluded.reason, "
+               "name = COALESCE(excluded.name, excluded_tournaments.name), files = excluded.files",
+               (site, tournament_id, name, reason, "\n".join(files), datetime.now().isoformat(timespec="seconds")))
+    remove_tournaments(db, [(site, tournament_id)])
+
+
+def _settle_unrecognised(db, stats):
+    """After a whole import: leave out the tournaments of unreadable summaries, unless the fuse trips."""
+    pending, stats.unrecognised = stats.unrecognised, []
+    if not pending:
+        return
+    n = len(pending)
+    if n > FUSE_COUNT or (n > 1 and n / max(stats.summaries_read, 1) > FUSE_SHARE):
+        stats.to_check += sorted({f for _, _, f in pending})
+        return
+    for tid, name, file in pending:
+        exclude_tournament(db, tid, UNRECOGNISED, name, file)
+        stats.excluded[tid] = UNRECOGNISED
+        stats.ignore(UNRECOGNISED, tid, file)
+        stats.tournaments.discard(tid)
+
+
 def _import_one(db, stats, label, text, equity):
     """Import one source text; returns the tournament ids it touched."""
+    if stats.excluded is None:
+        stats.excluded = excluded_tournaments(db)
     stats.files += 1
     kind = classify(text or "")
     if kind == "hands":
@@ -288,7 +339,13 @@ def _import_one(db, stats, label, text, equity):
             for key in ids:
                 stats.ignore(reason, label if key == "cash" else key)
         hands = parse_hands(text)
+        left_out = [h for h in hands if h.tournament_id in stats.excluded]
+        for h in left_out:                          # a tournament left out as a whole stays out
+            stats.ignore(stats.excluded[h.tournament_id], h.tournament_id, label)
+        hands = [h for h in hands if h.tournament_id not in stats.excluded]
         if not hands:
+            if left_out:
+                return set(), set()
             if not ignored:                       # a file of only out-of-scope hands is not a problem
                 stats.skip(label, "no_hands")
             return set(), set()
@@ -302,14 +359,24 @@ def _import_one(db, stats, label, text, equity):
         stats.tournaments |= ids
         return ids, ids
     if kind == "summary":
+        stats.summaries_read += 1
         try:
             t = parse_summary(text)
-        except OutOfScope as e:
-            stats.ignore(e.reason, e.tournament_id)
+        except OutOfScope as e:                     # the whole tournament, with any hands imported before
+            exclude_tournament(db, e.tournament_id, e.reason, e.name, label)
+            stats.excluded[e.tournament_id] = e.reason
+            stats.ignore(e.reason, e.tournament_id, label)
+            stats.tournaments.discard(e.tournament_id)
             return set(), set()
-        except ValueError:
-            stats.skip(label, "unrecognised_summary")
+        except UnrecognisedSummary as e:
+            if e.tournament_id is None:             # not even a GGPoker header: nothing to leave out
+                stats.skip(label, "unrecognised_summary")
+            else:
+                stats.unrecognised.append((e.tournament_id, e.name, label))
             return set(), set()
+        if stats.excluded.get(t.id) == UNRECOGNISED:  # readable now (e.g. after a parser update): back in scope
+            db.execute("DELETE FROM excluded_tournaments WHERE site = ? AND tournament_id = ?", (SITE, t.id))
+            del stats.excluded[t.id]
         _store_summary(db, t)
         stats.summary_files += 1
         stats.tournaments.add(t.id)
@@ -336,6 +403,7 @@ def import_texts(db, items, equity=True) -> ImportStats:
         hand_tids |= h
         all_tids |= a
     _refresh(db, hand_tids, all_tids)
+    _settle_unrecognised(db, stats)
     db.commit()
     return stats
 
@@ -363,6 +431,8 @@ def import_files(db, files, equity=True, progress=None, skip_unchanged=False) ->
             db.commit()
         if progress:
             progress(i, len(files), f.name)
+    _settle_unrecognised(db, stats)
+    db.commit()
     return stats
 
 

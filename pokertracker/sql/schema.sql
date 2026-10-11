@@ -135,6 +135,18 @@ CREATE TABLE IF NOT EXISTS imported_files (
     mtime  NUMERIC NOT NULL
 );
 
+-- Tournaments left out as a whole (a freeroll, an unreadable summary): their data is removed and their hands are
+-- skipped in later imports. files: the export files they were seen in (one per line).
+CREATE TABLE IF NOT EXISTS excluded_tournaments (
+    site           TEXT NOT NULL,
+    tournament_id  BIGINT NOT NULL,
+    name           TEXT,
+    reason         TEXT NOT NULL,
+    files          TEXT,
+    excluded_at    TEXT,
+    PRIMARY KEY (site, tournament_id)
+);
+
 -- Version of this schema the database is at; older databases are upgraded by pokertracker/migrations.py.
 CREATE TABLE IF NOT EXISTS schema_version (
     version  INTEGER NOT NULL

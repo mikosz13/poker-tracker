@@ -2,7 +2,7 @@
 import re
 from dataclasses import dataclass
 
-from .scope import tournament_reason
+from .scope import FREEROLL, buyin_paid, tournament_reason
 
 AMT = r"\d[\d,]*(?:\.\d+)?"
 HEADER = re.compile(r"Tournament #(?P<id>\d+), (?P<name>.+?)(?: \$?" + AMT + r")?, (?P<game>Hold'em No Limit.*)")
@@ -21,9 +21,17 @@ RECEIVED = re.compile(r"received a total of \$?(?P<prize>" + AMT + r")(?P<ticket
 class OutOfScope(ValueError):
     """A summary of something the tracker never imports (Sit & Go, PLO, not in $ ...)."""
 
-    def __init__(self, reason, tournament_id):
+    def __init__(self, reason, tournament_id, name=None):
         super().__init__(f"{reason}: tournament #{tournament_id}")
-        self.reason, self.tournament_id = reason, tournament_id
+        self.reason, self.tournament_id, self.name = reason, tournament_id, name
+
+
+class UnrecognisedSummary(ValueError):
+    """A summary that cannot be read; tournament_id is known when at least its first line is a GGPoker header."""
+
+    def __init__(self, tournament_id=None, name=None):
+        super().__init__("Unrecognized tournament summary format")
+        self.tournament_id, self.name = tournament_id, name
 
 
 def money(s):
@@ -55,10 +63,12 @@ def parse_summary(text: str) -> Tournament:
     if m := FIRST_LINE.match(first):
         buyin = next((l for l in text.splitlines() if l.startswith("Buy-in:")), "")
         if reason := tournament_reason(m["name"], m["game"], buyin):
-            raise OutOfScope(reason, int(m["id"]))
+            raise OutOfScope(reason, int(m["id"]), m["name"])
+        if buyin_paid(buyin) == 0:                                  # e.g. "Buy-in: $0": a freeroll or promotion
+            raise OutOfScope(FREEROLL, int(m["id"]), m["name"])
     h, b = HEADER.search(text), BUYIN.search(text)
     if not (h and b):
-        raise ValueError("Unrecognized tournament summary format")
+        raise UnrecognisedSummary(int(m["id"]) if m else None, m["name"] if m else None)
 
     def find(rx, group, default=None):
         m = rx.search(text)
