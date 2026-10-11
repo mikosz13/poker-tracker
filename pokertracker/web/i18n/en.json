@@ -612,5 +612,9 @@
  "places.late": "Late registration",
  "places.introSplit": "Your final place as a share of the field. The line marks where a player of average skill lands (in each band in proportion to its width); it is shown only for entries from the start.",
  "places.lateNote": "No comparison with an average player here: players who busted before you sat down count in the field, so these places look better than they are.",
- "places.none": "No tournaments of this kind with a place yet."
+ "places.none": "No tournaments of this kind with a place yet.",
+ "col.count": "Tournaments",
+ "col.countTip": "Tournaments with a summary in this row.",
+ "col.countTagTip": "Tournaments with this label. A tournament has several labels and counts under each, so the numbers add up to more than your total.",
+ "col.countReTip": "For re-entries: tournaments with at least one re-entry."
 }
