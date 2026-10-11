@@ -17,7 +17,7 @@ def run(db_url=None, port=0, browser=False):
             browser = True
             print("pywebview not installed, opening in your browser instead (pip install pywebview).")
         else:
-            webview.create_window("Poker Tracker", url, width=1100, height=820, min_size=(380, 600))
+            webview.create_window("Poker Tracker", url, width=1100, height=820, min_size=(800, 600))
             webview.start()
             server.shutdown()
             return
