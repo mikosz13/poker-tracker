@@ -5,7 +5,8 @@ stores them in SQL and answers the questions a player actually has: *what is my 
 how do I play at different stack depths?*
 
 **Players:** download the app from [Releases](https://github.com/mikosz13/poker-tracker/releases) and follow
-[Getting started / Jak zacząć](docs/INSTALL.md) (seven steps, English and Polish).
+[Getting started / Jak zacząć](docs/INSTALL.md) (seven steps, English and Polish). The app speaks English and Polish and has a light and a
+dark theme (switches in the top right corner; it starts with your system's language and theme).
 
 ## Why
 

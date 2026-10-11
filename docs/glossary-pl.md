@@ -56,7 +56,7 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 | prize | wygrana |
 | knockouts (licznik) | KO |
 | hands to review | ręce do przejrzenia |
-| busted / bust | wylot |
+| busted / bust | odpadnięcie |
 | biggest pots won / lost | największe wygrane / przegrane pule |
 | compared with your usual play | w porównaniu z Twoją normą |
 | time played | czas gry |
@@ -67,7 +67,7 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 | Analysis (zakładka) | Analiza |
 | Import (zakładka) | Import |
 | How luck works (zakładka) | Jak liczymy szczęście |
-| Overview / Money (zakładki Analizy) | Przegląd / Kasa |
+| Overview / Money (zakładki Analizy) | Przegląd / Finanse |
 | Leaks & strengths (zakładka) | Leaki (wycieki) i mocne strony |
 | Stack depth (zakładka v2) | Głębokość stacku |
 | Strengths | Mocne strony |
@@ -108,7 +108,7 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 
 **Pulpit → Ostatnia sesja**
 > 11 turniejów, 1 ITM, −45,31 $ (6 bez podsumowania). Szczęście w all-inach +286 BB: szczęście (mniej więcej 1 na 6
-> graczy). 16 wylotów; warto obejrzeć: JJ vs 96s w Bounty Hunters Hyper Special.
+> graczy). 16 odpadnięć; warto obejrzeć: JJ vs 96s w Bounty Hunters Hyper Special.
 
 > Czas gry 8 h 41 min · najwięcej 3 turnieje naraz · 24 KO · 5 re-entry (20,00 $) · najlepsze miejsce: 154/2841.
 
@@ -126,7 +126,7 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 
 > **Re-shove all-in** · prawdopodobne · +298 BB w 167 rękach (+1,78 BB na rękę).
 
-**Analiza → Kasa**
+**Analiza → Finanse**
 > $30+: strata ponad przypadek; to 50% Twoich wydatków, więc ma największy wpływ na Twój ogólny wynik.
 
 > Pierwsze wejścia −58%, re-entry −47% (re-entry zaczynają średnio z 28 BB, pierwsze wejścia z 52 BB).
@@ -144,5 +144,18 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 - Dashboard → **Pulpit**
 - spot → zostaje **spot**
 - replayer → zostaje **replayer**
-- Money → **Kasa**
-- busted → **wylot**
+- Money → **Finanse** (najpierw „Kasa”, zmienione 11.10.2026)
+- busted → **odpadnięcie** (najpierw „wylot”, zmienione 11.10.2026)
+
+## 8. Odmiana przez liczby (w aplikacji)
+
+Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama
+reguła w `pokertracker/i18n.py`; testy dla 1, 2, 5, 12, 22, 25).
+
+| n | turniej | ręka | odpadnięcie | all-in |
+|---|---|---|---|---|
+| 1 | 1 turniej | 1 ręka | 1 odpadnięcie | 1 all-in |
+| 2, 22 | 2 turnieje | 2 ręce | 2 odpadnięcia | 2 all-iny |
+| 5, 12, 25 | 5 turniejów | 5 rąk | 5 odpadnięć | 5 all-inów |
+
+Gdzie odmiana byłaby niezręczna (np. podsumowanie importu), używamy formy „etykieta: liczba” („nowe ręce: 120”).

@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+- The app speaks Polish: a PL | EN switch in the top right corner, starting in the system language and remembered,
+  switching at once (the replayer stays on the same step). Every text goes through translation files shared by the
+  page and the server (session summary, tips, money facts), with Polish plural forms (1 turniej, 2 turnieje,
+  5 turniejów), a decimal comma and non-breaking thousands (2 445,05 $), dates as 11.10.2026 and a 24 h clock. Poker
+  jargon (positions, actions, VPIP, all-in…) stays English, as agreed in docs/glossary-pl.md. The CLI HTML reports stay
+  English. Tests check that both languages have the same keys and placeholders and that the page has no hard-coded
+  text.
+- Light and dark theme: a switch next to the language one. Without a choice the app follows the system theme; a
+  chosen theme is remembered and applied from the first paint.
+- Layout: long table headers wrap instead of widening the table, the dashboard's three boxes go to two columns in a
+  narrow window, and the replayer's all-in equity and luck sit on two lines so they no longer run under a bet.
 - Dashboard: the last session's tournament list scrolls inside its box (about 8 rows, the column header stays visible)
   instead of growing the page, with "All tournaments →" opening the tournament list for the dashboard's period. The
   tournament list has a period filter.

@@ -6,7 +6,10 @@
 <title>Poker Tracker</title>
 <style>
 :root{--bg:#fff;--fg:#14161a;--muted:#6b7280;--card:#f3f4f6;--line:#e5e7eb;--blue:#2f6fed;--orange:#e67e22;--pos:#0a7d2c;--neg:#c0392b;--red:#c0392b;--felt:#1f6f4a;--rail:#5a3d2b;--s-s:#14161a;--s-h:#c62828;--s-d:#1f62c9;--s-c:#1b7f37}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}}
+/* the system theme, unless a theme was picked with the switch (data-theme on <html>) */
+:root{color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
 header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
@@ -22,6 +25,7 @@ a{color:var(--blue)}.m{color:var(--muted);font-size:.88rem}
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
+th{white-space:normal;vertical-align:bottom}   /* long headers (e.g. in Polish) wrap instead of widening the table */
 #list th:nth-child(2),#list td:nth-child(2){text-align:left;white-space:normal;min-width:10em}
 @media (max-width:560px){#list th,#list td{padding:6px 4px}#list th:nth-child(2),#list td:nth-child(2){min-width:7em}
   #list th:nth-child(3),#list td:nth-child(3),#list th:nth-child(6),#list td:nth-child(6){display:none}
@@ -85,7 +89,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
-.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin:14px 0}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
   background:var(--bg);color:var(--muted);border:1px solid var(--line)}.lv b{display:block;font-size:1rem;margin-bottom:2px}
@@ -102,20 +106,24 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .finding{border-left:4px solid var(--line);margin:10px 0}.finding.likely{border-left-color:var(--neg)}
 .finding.possible{border-left-color:var(--orange)}.finding.good{border-left-color:var(--pos)}
 .finding h3{margin:0 0 4px;font-size:1rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-.conf{font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--bg);border:1px solid var(--line)}
+.conf{display:inline-block;font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--bg);border:1px solid var(--line)}
 .finding .big{font-size:1.05rem;font-weight:700;margin:2px 0}.finding details{margin-top:6px}
 .finding summary{cursor:pointer;color:var(--blue);font-size:.88rem}
 .sess-sum{margin:8px 0 0;font-size:1rem;line-height:1.45}
 .scrollbox{max-height:21rem;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
 .scrollbox table{border-collapse:separate;border-spacing:0}   /* collapsed borders let rows show above a sticky header */
 .scrollbox th{position:sticky;top:0;background:var(--card);z-index:1;box-shadow:0 1px 0 var(--line)}
-td.vcell{white-space:normal;min-width:7.5em;text-align:left}
+td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .ci{position:relative;display:inline-block;width:80px;height:10px;background:var(--line);border-radius:5px;vertical-align:middle;margin-right:6px}
 .ci-zero{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fg);opacity:.6}
 .ci-range{position:absolute;top:2px;height:6px;border-radius:3px;background:var(--muted)}
 .ci-range.neg{background:var(--neg)}.ci-range.pos{background:var(--pos)}
 .conf.v-neg{color:var(--neg);border-color:var(--neg)}.conf.v-pos{color:var(--pos);border-color:var(--pos)}
 .seg a{text-decoration:none}
+.langs{margin-left:auto;display:flex;flex:none;align-items:center}.langs button{padding:4px 8px;font-size:.8rem;border-radius:0}
+.langs button:first-child{border-radius:8px 0 0 8px}.langs button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.langs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.langs.themes{margin-left:6px}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -130,187 +138,251 @@ td.vcell{white-space:normal;min-width:7.5em;text-align:left}
 </head>
 <body>
 <header><nav id="nav">
-  <a href="#/">Dashboard</a><a href="#/tournaments">Tournaments</a><a href="#/analysis">Analysis</a><a href="#/import">Import</a><a href="#/luck">How luck works</a>
+  <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
+  <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
+  <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
 </nav></header>
-<main id="app">Loading…</main>
+<main id="app"></main>
 <script>
 const TOKEN = "__TOKEN__";
 const app = document.getElementById("app");
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const SUIT = {c:"♣", d:"♦", h:"♥", s:"♠"};
-const num = (x, d=1) => x == null ? "–" : Number(x).toLocaleString("en-US", {minimumFractionDigits:d, maximumFractionDigits:d});
+
+// ---- Language -----------------------------------------------------------------
+// Texts come from i18n/<lang>.json (English for a missing key). A value is a string with {placeholders}, or plural
+// forms picked with Intl.PluralRules; {n} is the count. Texts are trusted HTML; values are escaped by the caller.
+const LANGS = ["en", "pl"], NB = "\u00a0";
+let LANG = "en", STR = {}, EN = {};
+const dicts = {};
+const loadLang = async l => dicts[l] || (dicts[l] = await fetch(`/i18n/${l}.json`).then(r => r.json()));
+function t(key, p = {}) {
+  let v = STR[key], rule = LANG;
+  if (v == null) { v = EN[key]; rule = "en"; }
+  if (v == null) return key;
+  if (typeof v === "object") v = v[new Intl.PluralRules(rule).select(Number(p.n))] ?? v.other ?? v.many;
+  return v.replace(/\{(\w+)\}/g, (m, k) => !(k in p) ? m : k === "n" && typeof p.n === "number" ? num(p.n, 0) : p[k]);
+}
+async function setLang(l, save) {
+  [EN, STR] = await Promise.all([loadLang("en"), loadLang(l)]);
+  LANG = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-title]").forEach(e => { e.title = t(e.dataset.i18nTitle); });
+  document.querySelectorAll("#langs button").forEach(b => b.classList.toggle("on", b.dataset.l === l));
+  if (save) try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                             body: JSON.stringify({lang: l})}); } catch (e) { /* still applied now */ }
+}
+document.getElementById("langs").onclick = async e => {
+  const b = e.target.closest("button");
+  if (!b || b.dataset.l === LANG) return;
+  await setLang(b.dataset.l, true);
+  if (replay && document.getElementById("stage")) { const k = step; stopPlay(); renderHand(); replay.go(k); }
+  else route(true);
+};
+
+// ---- Theme: the system's until one is picked; the server puts the saved choice on <html> so the page does not flash
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const markTheme = () => document.querySelectorAll("#themes button").forEach(b => b.classList.toggle("on",
+  b.dataset.t === (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light"))));
+systemDark.addEventListener("change", markTheme);
+markTheme();
+document.getElementById("themes").onclick = async e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  document.documentElement.dataset.theme = b.dataset.t;
+  markTheme();
+  try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                   body: JSON.stringify({theme: b.dataset.t})}); } catch (err) { /* still applied now */ }
+};
+
+// Numbers: a decimal comma and non-breaking thousands in Polish (1,5 BB; 2 445,05 $), a true minus sign
+function num(x, d = 1) {
+  if (x == null || x === "" || isNaN(x)) return "–";
+  const v = Number(x), s = Math.abs(v).toFixed(d), [i, f] = s.split("."), pl = LANG === "pl";
+  return (v < 0 && Number(s) !== 0 ? "−" : "") + i.replace(/\B(?=(\d{3})+(?!\d))/g, pl ? NB : ",") + (f ? (pl ? "," : ".") + f : "");
+}
 const sgn = (x, d=1, unit="") => x == null ? "–" :
-  `<span class="${Number(x) >= 0 ? "pos" : "neg"}">${Number(x) >= 0 ? "+" : ""}${num(x, d)}${unit}</span>`;
-const money = x => x == null ? "–" : "$" + num(x, 2);
-function cards(t) {
-  const a = Array.isArray(t) ? t : String(t || "").split(" ").filter(Boolean);
+  `<span class="${Number(x) >= 0 ? "pos" : "neg"}">${Number(x) >= 0 ? "+" : ""}${num(x, d)}${unit.replace(/^ /, NB)}</span>`;
+function money(x, d = 2) {
+  if (x == null) return "–";
+  if (LANG === "pl") return num(x, d) + NB + "$";
+  const s = num(Math.abs(x), d);
+  return (Number(x) < 0 && Number(Math.abs(x).toFixed(d)) !== 0 ? "−" : "") + "$" + s;
+}
+const pct = x => x == null ? "–" : num(x, 1) + "%";
+const bbUnit = (x, d = 1) => num(x, d) + NB + "BB";
+// Dates: "2026-10-11 21:45" in English, "11.10.2026 21:45" in Polish; always a 24 h clock
+const pad = n => String(n).padStart(2, "0");
+function dateTime(s) {
+  const m = String(s ?? "").match(/^(\d{4})-(\d\d)-(\d\d)(?:[ T](\d\d:\d\d))?/);
+  if (!m) return esc(s);
+  return (LANG === "pl" ? `${m[3]}.${m[2]}.${m[1]}` : `${m[1]}-${m[2]}-${m[3]}`) + (m[4] ? " " + m[4] : "");
+}
+const dayLabel = d => LANG === "pl" ? `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`
+  : d.toLocaleDateString("en-US", {month: "short", day: "numeric"});
+const timeLabel = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+function cards(x) {
+  const a = Array.isArray(x) ? x : String(x || "").split(" ").filter(Boolean);
   return a.length ? a.map(c => `<span class="card s-${esc(c[1])}">${esc(c[0])}${SUIT[c[1]] || ""}</span>`).join("") : '<span class="m">–</span>';
 }
 async function api(path, opts) {
-  const r = await fetch(path, opts);
+  // texts made on the server (session summary, analysis) come in the page's language
+  const url = opts ? path : path + (path.includes("?") ? "&" : "?") + "lang=" + LANG;
+  const r = await fetch(url, opts);
   const j = await r.json();
-  if (!r.ok) throw new Error(j.error || r.status);
+  if (!r.ok) { const e = new Error(j.code ? t("err." + j.code) : j.error || r.status); throw e; }
   return j;
 }
-function chart(series, colors = ["var(--blue)", "var(--orange)"]) {
-  const vals = series.flat();
-  if (vals.length < 2) return '<p class="m">Not enough data for a chart yet.</p>';
-  const w = 300, h = 110, lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), span = (hi - lo) || 1;
-  const y = v => (h - 8 - (v - lo) / span * (h - 16)).toFixed(1);
-  const lines = series.map((s, k) => `<polyline fill="none" stroke="${colors[k]}" stroke-width="2" points="${
-    s.map((v, i) => `${(i * w / Math.max(s.length - 1, 1)).toFixed(1)},${y(v)}`).join(" ")}"/>`).join("");
-  return `<svg class="chart" viewBox="0 0 ${w} ${h}"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="currentColor" stroke-opacity=".25"/>${lines}</svg>`;
-}
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
-const luckLink = '<a href="#/luck">How is luck calculated?</a>';
+const luckLink = () => `<a href="#/luck">${t("common.howLuck")}</a>`;
 
 // ---- Dashboard -------------------------------------------------------------
-const PERIODS = [["24h", "24 h"], ["3d", "3 days"], ["1w", "1 week"], ["2w", "2 weeks"], ["4w", "4 weeks"],
-                 ["3m", "3 months"], ["6m", "6 months"], ["max", "Max"]];
-const pct = x => x == null ? "–" : num(x, 1) + "%";
+const PERIODS = ["24h", "3d", "1w", "2w", "4w", "3m", "6m", "max"];       // labels: period.<key>, period.<key>.last
 
 async function viewDashboard(period) {
   const mine = routeSeq, q = period ? `?period=${encodeURIComponent(period)}` : "";
   const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
   if (mine !== routeSeq) return;                         // the user went elsewhere while this was loading
-  const banner = st.running ? `<p class="warn">Importing ${st.done}/${st.total} files… <a href="#/import">details</a>. The numbers below will update when it finishes.</p>` : "";
+  const banner = st.running ? `<p class="warn">${t("dash.importing", {done: st.done, total: st.total})}</p>` : "";
   if (!d.tournaments && !d.hands && d.period === "max") {
-    app.innerHTML = banner + `<h1>Welcome</h1><p>No data yet. Go to <a href="#/import">Import</a> and point the app at the folder where you save PokerCraft exports.</p>`;
+    app.innerHTML = banner + `<h1>${t("dash.welcome")}</h1><p>${t("dash.noData")}</p>`;
     return;
   }
-  let h = "<h1>Dashboard</h1>" + banner;
+  let h = `<h1>${t("nav.dashboard")}</h1>` + banner;
   if (s) {
     const si = s.insights || {}, sn = si.numbers || {};
-    h += `<div class="box"><b>Last session</b> <span class="m">${esc(s.from)} – ${esc(s.to)}</span>
+    h += `<div class="box"><b>${t("sess.title")}</b> <span class="m">${dateTime(s.from)} – ${dateTime(s.to)}</span>
       ${si.summary ? `<p class="sess-sum">${esc(si.summary)}</p>` : ""}
-      <div class="k" style="margin-top:8px"><div>Tournaments<b>${s.count}</b></div><div>Hands<b>${s.hands}</b></div>
-      <div>Profit<b>${s.profit == null ? "–" : sgn(s.profit, 2, " $")}</b></div><div>All-in luck<b>${sgn(s.luck_bb, 1, " BB")}</b></div></div>
+      <div class="k" style="margin-top:8px"><div>${t("common.tournamentsTitle")}<b>${s.count}</b></div><div>${t("common.hands")}<b>${num(s.hands, 0)}</b></div>
+      <div>${t("common.profit")}<b>${s.profit == null ? "–" : sgn(s.profit, 2, " $")}</b></div><div>${t("sess.allinLuck")}<b>${sgn(s.luck_bb, 1, " BB")}</b></div></div>
       ${si.numbers ? `<p class="m" style="margin:8px 0 0">${[
-        sn.minutes != null ? `played ${Math.floor(sn.minutes / 60)} h ${sn.minutes % 60} min` : "",
-        `up to ${sn.max_at_once} at once`, `${sn.knockouts} knockouts`,
-        sn.reentries ? `${sn.reentries} re-entries (${money(sn.reentry_cost)})` : "no re-entries",
-        sn.best ? `best: ${sn.best.place}/${sn.best.players} in ${esc(sn.best.name)}` : ""].filter(Boolean).join(" · ")}</p>` : ""}
+        sn.minutes != null ? t("sess.played", {h: Math.floor(sn.minutes / 60), m: sn.minutes % 60}) : "",
+        t("sess.atOnce", {n: sn.max_at_once}), t("sess.knockouts", {n: sn.knockouts}),
+        sn.reentries ? t("sess.reentries", {n: sn.reentries, cost: money(sn.reentry_cost)}) : t("sess.noReentries"),
+        sn.best ? t("sess.best", {place: sn.best.place, players: sn.best.players, name: esc(sn.best.name)}) : ""].filter(Boolean).join(" · ")}</p>` : ""}
       ${si.luck && si.luck.count ? sessionLuck(si.luck) : ""}
       ${si.vs_usual && si.vs_usual.length ? vsUsual(si.vs_usual) : ""}
       ${si.busts ? reviewHands(si) : ""}
-      ${table(["Tournament", "Place", "Profit $", "Luck BB"], s.tournaments.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
-        <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
-        <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`), "scrollbox")}
-      <p style="margin:8px 0 0"><a href="#/tournaments?period=${encodeURIComponent(d.period)}">All tournaments →</a></p></div>`;
+      ${table([t("col.tournament"), t("col.place"), t("col.profitUsd"), t("col.luckBb")], s.tournaments.map(x => `<tr class="click" onclick="location.hash='#/t/${x.tournament_id}'">
+        <td>${esc(x.name)} <span class="m">${money(x.buyin_total)}</span></td><td>${x.finish_place ?? "–"}/${x.players ?? "–"}</td>
+        <td>${x.profit == null ? `<span class="m">${t("common.noSummary")}</span>` : sgn(x.profit, 2)}</td><td>${sgn(x.luck_bb)}</td></tr>`), "scrollbox")}
+      <p style="margin:8px 0 0"><a href="#/tournaments?period=${encodeURIComponent(d.period)}">${t("sess.allTournaments")}</a></p></div>`;
   }
-  const label = PERIODS.find(p => p[0] === d.period)[1];
-  h += `<h2>${d.period === "max" ? "All tournaments" : "Last " + esc(label)}</h2>
-    <div class="seg" id="periods">${PERIODS.map(([k, t]) => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t}</button>`).join("")}</div>`;
+  h += `<h2>${t(`period.${d.period}.last`)}</h2>
+    <div class="seg" id="periods">${PERIODS.map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}</div>`;
   if (!d.tournaments && !d.hands) {
-    app.innerHTML = h + `<p class="m">Nothing played in the last ${esc(label)}. Pick a longer period.</p>`;
+    app.innerHTML = h + `<p class="m">${t("dash.nothingPlayed")}</p>`;
     bindPeriods();
     return;
   }
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
-  h += `<div class="k"><div>Tournaments<b>${d.tournaments}</b></div><div>Profit (cash)<b>${sgn(d.profit, 0, " $")}</b></div>
-    <div>ROI<b>${roi}</b></div><div>In the money<b>${pct(d.itm_pct)}</b><span class="m">${d.itm} of ${d.tournaments}</span></div>
-    <div>Knockouts<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : num(d.knockouts.per_tournament, 2) + " per tournament"}</span></div></div>
-    <p class="m">cost ${money(d.cost)} · cash ${money(d.cash)}${d.tickets ? ` · tickets ${money(d.tickets)} (not in ROI)` : ""} · ${d.hands} hands</p>`;
-  if (d.tournaments < 30) h += `<p class="warn">Small sample (${d.tournaments} tournaments). Tournament results this small are mostly variance.</p>`;
+  h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b></div>
+    <div>ROI<b>${roi}</b></div><div>${t("dash.itm")}<b>${pct(d.itm_pct)}</b><span class="m">${t("dash.itmOf", {itm: d.itm, n: d.tournaments})}</span></div>
+    <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
+    <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
+  if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
   h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
-  h += `<h2>Cash profit, cumulative</h2><div class="tchart" id="c-profit"></div>`;
-  h += `<h2>Luck</h2><div class="tchart" id="c-luck"></div>
-    <p class="legend"><i style="background:var(--blue);margin-left:0"></i>actual result in BB<i style="background:var(--orange)"></i>luck-adjusted (all-in luck removed) · ${luckLink}</p>`;
-  if (d.allins.count) h += `<p>${d.allins.count} all-ins: actual ${sgn(d.allins.net_bb)} BB, expected ${sgn(d.allins.ev_bb)} BB, luck ${sgn(d.allins.luck_bb)} BB.</p>`;
-  const tagRows = pre => d.tags.filter(t => t.tag.startsWith(pre)).map(t =>
-    `<tr><td>${esc(t.tag.split(":")[1])}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
+  h += `<h2>${t("dash.cashCumulative")}</h2><div class="tchart" id="c-profit"></div>`;
+  h += `<h2>${t("dash.luck")}</h2><div class="tchart" id="c-luck"></div>
+    <p class="legend"><i style="background:var(--blue);margin-left:0"></i>${t("dash.legendActual")}<i style="background:var(--orange)"></i>${t("dash.legendAdjusted")} · ${luckLink()}</p>`;
+  if (d.allins.count) h += `<p>${t("dash.allinsLine", {allins: t("common.allins", {n: d.allins.count}), net: sgn(d.allins.net_bb), ev: sgn(d.allins.ev_bb), luck: sgn(d.allins.luck_bb)})}</p>`;
+  const tagRows = pre => d.tags.filter(x => x.tag.startsWith(pre)).map(x =>
+    `<tr><td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>Late registration vs start</h2>${table(["Entered", "n", "ITM", "ITM %", "ROI"], entry)}` +
-    (d.entry_incomplete ? `<p class="m">${d.entry_incomplete} tournament${d.entry_incomplete === 1 ? "" : "s"} with an incomplete entry history left out.</p>` : "");
-  if (d.by_buyin.length) h += `<h2>By buy-in</h2>${table(["Buy-in", "n", "ITM", "ITM %", "Profit $", "ROI"], d.by_buyin.map(b =>
+  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), "n", "ITM", "ITM %", "ROI"], entry)}` +
+    (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "");
+  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), "n", "ITM", "ITM %", t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
     `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${pct(b.itm_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
-  if (d.positions.length) h += `<h2>By position</h2>${table(["Position", "Hands", "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
+  if (d.positions.length) h += `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
-  const other = d.tags.filter(t => !t.tag.startsWith("entry:")).map(t =>
-    `<tr><td>${esc(t.tag)}</td><td>${t.n}</td><td>${t.itm}</td><td>${pct(t.itm_pct)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>Other categories</h2>${table(["Tag", "n", "ITM", "ITM %", "ROI"], other)}`;
+  const other = d.tags.filter(x => !x.tag.startsWith("entry:")).map(x =>
+    `<tr><td>${esc(x.tag)}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), "n", "ITM", "ITM %", "ROI"], other)}`;
   app.innerHTML = h;
   bindPeriods();
   charts = [];
-  addChart("c-profit", d.profit_points, [{key: "total", color: "var(--blue)"}], v => `${v < 0 ? "−" : ""}$${num(Math.abs(v), 0)}`,
-    p => `<b>${esc(p.name)}</b> $${num(p.buyin, 2)}<br>${sgn(p.profit, 2, " $")} · total ${sgn(p.total, 2, " $")}`);
+  addChart("c-profit", d.profit_points, [{key: "total", color: "var(--blue)"}], v => money(v, 0),
+    p => `<b>${esc(p.name)}</b> ${money(p.buyin)}<br>${t("chart.profitTip", {profit: sgn(p.profit, 2, " $"), total: sgn(p.total, 2, " $")})}`);
   addChart("c-luck", d.bb_points, [{key: "actual", color: "var(--blue)"}, {key: "adjusted", color: "var(--orange)"}],
-    v => `${v < 0 ? "−" : ""}${num(Math.abs(v), 0)} BB`, p => `<b>${esc(p.name || "")}</b><br>result ${sgn(p.net_bb)} BB · luck ${sgn(p.luck_bb)} BB<br>
-      total: actual ${sgn(p.actual)} BB, adjusted ${sgn(p.adjusted)} BB`);
+    v => bbUnit(v, 0), p => `<b>${esc(p.name || "")}</b><br>${t("chart.luckTip", {net: sgn(p.net_bb), luck: sgn(p.luck_bb),
+      actual: sgn(p.actual), adjusted: sgn(p.adjusted)})}`);
 }
 
-const LEVELS = [["Very lucky", "▲▲", "up"], ["Lucky", "▲", "up"], ["Average", "●", "mid"], ["Bad run", "▼", "down"],
-                ["Worst run", "▼▼", "down"]];
+// the luck badge: the server sends the English level as its id
+const LEVELS = [["Very lucky", "▲▲", "up", "luck.veryLucky"], ["Lucky", "▲", "up", "luck.lucky"], ["Average", "●", "mid", "luck.average"],
+                ["Bad run", "▼", "down", "luck.badRun"], ["Worst run", "▼▼", "down", "luck.worstRun"]];
 function luckBox(b) {
-  const scale = `<div class="lscale">${LEVELS.map(([name, sym, cls]) =>
-    `<div class="lv ${cls} ${b.level === name ? "on" : ""}"><b>${sym}</b>${name}</div>`).join("")}</div>`;
-  const note = b.count ? `${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")} · ${b.z >= 0 ? "+" : ""}${num(b.z, 2)} typical swings`
-    + (b.small_sample ? ` · <b>small sample</b>` : "") : "No all-ins with known cards in this period.";
-  const rare = b.count && b.one_in ? `<p style="margin:8px 0 0;font-size:.9rem">A run this ${b.direction === "worse" ? "bad or worse" : "good or better"}
-      happens to about <b>1 in ${b.one_in}</b> players with average luck.</p>` : "";
-  return `<div class="box"><h3>Luck</h3>${scale}${rare}<p class="m" style="margin:6px 0 0">${note} · ${luckLink}</p></div>`;
+  const scale = `<div class="lscale">${LEVELS.map(([id, sym, cls, key]) =>
+    `<div class="lv ${cls} ${b.level === id ? "on" : ""}"><b>${sym}</b>${t(key)}</div>`).join("")}</div>`;
+  const note = b.count ? t("luck.note", {allins: t("common.allins", {n: b.count}), luck: sgn(b.luck_bb, 1, " BB"),
+      z: (b.z >= 0 ? "+" : "") + num(b.z, 2)}) + (b.small_sample ? ` · <b>${t("luck.small")}</b>` : "")
+    : t("luck.noneInPeriod");
+  const rare = b.count && b.one_in ? `<p style="margin:8px 0 0;font-size:.9rem">${t(b.direction === "worse" ? "luck.rareWorse" : "luck.rareBetter", {n: b.one_in})}</p>` : "";
+  return `<div class="box"><h3>${t("dash.luck")}</h3>${scale}${rare}<p class="m" style="margin:6px 0 0">${note} · ${luckLink()}</p></div>`;
 }
 function handsBox(sh) {
-  const kind = h => h.length === 2 ? "pair" : h.endsWith("s") ? "suited" : "offsuit";
+  const kind = x => t(x.length === 2 ? "hand.pair" : x.endsWith("s") ? "hand.suited" : "hand.offsuit");
   const card = (title, g) => g ? `<div><span class="m">${title}</span><div class="hc">${esc(g.hand.slice(0, 2))}</div>
-      <span class="m">${kind(g.hand)}</span><br>${sgn(g.net_bb, 1, " BB")}<br><span class="m">${g.hands} hands</span></div>`
+      <span class="m">${kind(g.hand)}</span><br>${sgn(g.net_bb, 1, " BB")}<br><span class="m">${t("common.handsN", {n: g.hands})}</span></div>`
     : `<div><span class="m">${title}</span><div class="hc">–</div></div>`;
-  const body = sh.ranked ? `<div class="hcards">${card("Best hand", sh.best)}${card("Worst hand", sh.worst)}</div>`
-    : `<p class="m">No starting hand has ${sh.min_hands} hands in this period yet, so there is no ranking.</p>`;
-  return `<div class="box"><h3>Best &amp; worst starting hand</h3>${body}
-    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">Ranked by result among ${sh.ranked} hand types with ${sh.min_hands}+ hands.
-      With this many hands, a result depends mostly on a few big pots.</p>` : ""}</div>`;
+  const body = sh.ranked ? `<div class="hcards">${card(t("hands.best"), sh.best)}${card(t("hands.worst"), sh.worst)}</div>`
+    : `<p class="m">${t("hands.noRanking", {hands: t("common.handsN", {n: sh.min_hands})})}</p>`;
+  return `<div class="box"><h3>${t("hands.title")}</h3>${body}
+    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">${t("hands.rankedNote", {types: t("hands.types", {n: sh.ranked}), min: sh.min_hands})}</p>` : ""}</div>`;
 }
 const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
 const blinds = by => ["SB", "BB"].some(p => by[p]) ? `<p class="m" style="margin:4px 0 0">${["SB", "BB"].filter(p => by[p]).map(p =>
-    `${p === "SB" ? "Small blind" : "Big blind"} ${sgn(by[p].bb_per_100, 0)} bb/100 (${by[p].hands} hands)`).join(" · ")}.
-    Not ranked: the blinds lose money for almost every player.</p>` : "";
+    t("pos.blindLine", {blind: t(p === "SB" ? "pos.sb" : "pos.bb"), bb: sgn(by[p].bb_per_100, 0), hands: t("common.handsN", {n: by[p].hands})})).join(" · ")}.
+    ${t("pos.blindsNote")}</p>` : "";
 function positionBox(list, rank) {
   const by = Object.fromEntries(list.map(p => [p.position, p]));
   const ring = SEATS.filter(p => by[p]);
   const spot = (pos, k, n) => {
-    const t = Math.PI / 2 + (k + .5) * 2 * Math.PI / n, p = by[pos];
+    const a = Math.PI / 2 + (k + .5) * 2 * Math.PI / n, p = by[pos];
     const cls = rank.best && rank.best.position === pos ? "best" : rank.worst && rank.worst.position === pos ? "worst"
       : p.hands < rank.min_hands ? "few" : "";
-    return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(t)}%;top:${50 + 38 * Math.sin(t)}%"
-      title="${esc(pos)}: ${sgn(p.bb_per_100, 0).replace(/<[^>]+>/g, "")} bb/100 in ${p.hands} hands">${esc(pos)}</div>`;
+    return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(a)}%;top:${50 + 38 * Math.sin(a)}%"
+      title="${esc(t("pos.tip", {pos, bb: sgn(p.bb_per_100, 0).replace(/<[^>]+>/g, ""), hands: t("common.handsN", {n: p.hands})}))}">${esc(pos)}</div>`;
   };
-  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${p.hands} hands)</span>` : "";
+  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${t("common.handsN", {n: p.hands})})</span>` : "";
   const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
-      <p style="margin:6px 0 0;font-size:.88rem">${line("Strongest", rank.best)}${rank.worst ? "<br>" + line("Weakest", rank.worst) : ""}</p>
+      <p style="margin:6px 0 0;font-size:.88rem">${line(t("pos.strongest"), rank.best)}${rank.worst ? "<br>" + line(t("pos.weakest"), rank.worst) : ""}</p>
       ${blinds(by)}
-      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">Heads-up (BTN/SB): ${sgn(by["BTN/SB"].bb_per_100, 0)} bb/100, ${by["BTN/SB"].hands} hands.</p>` : ""}`
-    : `<p class="m">No position has ${rank.min_hands} hands in this period yet, so there is no ranking.</p>`;
-  return `<div class="box"><h3>Strongest &amp; weakest position</h3>${body}</div>`;
+      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">${t("pos.headsUp", {bb: sgn(by["BTN/SB"].bb_per_100, 0), hands: t("common.handsN", {n: by["BTN/SB"].hands})})}</p>` : ""}`
+    : `<p class="m">${t("pos.noRanking", {hands: t("common.handsN", {n: rank.min_hands})})}</p>`;
+  return `<div class="box"><h3>${t("pos.title")}</h3>${body}</div>`;
 }
 
 // ---- Last session: luck, the session against your usual play, hands to review --------------------------------
 function sessionLuck(b) {
-  const cls = LEVELS.find(l => l[0] === b.level)?.[2] || "mid", sym = LEVELS.find(l => l[0] === b.level)?.[1] || "";
-  return `<p style="margin:8px 0 0"><span class="lv on ${cls}" style="display:inline-block;padding:2px 8px">${sym} ${esc(b.level)}</span>
-    <span class="m">${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")}${b.one_in && b.level !== "Average" ? ` · a run like this happens to about 1 in ${b.one_in} players` : ""}${b.small_sample ? " · small sample" : ""}</span></p>`;
+  const lv = LEVELS.find(l => l[0] === b.level), cls = lv?.[2] || "mid", sym = lv?.[1] || "";
+  return `<p style="margin:8px 0 0"><span class="lv on ${cls}" style="display:inline-block;padding:2px 8px">${sym} ${lv ? t(lv[3]) : esc(b.level)}</span>
+    <span class="m">${t("sess.luckLine", {allins: t("common.allins", {n: b.count}), luck: sgn(b.luck_bb, 1, " BB")})}${
+      b.one_in && b.level !== "Average" ? t("sess.oneIn", {n: b.one_in}) : ""}${b.small_sample ? " · " + t("luck.small") : ""}</span></p>`;
 }
 function vsUsual(rows) {
-  return `<p style="margin:6px 0 0" class="m">Compared with your usual play: ${rows.map(r => {
-    const diff = r.confidence ? ` <b style="color:var(--orange)">${r.session > r.usual ? "higher" : "lower"}${r.confidence === "possible" ? " (could be chance)" : ""}</b>` : "";
-    return `${r.stat} ${num(r.session, 1)}${r.unit} (usually ${num(r.usual, 1)}${r.unit})${diff}`;
+  return `<p style="margin:6px 0 0" class="m">${t("vs.title")} ${rows.map(r => {
+    const diff = r.confidence ? ` <b style="color:var(--orange)">${t(r.session > r.usual ? "vs.higher" : "vs.lower")}${r.confidence === "possible" ? t("vs.chance") : ""}</b>` : "";
+    return `${r.stat} ${num(r.session, 1)}${r.unit} ${t("vs.usually", {x: num(r.usual, 1) + r.unit})}${diff}`;
   }).join(" · ")}</p>`;
 }
 function reviewHands(si) {
-  const story = x => `${x.hero_cards ? cards(x.hero_cards) : "–"} vs ${x.rival ? esc(x.rival) + " " : ""}${x.rival_cards ? cards(x.rival_cards) : '<span class="m">cards not shown</span>'}${
-    x.board ? ` <span class="m">on</span> ${cards(x.board)}` : ""}${x.equity != null ? ` <span class="m">· your equity ${num(100 * x.equity, 0)}%</span>` : ""}`;
+  const story = x => `${x.hero_cards ? cards(x.hero_cards) : "–"} vs ${x.rival ? esc(x.rival) + " " : ""}${x.rival_cards ? cards(x.rival_cards) : `<span class="m">${t("review.notShown")}</span>`}${
+    x.board ? ` <span class="m">${t("review.on")}</span> ${cards(x.board)}` : ""}${x.equity != null ? ` <span class="m">· ${t("review.equity", {x: num(100 * x.equity, 0)})}</span>` : ""}`;
   // one cell for the hand (with what it was on a small line above) so it wraps on a phone, one for the result
   const row = (x, extra = "") => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'">
     <td style="text-align:left;white-space:normal">${extra ? `<div class="m" style="font-size:.8rem">${extra}</div>` : ""}${story(x)}</td>
     <td style="vertical-align:top">${sgn(x.net_bb)}</td></tr>`;
   const groups = [
-    ["Busts", si.busts.map(x => row(x, esc(x.name)))],
-    ["Bad beats and suckouts", si.beats.map(x => row(x, esc(x.kind)))],
-    ["Biggest pots lost", si.pots.lost.map(x => row(x))],
-    ["Biggest pots won", si.pots.won.map(x => row(x))]].filter(g => g[1].length);
+    [t("review.busts"), si.busts.map(x => row(x, esc(x.name)))],
+    [t("review.beats"), si.beats.map(x => row(x, esc(x.kind)))],
+    [t("review.lost"), si.pots.lost.map(x => row(x))],
+    [t("review.won"), si.pots.won.map(x => row(x))]].filter(g => g[1].length);
   const n = si.busts.length + si.beats.length + si.pots.lost.length + si.pots.won.length;
-  return n ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--blue)">Hands to review (${n})</summary>
-    ${groups.map(([title, rows]) => `<h3 style="font-size:.9rem;margin:10px 0 4px">${title}</h3>${table(["Hand", "BB"], rows)}`).join("")}</details>` : "";
+  return n ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--blue)">${t("review.title", {n})}</summary>
+    ${groups.map(([title, rows]) => `<h3 style="font-size:.9rem;margin:10px 0 4px">${title}</h3>${table([t("col.hand"), "BB"], rows)}`).join("")}</details>` : "";
 }
 
 function bindPeriods() {
@@ -341,7 +413,7 @@ function niceStep(raw) {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
 }
 function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
-  if (pts.length < 2) { box.innerHTML = '<p class="m" style="padding:8px 12px">Not enough data for a chart in this period yet.</p>'; return; }
+  if (pts.length < 2) { box.innerHTML = `<p class="m" style="padding:8px 12px">${t("chart.notEnough")}</p>`; return; }
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
   const L = 58, R = 14, B = 26, iw = W - L - R;
   const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
@@ -370,8 +442,7 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   let prevLab = "";
   for (let k = 0; k <= nx; k++) {
     const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
-    const lab = spanH <= 36 ? d.toLocaleTimeString("en-GB", {hour: "2-digit", minute: "2-digit"})
-      : d.toLocaleDateString("en-US", {month: "short", day: "numeric"});
+    const lab = spanH <= 36 ? timeLabel(d) : dayLabel(d);
     if (lab === prevLab) continue;                       // a few days on a wide axis: one label per day
     prevLab = lab;
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
@@ -399,7 +470,8 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
     hov.style.display = "";
     hov.querySelector("line").setAttribute("x1", px); hov.querySelector("line").setAttribute("x2", px);
     hov.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", px); c.setAttribute("cy", y(pts[i][series[k].key])); });
-    const when = new Date(ts[i]).toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
+    const at = new Date(ts[i]), when = LANG === "pl" ? `${dayLabel(at)}, ${timeLabel(at)}`
+      : at.toLocaleString("en-GB", {day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"});
     tipEl.innerHTML = `<span class="m">${when}</span><br>${tip(pts[i])}`;
     tipEl.style.display = "block";
     const left = px * r.width / W, w = tipEl.offsetWidth;
@@ -416,42 +488,46 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   svg.addEventListener("pointerleave", () => { hov.style.display = "none"; tipEl.style.display = "none"; });
 }
 
+
 // ---- Tournaments ------------------------------------------------------------
 let filters = {buyin: "", format: "", entry: "", period: "max"};
 const SPANS_H = {"24h": 24, "3d": 72, "1w": 168, "2w": 336, "4w": 672, "3m": 91 * 24, "6m": 182 * 24};
 const inPeriod = (date, period) => !SPANS_H[period] || Date.parse(String(date).replace(" ", "T")) >= Date.now() - SPANS_H[period] * 3600e3;
-// "Oct 10", with the year only when it is not this year: keeps the date column narrow
+// "Oct 10" / "10.10", with the year only when it is not this year: keeps the date column narrow
 const shortDate = s => {
   const d = new Date(String(s).slice(0, 10) + "T12:00");
   if (isNaN(d)) return esc(String(s).slice(0, 10));
-  return d.toLocaleDateString("en-US", {month: "short", day: "numeric",
-    ...(d.getFullYear() !== new Date().getFullYear() ? {year: "numeric"} : {})});
+  const other = d.getFullYear() !== new Date().getFullYear();
+  if (LANG === "pl") return dayLabel(d) + (other ? "." + d.getFullYear() : "");
+  return d.toLocaleDateString("en-US", {month: "short", day: "numeric", ...(other ? {year: "numeric"} : {})});
 };
 async function viewTournaments() {
   const mine = routeSeq, all = await api("/api/tournaments");
   if (mine !== routeSeq) return;
-  const opts = (vals, cur, label) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
-    .sort((a, b) => a - b).map(v => `<option ${String(v) === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
+  const opts = (vals, cur, label, show) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
+    .sort((a, b) => a - b).map(v => `<option value="${esc(v)}" ${String(v) === cur ? "selected" : ""}>${show(v)}</option>`).join("");
   const draw = () => {
-    const rows = all.filter(t => inPeriod(t.date, filters.period) && (!filters.buyin || String(t.buyin_total) === filters.buyin)
-      && (!filters.format || t.format === filters.format)
-      && (!filters.entry || t.tags.includes("entry:" + filters.entry)));
-    const done = rows.filter(t => t.profit != null);
-    const cost = done.reduce((a, t) => a + Number(t.total_cost), 0), profit = done.reduce((a, t) => a + Number(t.profit), 0);
-    document.getElementById("list").innerHTML = `<p class="m">${rows.length} tournaments · profit ${sgn(profit, 2, " $")} · ROI ${cost ? sgn(100 * profit / cost, 0, "%") : "–"}</p>` +
-      table(["Date", "Tournament", "Buy-in", "Place", "Profit $", "KOs", "Luck BB"], rows.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
-        <td>${shortDate(t.date)}</td><td>${esc(t.name)}</td><td>${t.buyin_total == null ? "–" : money(t.buyin_total)}</td>
-        <td>${t.finish_place ?? "–"}<span class="wide">/${t.players ?? "–"}</span></td>
-        <td>${t.profit == null ? '<span class="m" title="no summary imported"><span class="wide">no summary</span><span class="narrow">–</span></span>'
-          : `<span class="wide">${sgn(t.profit, 2)}</span><span class="narrow">${sgn(t.profit, 0)}</span>`}${t.prize_is_ticket ? '<span class="wide"> +ticket</span>' : ""}</td>
-        <td>${t.hands ? (t.knockouts || 0) : "–"}</td><td>${t.luck_bb == null ? "–" : sgn(t.luck_bb)}</td></tr>`));
+    const rows = all.filter(x => inPeriod(x.date, filters.period) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
+      && (!filters.format || x.format === filters.format)
+      && (!filters.entry || x.tags.includes("entry:" + filters.entry)));
+    const done = rows.filter(x => x.profit != null);
+    const cost = done.reduce((a, x) => a + Number(x.total_cost), 0), profit = done.reduce((a, x) => a + Number(x.profit), 0);
+    document.getElementById("list").innerHTML = `<p class="m">${t("list.summary", {tournaments: t("common.tournaments", {n: rows.length}),
+        profit: sgn(profit, 2, " $"), roi: cost ? sgn(100 * profit / cost, 0, "%") : "–"})}</p>` +
+      table([t("col.date"), t("col.tournament"), t("col.buyin"), t("col.place"), t("col.profitUsd"), t("col.kos"), t("col.luckBb")],
+        rows.map(x => `<tr class="click" onclick="location.hash='#/t/${x.tournament_id}'">
+        <td>${shortDate(x.date)}</td><td>${esc(x.name)}</td><td>${x.buyin_total == null ? "–" : money(x.buyin_total)}</td>
+        <td>${x.finish_place ?? "–"}<span class="wide">/${x.players ?? "–"}</span></td>
+        <td>${x.profit == null ? `<span class="m" title="${esc(t("list.noSummaryImported"))}"><span class="wide">${t("common.noSummary")}</span><span class="narrow">–</span></span>`
+          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>`}${x.prize_is_ticket ? `<span class="wide"> ${t("list.ticket")}</span>` : ""}</td>
+        <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
-  app.innerHTML = `<h1>Tournaments</h1><div class="filters">
-    <select id="fp">${PERIODS.map(([k, t]) => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${k === "max" ? "Any time" : "Last " + t}</option>`).join("")}</select>
-    <select id="fb">${opts(all.map(t => t.buyin_total), filters.buyin, "All buy-ins")}</select>
-    <select id="ff">${opts(all.map(t => t.format), filters.format, "All formats")}</select>
-    <select id="fe"><option value="">Any entry</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>From the start</option>
-      <option value="late" ${filters.entry === "late" ? "selected" : ""}>Late registration</option></select></div><div id="list"></div>`;
+  app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
+    <select id="fp">${PERIODS.map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join("")}</select>
+    <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
+    <select id="ff">${opts(all.map(x => x.format), filters.format, t("filter.allFormats"), v => t("format." + v))}</select>
+    <select id="fe"><option value="">${t("filter.anyEntry")}</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>${t("filter.fromStart")}</option>
+      <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select></div><div id="list"></div>`;
   for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
     document.getElementById(id).onchange = e => { filters[key] = e.target.value; draw(); };
   draw();
@@ -462,42 +538,47 @@ function stackChart(d) {
   const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i]));
   const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
     i: idx[e.first_hand_id],
-    label: `${e.entry_no === 1 ? (e.level > 1 ? "Late reg" : "Start") : "Re-entry " + e.entry_no} · L${e.level} · ${num(e.stack_bb, 0)} BB`,
-    title: `Entry ${e.entry_no} at level ${e.level} with ${num(e.stack, 0)} chips (${num(e.stack_bb, 1)} BB)`
-      + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? ", the full starting stack" : "")}));
+    label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${bbUnit(e.stack_bb, 0)}`,
+    title: t("stack.entryTitle", {no: e.entry_no, level: e.level, chips: num(e.stack, 0), bb: num(e.stack_bb, 1)})
+      + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? t("stack.full") : "")}));
   pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
   charts = [];
-  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => `${num(v, 0)} BB`,
-    p => `Level ${p.level} · ${esc(p.position || "")} ${p.cards ? cards(p.cards) : ""}<br>hand ${sgn(p.net_bb)} BB · stack ${num(p.before_bb, 0)} → <b>${num(p.after_bb, 0)} BB</b>`,
+  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => bbUnit(v, 0),
+    p => t("stack.tip", {level: p.level, pos: esc(p.position || ""), cards: p.cards ? cards(p.cards) : "", net: sgn(p.net_bb),
+                         before: num(p.before_bb, 0), after: num(p.after_bb, 0)}),
     {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
 }
 
 async function viewTournament(id) {
   const mine = routeSeq, d = await api(`/api/tournament/${id}`);
   if (mine !== routeSeq) return;
-  let h = `<p><a href="#/tournaments">← Tournaments</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
+  let h = `<p><a href="#/tournaments">${t("tour.back")}</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
-  if (r) h += `<div class="k"><div>Place<b>${r.place}/${r.players}</b></div><div>Prize<b>${money(r.prize)}${r.ticket ? " ticket" : ""}</b></div>
-    <div>Cost<b>${money(r.cost)}</b></div><div>ROI (cash)<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
-  else h += `<p class="m">No summary imported yet, so no result or ROI.</p>`;
-  h += `<p>${d.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</p>`;
-  h += d.entries.map(e => `<p class="m">Entry ${e.entry_no}: level ${e.level}, ${num(e.stack_bb, 0)} BB</p>`).join("");
-  if (d.entries.length) h += `<p class="m">Starting stack: ${d.starting_stack == null ? "unknown" : num(d.starting_stack, 0)}</p>`;
-  if (!d.hands) { app.innerHTML = h + '<p class="m">No hand history imported for this tournament.</p>'; return; }
+  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.place}/${r.players}</b></div><div>${t("tour.prize")}<b>${money(r.prize)}${r.ticket ? " " + t("tour.ticket") : ""}</b></div>
+    <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
+  else h += `<p class="m">${t("tour.noSummary")}</p>`;
+  h += `<p>${d.tags.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</p>`;
+  h += d.entries.map(e => `<p class="m">${t("tour.entry", {no: e.entry_no, level: e.level, bb: num(e.stack_bb, 0)})}</p>`).join("");
+  if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
+  if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; return; }
   const s = d.stack, a = d.allins;
-  h += `<div class="k"><div>Hands<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>Net<b>${sgn(d.net_bb, 0, " BB")}</b></div>
-    <div>Knockouts<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">+${d.knockouts.shared} shared</span>` : ""}</b></div></div>`;
-  h += `<h2>Stack in BB</h2><div class="tchart" id="c-stack"></div><p class="m">${num(s.start_bb, 0)} → ${num(s.end_bb, 0)} BB, peak ${num(s.peak_bb, 0)} BB after ${s.peak_after_hands} hands · click the chart to replay a hand</p>`;
-  h += `<h2>Positions</h2>${table(["Position", "Hands", "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
-  if (!d.best_position) h += `<p class="m">Fewer than 8 hands per position, too small to rank.</p>`;
-  else h += `<p class="m">Best: ${esc(d.best_position.position)}${d.worst_position ? ` · worst: ${esc(d.worst_position.position)}` : ""} (positions with 8+ hands)</p>`;
-  const moments = (title, list) => list.length ? `<h2>${title}</h2>` + table(["Cards", "Pos", "Board", "BB", ""], list.map(m =>
+  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
+    <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
+  h += `<h2>${t("tour.stackTitle")}</h2><div class="tchart" id="c-stack"></div><p class="m">${t("tour.stackLine",
+    {start: num(s.start_bb, 0), end: num(s.end_bb, 0), peak: num(s.peak_bb, 0), n: s.peak_after_hands})}</p>`;
+  h += `<h2>${t("tour.positions")}</h2>${table([t("col.position"), t("col.hands"), "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
+  if (!d.best_position) h += `<p class="m">${t("tour.tooFew")}</p>`;
+  else h += `<p class="m">${t("tour.best", {pos: esc(d.best_position.position)})}${d.worst_position ? t("tour.worst", {pos: esc(d.worst_position.position)}) : ""}${t("tour.rankNote")}</p>`;
+  const moments = (title, list) => list.length ? `<h2>${title}</h2>` + table([t("col.cards"), t("col.pos"), t("col.board"), "BB", ""], list.map(m =>
     `<tr class="click" onclick="location.hash='#/hand/${m.hand_id}'"><td>${cards(m.hole_cards)}</td><td>${esc(m.position)}</td><td>${cards(m.board)}</td><td>${sgn(m.net_bb)}</td><td>▶</td></tr>`)) : "";
-  h += moments("Biggest wins", d.biggest_wins) + moments("Biggest losses", d.biggest_losses);
-  if (d.strongest_showdown) h += `<h2>Strongest showdown hand</h2><p><a href="#/hand/${d.strongest_showdown.hand_id}">${esc(d.strongest_showdown.hand)}</a>: ${cards(d.strongest_showdown.hole_cards)} on ${cards(d.strongest_showdown.board)}</p>`;
-  if (a.count) h += `<h2>All-ins</h2><p>${a.count} all-ins: actual ${sgn(a.net_bb)} BB, expected ${sgn(a.ev_bb)} BB, luck ${sgn(a.luck_bb)} BB. Won ${a.won} (expected ${num(a.expected_won)}). ${luckLink}</p>` +
-    a.notable.map(n => `<p><a href="#/hand/${n.hand_id}">${esc(n.kind)}</a>: ${cards(n.hole_cards)} on ${cards(n.board)} (${esc(n.street)}), equity ${num(100 * n.equity, 1)}%, luck ${sgn(n.luck_bb)} BB</p>`).join("");
-  h += `<h2>All hands (${d.hand_list.length})</h2>` + table(["Time", "Lvl", "Pos", "Cards", "Board", "BB"], d.hand_list.map(x =>
+  h += moments(t("tour.biggestWins"), d.biggest_wins) + moments(t("tour.biggestLosses"), d.biggest_losses);
+  if (d.strongest_showdown) h += `<h2>${t("tour.strongest")}</h2><p>${t("tour.strongestLine", {hand: `<a href="#/hand/${d.strongest_showdown.hand_id}">${esc(d.strongest_showdown.hand)}</a>`,
+    cards: cards(d.strongest_showdown.hole_cards), board: cards(d.strongest_showdown.board)})}</p>`;
+  if (a.count) h += `<h2>${t("tour.allins")}</h2><p>${t("dash.allinsLine", {allins: t("common.allins", {n: a.count}), net: sgn(a.net_bb), ev: sgn(a.ev_bb), luck: sgn(a.luck_bb)})}
+    ${t("tour.won", {won: a.won, exp: num(a.expected_won)})} ${luckLink()}</p>` +
+    a.notable.map(n => `<p>${t("tour.notable", {kind: `<a href="#/hand/${n.hand_id}">${esc(n.kind)}</a>`, cards: cards(n.hole_cards), board: cards(n.board),
+      street: esc(n.street), eq: num(100 * n.equity, 1), luck: sgn(n.luck_bb)})}</p>`).join("");
+  h += `<h2>${t("tour.allHands", {n: d.hand_list.length})}</h2>` + table([t("col.time"), t("col.lvl"), t("col.pos"), t("col.cards"), t("col.board"), "BB"], d.hand_list.map(x =>
     `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(String(x.played_at).slice(11, 16))}</td><td>${x.level}</td><td>${esc(x.position)}</td>
      <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
   app.innerHTML = h;
@@ -523,12 +604,12 @@ const at = ([x, y]) => `left:${x.toFixed(2)}%;top:${y.toFixed(2)}%`;
 
 function logLine(s, r) {
   const bb = r.big_blind;
-  if (s.kind === "start") return `Blinds ${num(r.small_blind, 0)}/${num(r.big_blind, 0)}${r.ante ? `, ante ${num(r.ante, 0)}` : ""}`;
+  if (s.kind === "start") return t("replay.blinds", {sb: num(r.small_blind, 0), bb: num(r.big_blind, 0)}) + (r.ante ? t("replay.ante", {x: num(r.ante, 0)}) : "");
   if (s.kind === "deal") return `<span class="cs">${cards(s.board)}</span>`;
-  if (s.kind === "return") return `<span>Returned to ${s.action.nick === "Hero" ? "<b>Hero</b>" : esc(s.action.nick)}</span><span>${bbs(s.action.amount, bb)} BB</span>`;
+  if (s.kind === "return") return `<span>${t("replay.returned", {who: s.action.nick === "Hero" ? "<b>Hero</b>" : esc(s.action.nick)})}</span><span>${bbs(s.action.amount, bb)} BB</span>`;
   if (s.kind === "result") {
     const w = s.players.filter(p => p.net > 0);
-    return w.length ? w.map(p => `<span>${p.hero ? "<b>Hero</b>" : esc(p.nick)} wins</span><span>${sgn(p.net / bb, 1)} BB</span>`).join("") : esc(s.label);
+    return w.length ? w.map(p => `<span>${t("replay.wins", {who: p.hero ? "<b>Hero</b>" : esc(p.nick)})}</span><span>${sgn(p.net / bb, 1)} BB</span>`).join("") : t("replay.noWinner");
   }
   if (s.kind === "action") {
     const a = s.action, who = a.nick === "Hero" ? "<b>Hero</b>" : esc(a.nick);
@@ -550,29 +631,30 @@ function renderHand() {
   let log = "", street = null;
   r.steps.forEach((s, k) => {
     if (s.kind !== "result" && s.street !== street) { street = s.street; log += `<div class="sh">${esc(street)}</div>`; }
-    if (s.kind === "result") log += `<div class="sh">result</div>`;
-    log += `<div class="li" data-k="${k}">${s.kind === "deal" ? "<span class=m>Board</span>" : ""}${logLine(s, r)}</div>`;
+    if (s.kind === "result") log += `<div class="sh">${t("replay.result")}</div>`;
+    log += `<div class="li" data-k="${k}">${s.kind === "deal" ? `<span class=m>${t("replay.board")}</span>` : ""}${logLine(s, r)}</div>`;
   });
   const n0 = r.max_seats || 9, taken = new Set(r.steps[0].players.map(p => p.seat));
   const empty = Array.from({length: n0}, (_, k) => k + 1).filter(k => !taken.has(k))
     .map(k => `<div class="seat0" style="${at(seatPoint(r, k))}"></div>`).join("");
   const btn = r.steps[0].players.find(p => (p.position || "").startsWith("BTN"));
-  app.innerHTML = `<p><a href="#/t/${r.tournament_id}">← Tournament</a></p>
-    <h1>Hand ${i} of ${n}</h1><p class="m">Level ${r.level} · blinds ${num(r.small_blind, 0)}/${num(r.big_blind, 0)} ante ${num(r.ante, 0)} · table ${esc(r.table)} · ${esc(r.played_at)}</p>
+  app.innerHTML = `<p><a href="#/t/${r.tournament_id}">${t("replay.back")}</a></p>
+    <h1>${t("replay.title", {i, n})}</h1><p class="m">${t("replay.info", {level: r.level, sb: num(r.small_blind, 0), bb: num(r.big_blind, 0),
+      ante: num(r.ante, 0), table: esc(r.table), at: dateTime(r.played_at)})}</p>
     <div class="rt"><div>
       <div class="stage" id="stage"><div class="oval"></div>${empty}
         ${btn ? `<div class="dealer" style="${at(seatPoint(r, btn.seat + .32, .74))}">D</div>` : ""}
         <div class="center"><div class="street" id="street"></div><div class="board" id="board"></div><div class="pot" id="pot"></div><div class="eqline" id="eq"></div></div>
         <div id="seats"></div></div>
       <div class="ctl">
-        <button id="b0" title="Start (Home)">⏮</button><button id="b1" title="Back (←)">◀</button>
-        <button id="bp" class="primary" title="Play / pause (space)">▶ Play</button>
-        <button id="b2" title="Next (→)">▶</button><button id="b3" title="End (End)">⏭</button>
-        <select id="spd" title="Autoplay speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select>
+        <button id="b0" title="${t("replay.startKey")}">⏮</button><button id="b1" title="${t("replay.backKey")}">◀</button>
+        <button id="bp" class="primary" title="${t("replay.playKey")}">${t("replay.play")}</button>
+        <button id="b2" title="${t("replay.nextKey")}">▶</button><button id="b3" title="${t("replay.endKey")}">⏭</button>
+        <select id="spd" title="${t("replay.speed")}">${["slow", "normal", "fast"].map(k => `<option value="${k}" ${k === "normal" ? "selected" : ""}>${t("replay." + k)}</option>`).join("")}</select>
         <span class="m" id="cnt"></span>
-        <label class="m" title="Diamonds blue and clubs green, as on GGPoker"><input type="checkbox" id="deck4" ${document.body.classList.contains("two-color") ? "" : "checked"}> 4-colour deck</label>
+        <label class="m" title="${t("replay.deckTip")}"><input type="checkbox" id="deck4" ${document.body.classList.contains("two-color") ? "" : "checked"}> ${t("replay.deck")}</label>
       </div>
-      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">← previous hand</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">next hand →</a>` : ""}</p>
+      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">${t("replay.prev")}</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">${t("replay.next")}</a>` : ""}</p>
     </div><div class="log" id="log">${log}</div></div>`;
   const go = k => { step = Math.max(0, Math.min(r.steps.length - 1, k)); drawStep(); };
   replay.go = go;
@@ -601,27 +683,27 @@ function togglePlay() {
     replay.go(step + 1);
     if (step >= replay.steps.length - 1) stopPlay();
   }, SPEEDS[document.getElementById("spd").value]);
-  document.getElementById("bp").textContent = "⏸ Pause";
+  document.getElementById("bp").textContent = t("replay.pause");
 }
 function stopPlay() {
   clearInterval(playTimer); playTimer = null;
-  const b = document.getElementById("bp"); if (b) b.textContent = "▶ Play";
+  const b = document.getElementById("bp"); if (b) b.textContent = t("replay.play");
 }
 
 function drawStep() {
   const r = replay, s = r.steps[step], bb = r.big_blind, prev = r.steps[step - 1];
-  document.getElementById("street").textContent = s.result ? "result" : s.street;
+  document.getElementById("street").textContent = s.result ? t("replay.result") : s.street;
   const fresh = step === 0 || !prev ? 0 : prev.board.length;
   document.getElementById("board").innerHTML = [0, 1, 2, 3, 4].map(k => s.board[k]
     ? pcard(s.board[k], k >= fresh && s.board.length > fresh && step ? "new" : "") : `<span class="pc slot"></span>`).join("");
   document.getElementById("pot").innerHTML = s.result
-    ? `Pot ${bbs(r.total_pot, bb)} BB <small>(${num(r.total_pot, 0)}) paid out</small>`
-    : `Pot ${bbs(s.pot, bb)} BB <small>(${num(s.pot, 0)})</small>`;
+    ? t("replay.potPaid", {bb: bbs(r.total_pot, bb), chips: num(r.total_pot, 0)})
+    : t("replay.pot", {bb: bbs(s.pot, bb), chips: num(s.pot, 0)});
   const hero = s.players.find(p => p.hero);
   document.getElementById("eq").innerHTML = !(hero && hero.equity != null && r.hero_allin) ? ""
-    : s.result ? `Hero all-in equity <b>${num(100 * r.hero_allin.equity, 1)}%</b> · luck ${sgn(r.hero_allin.luck / bb, 1, " BB")}
-        <a href="#/luck" style="color:#fff">how?</a>`
-    : `Hero equity <b>${num(100 * hero.equity, 1)}%</b>${prev && prev.players.find(p => p.hero).equity == null ? " at the all-in" : ""}`;
+    : s.result ? `${t("replay.eqResult", {eq: num(100 * r.hero_allin.equity, 1), luck: sgn(r.hero_allin.luck / bb, 1, " BB")})}
+        <a href="#/luck" style="color:#fff">${t("replay.how")}</a>`
+    : t("replay.eq", {eq: num(100 * hero.equity, 1)}) + (prev && prev.players.find(p => p.hero).equity == null ? t("replay.atAllin") : "");
   const eqChanged = p => { const q = prev && prev.players.find(x => x.nick === p.nick); return q && q.equity != null && q.equity !== p.equity; };
   document.getElementById("seats").innerHTML = s.players.map(p => {
     const won = s.result && (r.collected[p.nick] || 0) > 0;
@@ -630,7 +712,7 @@ function drawStep() {
     const bet = won ? `<div class="bet won" style="${at(seatPoint(r, p.seat, .6))}">+${bbs(r.collected[p.nick], bb)} BB</div>`
       : `<div class="bet ${p.commit ? "" : "off"}" style="${at(seatPoint(r, p.seat, .6))}">${p.commit ? bbs(p.commit, bb) : 0} BB</div>`;
     const res = p.net != null ? ` <span style="font-size:.78rem">${sgn(p.net / bb, 1)}</span>` : "";
-    return `<div class="${cls}" style="${at(seatPoint(r, p.seat))}" title="${esc(p.nick)}: ${num(p.stack, 0)} chips">
+    return `<div class="${cls}" style="${at(seatPoint(r, p.seat))}" title="${esc(t("replay.chips", {nick: p.nick, chips: num(p.stack, 0)}))}">
         <div class="hc">${hole}</div>
         <div class="box">${p.hero ? `<span class="pt">${esc(p.position || "")}</span>` : ""}
           ${p.equity != null && !s.result ? `<span class="badge eq ${eqChanged(p) ? "chg" : ""}">${num(100 * p.equity, 0)}%</span>` : ""}
@@ -654,133 +736,126 @@ matchMedia("(max-width:560px)").addEventListener("change", () => {
   if (replay && document.getElementById("stage")) { const k = step; stopPlay(); renderHand(); replay.go(k); }
 });
 
+
 // ---- Analysis ---------------------------------------------------------------
 // Always the whole history. Built-in tips from clear rules; a finding shows only when it stands out from chance.
-const CONF = {likely: "likely", possible: "possible – could still be chance"};
+const conf = c => t(c === "likely" ? "conf.likely" : "conf.possible");
 function findingNumber(l) {
-  if (l.kind === "vs_fold") return `${sgn(l.value, 2, " BB")} per hand compared with folding
-    <div class="m" style="font-weight:400">playing ${sgn(l.played, 2)} BB per hand · folding would have lost exactly
-    your blind and ante, ${sgn(l.folded, 2)} BB per hand · ${l.hands} hands</div>`;
-  if (l.kind === "vs_fold_total") return `${sgn(l.value, 0, " BB")} compared with folding it every time, in ${l.hands} hands`;
-  if (l.kind === "frequency") return `${num(l.value, 0)}% of ${l.hands} times <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
-  if (l.kind === "bb_per_100") return `${sgn(l.value, 1)} bb/100 in ${l.hands} hands`;
-  return `${sgn(l.value, 0, " BB")} in ${l.hands} hands`;
+  const inHands = t("find.inHands", {n: l.hands});
+  if (l.kind === "vs_fold") return `${t("find.vsFold", {value: sgn(l.value, 2, " BB")})}
+    <div class="m" style="font-weight:400">${t("find.vsFoldDetail", {played: sgn(l.played, 2), folded: sgn(l.folded, 2), hands: t("common.handsN", {n: l.hands})})}</div>`;
+  if (l.kind === "vs_fold_total") return t("find.vsFoldTotal", {value: sgn(l.value, 0, " BB"), inHands});
+  if (l.kind === "frequency") return `${t("find.freq", {value: num(l.value, 0), n: l.hands})} <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
+  if (l.kind === "bb_per_100") return t("find.per100", {value: sgn(l.value, 1), inHands});
+  return t("find.total", {value: sgn(l.value, 0, " BB"), inHands});
 }
-const worstList = hands => `<details><summary>Show the ${hands.length} worst hands</summary>${table(["When", "Pos", "Cards", "Stack", "BB (EV-adj.)", "BB"],
-  hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(x.at)}</td><td>${esc(x.position || "")}</td>
-    <td>${x.cards ? cards(x.cards) : "–"}</td><td>${num(x.stack_bb, 0)} BB</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
+const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.length})}</summary>${table([t("col.when"), t("col.pos"), t("col.cards"), t("col.stack"), t("col.bbEvAdj"), "BB"],
+  hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
+    <td>${x.cards ? cards(x.cards) : "–"}</td><td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
-const ANALYSIS_TABS = [["overview", "Overview"], ["leaks", "Leaks & strengths"], ["money", "Money"]];
+const ANALYSIS_TABS = ["overview", "leaks", "money"];                  // labels: an.tab.<key>
 
 // a 95 % interval as a small bar with the zero line; red when wholly below zero, green when above
 function ciBar(iv) {
   if (!iv) return '<span class="m">–</span>';
   const lo = Math.min(-100, iv.low), hi = Math.max(100, iv.high), x = v => 100 * (v - lo) / (hi - lo);
   const cls = iv.high < 0 ? "neg" : iv.low > 0 ? "pos" : "mid";
-  return `<span class="ci" title="95% interval: ${num(iv.low, 0)}% to ${num(iv.high, 0)}%"><span class="ci-zero" style="left:${x(0)}%"></span>
+  return `<span class="ci" title="${esc(t("an.ciTitle", {lo: num(iv.low, 0), hi: num(iv.high, 0)}))}"><span class="ci-zero" style="left:${x(0)}%"></span>
     <span class="ci-range ${cls}" style="left:${x(iv.low)}%;width:${Math.max(1.5, x(iv.high) - x(iv.low))}%"></span></span>
     <span class="m" style="font-size:.8rem">${num(iv.low, 0)}…${num(iv.high, 0)}%</span>`;
 }
-const verdict = g => g.confidence ? `<span class="conf ${g.profit < 0 ? "v-neg" : "v-pos"}">${esc(g.verdict)}${g.confidence === "possible" ? " (possible)" : ""}</span>`
+const verdict = g => g.confidence ? `<span class="conf ${g.profit < 0 ? "v-neg" : "v-pos"}">${esc(g.verdict)}${g.confidence === "possible" ? t("money.possible") : ""}</span>`
   : `<span class="m">${esc(g.verdict)}</span>`;
 
 async function viewAnalysis(tab) {
   const mine = routeSeq, a = await api("/api/analysis");
   if (mine !== routeSeq) return;
-  tab = ANALYSIS_TABS.some(t => t[0] === tab) ? tab : "overview";
+  tab = ANALYSIS_TABS.includes(tab) ? tab : "overview";
   const o = a.overview, m = a.money, ri = m.roi_interval;
-  let h = `<h1>Analysis</h1><p class="m">Your whole history (${o.tournaments} tournaments with a summary, ${o.hands} hands),
-    independent of the dashboard period.</p>
-    <div class="seg">${ANALYSIS_TABS.map(([k, t]) => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t}</button></a>`).join("")}</div>`;
+  let h = `<h1>${t("nav.analysis")}</h1><p class="m">${t("an.intro", {tournaments: t("common.tournaments", {n: o.tournaments}), hands: t("common.handsN", {n: o.hands})})}</p>
+    <div class="seg">${ANALYSIS_TABS.map(k => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t("an.tab." + k)}</button></a>`).join("")}</div>`;
 
   if (tab === "overview") {
-    h += `<div class="k"><div>Hands<b>${o.hands}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
-      <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">EV-adjusted ${sgn(o.bb_per_100_ev, 1)}</span></div>
-      <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? `95%: ${num(ri.low, 0)}% to ${num(ri.high, 0)}%` : ""}</span></div>
-      <div>ITM<b>${num(o.itm_pct, 1)}%</b></div><div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
-      <span class="m">actual ${sgn(o.allins.actual_bb, 0)} · luck ${sgn(o.allins.luck_bb, 0)}</span></div></div>
-      <p class="m">More here in Analysis v2: per position, per stack depth and trends.</p>`;
+    h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
+      <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">${t("an.evAdjusted", {x: sgn(o.bb_per_100_ev, 1)})}</span></div>
+      <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? t("an.ci", {lo: num(ri.low, 0), hi: num(ri.high, 0)}) : ""}</span></div>
+      <div>ITM<b>${pct(o.itm_pct)}</b></div><div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
+      <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
+      <p class="m">${t("an.v2")}</p>`;
   }
 
   if (tab === "leaks") {
-    h += `<p class="m">Results are EV-adjusted: in all-in hands the all-in EV replaces the actual result, so single coinflips
-      do not create findings. <b>${a.tested} spots checked</b>; false alarms are corrected for all of them together
-      (Benjamini–Hochberg): <b>likely</b> means a false-discovery rate under 5 %, <b>possible</b> under 20 %.</p><h2>Leaks</h2>`;
+    h += `<p class="m">${t("an.leaksIntro", {tested: a.tested})}</p><h2>${t("an.leaks")}</h2>`;
     h += a.leaks.length ? a.leaks.map(l => `<div class="box finding ${l.confidence}">
-        <h3>${esc(l.title)} <span class="conf">${CONF[l.confidence]}</span></h3>
+        <h3>${esc(l.title)} <span class="conf">${conf(l.confidence)}</span></h3>
         <div class="big">${findingNumber(l)}</div><p style="margin:6px 0 0">${esc(l.tip)}</p>
-        <p class="m" style="margin:4px 0 0">${l.sample === "small" ? "Small sample. " : ""}About ${num(l.cost_bb, 0)} BB over this history.</p>
+        <p class="m" style="margin:4px 0 0">${l.sample === "small" ? t("an.smallSample") + " " : ""}${t("an.about", {bb: num(l.cost_bb, 0)})}</p>
         ${l.worst && l.worst.length ? worstList(l.worst) : ""}</div>`).join("")
-      : `<p class="m">Nothing stands out from chance among the ${a.tested} spots checked. No spot is clearly costing you
-          money beyond what luck can explain; with more hands smaller leaks can show up here.</p>`;
-    h += `<h2>Strengths</h2>`;
+      : `<p class="m">${t("an.noLeaks", {tested: a.tested})}</p>`;
+    h += `<h2>${t("an.strengths")}</h2>`;
     h += a.strengths.length ? a.strengths.map(x => `<div class="box finding good"><h3>${esc(x.title)}
-        ${x.confidence ? `<span class="conf">${CONF[x.confidence]}</span>` : ""}</h3><p style="margin:0">${esc(x.text)}</p></div>`).join("")
-      : `<p class="m">Nothing stands out from chance yet.</p>`;
+        ${x.confidence ? `<span class="conf">${conf(x.confidence)}</span>` : ""}</h3><p style="margin:0">${esc(x.text)}</p></div>`).join("")
+      : `<p class="m">${t("an.noStrengths")}</p>`;
   }
 
   if (tab === "money") {
-    const shareRes = g => m.profit < 0 && g.profit < 0 ? `${num(g.share_of_result_pct, 1)}% of the loss`
-      : m.profit > 0 && g.profit > 0 ? `${num(g.share_of_result_pct, 1)}% of the profit` : "";
+    const shareRes = g => m.profit < 0 && g.profit < 0 ? t("money.ofLoss", {x: num(g.share_of_result_pct, 1)})
+      : m.profit > 0 && g.profit > 0 ? t("money.ofProfit", {x: num(g.share_of_result_pct, 1)}) : "";
     const rows = (list, extra = () => "") => list.map(g => `<tr><td>${esc(g.label)}</td><td>${g.tournaments}</td>
-      <td>${money(g.cost)}<div class="m" style="font-size:.78rem">${num(g.share_of_spend_pct, 1)}% of spend</div></td>
+      <td>${money(g.cost)}<div class="m" style="font-size:.78rem">${t("money.ofSpend", {x: num(g.share_of_spend_pct, 1)})}</div></td>
       <td>${sgn(g.profit, 2)}<div class="m" style="font-size:.78rem">${shareRes(g)}</div></td>
       <td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td><td style="white-space:nowrap">${ciBar(g.interval)}</td>
       <td class="vcell">${verdict(g)}</td>${extra(g)}</tr>`);
-    const head = ["", "n", "Spend", "Profit $", "ROI", "95% interval", "Verdict"];
-    h += `<p>ROI ${sgn(m.roi_pct, 1, "%")} over ${m.tournaments} tournaments; with 95% confidence between
-        <b>${num(ri.low, 0)}%</b> and <b>${num(ri.high, 0)}%</b> (bootstrap over tournaments, re-entries included).</p>
-      <p class="m">${m.tested} groups judged together (Benjamini–Hochberg), like the leaks. A verdict appears only beyond chance;
-        groups with fewer than 10 tournaments are not judged.</p>
-      ${m.facts.length ? `<div class="box"><b>What the numbers say</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
-      <h2>By buy-in</h2>${table(head, rows(m.tiers))}
-      <h2>By format</h2>${table([...head, "Tickets"], rows(m.formats, g => `<td>${g.tickets ? money(g.tickets) : "–"}</td>`))}
-      <p class="m">ROI counts cash only; satellite seats are shown as tickets, never mixed into ROI.</p>
-      <h2>Re-entries vs first entries</h2>
-      ${table(["", "n", "Spent", "Returned", "ROI", "95% interval", "Verdict", "Start stack"],
+    const head = ["", "n", t("col.spend"), t("col.profitUsd"), "ROI", t("col.ci95"), t("col.verdict")];
+    h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 1, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
+          lo: num(ri.low, 0), hi: num(ri.high, 0)})}</p>
+      <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
+      ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
+      <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}
+      <h2>${t("money.byFormat")}</h2>${table([...head, t("col.tickets")], rows(m.formats, g => `<td>${g.tickets ? money(g.tickets) : "–"}</td>`))}
+      <p class="m">${t("money.cashOnly")}</p>
+      <h2>${t("money.reVsFirst")}</h2>
+      ${table(["", "n", t("col.spent"), t("col.returned"), "ROI", t("col.ci95"), t("col.verdict"), t("col.startStack")],
         [m.first_entries, m.re_entries].map(g => `<tr><td>${esc(g.label)}</td><td>${g.tournaments}</td><td>${money(g.cost)}</td>
           <td>${money(g.returned)}</td><td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td>
           <td style="white-space:nowrap">${ciBar(g.interval)}</td><td class="vcell">${verdict(g)}</td>
-          <td>${g.avg_start_bb == null ? "–" : num(g.avg_start_bb, 1) + " BB"}</td></tr>`))}
-      <p class="m">A re-entry is decided after the first entry busted, so without it that tournament would have returned
-        nothing: the whole prize of a tournament with re-entries counts as their return. First entries return the prize
-        only where they lasted to the end. "Entries" for re-entries counts tournaments with at least one re-entry.</p>`;
+          <td>${g.avg_start_bb == null ? "–" : bbUnit(g.avg_start_bb, 1)}</td></tr>`))}
+      <p class="m">${t("money.reNote")}</p>`;
   }
   app.innerHTML = h;
 }
 
 // ---- Import -----------------------------------------------------------------
 let poller = null;
-const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported automatically" : "Done"}</b>
-  <span class="m">${esc(String(r.finished_at || "").replace("T", " "))}</span><br>
-  ${r.files} files read (${r.hand_files} hand histories, ${r.summary_files} summaries), ${r.unchanged} unchanged ·
-  ${r.hands_new} new hands, ${r.hands_duplicate} already imported · ${r.allins} all-ins analysed · ${r.tournaments} tournaments
-  ${Object.keys(r.ignored || {}).length ? `<p class="m">Not imported (outside No-Limit Hold'em tournaments in $): ${
-    Object.entries(r.ignored).map(([why, n]) => `${n} ${esc(why)}${why === "cash game" ? " files" : ""}`).join(", ")}</p>` : ""}
-  <p><a href="#/">Open the dashboard →</a></p>${r.skipped.length ? `<p class="m">Skipped: ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
+const REASONS = {"Sit & Go": "sng", "PLO/Omaha": "omaha", "other game": "other", "not in $": "currency", "cash game": "cash"};
+const resultBox = r => `<div class="box"><b>${t(r.source === "auto" ? "imp.auto" : "imp.done")}</b>
+  <span class="m">${dateTime(String(r.finished_at || "").replace("T", " "))}</span><br>
+  ${t("imp.result", {files: r.files, hand_files: r.hand_files, summary_files: r.summary_files, unchanged: r.unchanged,
+    new: r.hands_new, dup: r.hands_duplicate, allins: r.allins, tournaments: r.tournaments})}
+  ${Object.keys(r.ignored || {}).length ? `<p class="m">${t("imp.ignored", {list:
+    Object.entries(r.ignored).map(([why, n]) => REASONS[why] ? t("imp.reason." + REASONS[why], {n}) : `${n} ${esc(why)}`).join(", ")})}</p>` : ""}
+  <p><a href="#/">${t("imp.openDashboard")}</a></p>${r.skipped.length ? `<p class="m">${t("imp.skipped")} ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {
   const mine = routeSeq, st = await api("/api/settings");
   if (mine !== routeSeq) return;
-  app.innerHTML = `<h1>Import</h1>
-    <p>Paste the folder where you save your PokerCraft exports (hand histories and tournament summaries: .txt, .zip or .pdf).
-       Files that were already imported and did not change are skipped, so importing the whole folder again is quick.</p>
-    <div class="filters"><input id="folder" style="flex:1;min-width:240px" placeholder="/Users/you/Downloads/PokerCraft" value="${esc(st.import_folder || "")}">
-    <button id="go" class="primary">Import</button></div>
-    <p><label><input type="checkbox" id="watch" ${st.watch ? "checked" : ""}> Watch this folder and import new exports automatically while the app is open</label><br>
-       <label><input type="checkbox" id="rescan"> Re-read every file (only needed after an app update)</label></p>
-    <div id="out"></div><p class="m">Database: ${esc(st.database)}</p>`;
+  app.innerHTML = `<h1>${t("nav.import")}</h1>
+    <p>${t("imp.intro")}</p>
+    <div class="filters"><input id="folder" style="flex:1;min-width:240px" placeholder="${esc(t("imp.placeholder"))}" value="${esc(st.import_folder || "")}">
+    <button id="go" class="primary">${t("imp.go")}</button></div>
+    <p><label><input type="checkbox" id="watch" ${st.watch ? "checked" : ""}> ${t("imp.watch")}</label><br>
+       <label><input type="checkbox" id="rescan"> ${t("imp.rescan")}</label></p>
+    <div id="out"></div><p class="m">${t("imp.database", {db: esc(st.database)})}</p>`;
   const out = document.getElementById("out"), btn = document.getElementById("go");
   const show = s => {
     if (s.running) {
       btn.disabled = true;
-      out.innerHTML = `<div class="box"><b>Importing${s.source === "auto" ? " (automatic)" : ""}…</b>
+      out.innerHTML = `<div class="box"><b>${t(s.source === "auto" ? "imp.runningAuto" : "imp.running")}</b>
         <progress max="${s.total || 1}" value="${s.done}" style="width:100%"></progress>
-        <p class="m">${s.done} of ${s.total} files${s.current ? " · " + esc(s.current) : ""}. All-in equity is computed exactly,
-        so a first import of many tournaments takes a while.</p></div>`;
+        <p class="m">${t("imp.progress", {done: s.done, total: s.total})}${s.current ? " · " + esc(s.current) : ""}. ${t("imp.slow")}</p></div>`;
       return;
     }
     btn.disabled = false;
-    if (s.error) out.innerHTML = `<p class="warn">Import failed: ${esc(s.error)}</p>`;
+    if (s.error) out.innerHTML = `<p class="warn">${t("imp.failed", {e: esc(s.error)})}</p>`;
     else if (s.result || s.last_import) out.innerHTML = resultBox(s.result || s.last_import);
   };
   const poll = async () => {
@@ -803,44 +878,30 @@ async function viewImport() {
 
 // ---- How luck works ------------------------------------------------------------
 function viewLuck() {
-  app.innerHTML = `<h1>How luck is calculated</h1>
-  <p>An <b>all-in</b> here means: all the chips are in the middle, cards are still to come, and nobody can act any more.
-     From that moment the result depends only on the cards that are dealt, so it is a clean measure of luck.</p>
-  <div class="box"><p><b>Equity</b>: your share of the pot if this exact situation were played out over and over. It is not estimated:
-     the app goes through <i>every</i> possible remaining board (up to 1,712,304 of them preflop) with the real cards of everyone involved.
-     Ties split the pot, and side pots are handled.</p>
-  <p><b>Expected (EV)</b>: equity × pot, minus what you put in. What you win <i>on average</i> in this spot.</p>
-  <p><b>Actual</b>: what really happened.</p>
-  <p><b>Luck = actual − expected.</b> Positive: you won more than the cards deserved. Negative: less.</p>
-  <h2>The luck badge</h2>
-  <p>The dashboard sums the luck of every all-in in the period and compares it with how much that luck could swing by
-     chance: an all-in with 50% equity for a big pot swings a lot, one with 95% equity hardly at all. The result is the
-     number of "typical swings" your luck is away from zero.</p>
-  <p>Very lucky: +1.5 or more · Lucky: +0.5 to +1.5 · Average: between −0.5 and +0.5 · Bad run: −0.5 to −1.5 ·
-     Worst run: −1.5 or less. Two lost coinflips are "Average"; losing a series of 80% all-ins is a bad run. With fewer
-     than 20 all-ins the badge says the sample is small.</p>
-  <p>Everything is counted in big blinds, so an all-in at 25/50 weighs the same as the same all-in at 500/1,000. Under the
-     badge the app says how rare your result is for a player with average luck, e.g. "a run this bad or worse happens to
-     about 1 in 6 players" (from the normal distribution: −1 typical swing or worse is about 16%).</p>
-  <p>Luck always uses the equity <b>at the moment of the all-in</b>. The replayer also shows how the equity changes as the
-     flop, turn and river come, but those numbers are only for watching; they do not change your luck.</p></div>
-  <h2>Example</h2>
-  <p>You have ${cards("As Ah")} against ${cards("Kd Kc")}, 100 BB each, all-in before the flop. Your equity is about 81%.</p>
-  <p>Expected = 0.81 × 200 − 100 = <b>+62 BB</b>. If you win: actual +100 BB, luck <span class="pos">+38 BB</span>.
-     If you lose: actual −100 BB, luck <span class="neg">−162 BB</span>.</p>
-  <h2>Reading it</h2>
-  <p>Good decisions show up as a positive <b>expected</b> number: you get your chips in as the favourite.
-     <b>Luck</b> swings up and down and tends towards zero over many tournaments. The orange line on the dashboard is your result with
-     that luck removed.</p>
-  <p class="m">Limits: measured in chips and big blinds, not dollars (no payout structures needed). Only all-ins where every player's
-     cards are known count, as in PokerTracker. A "bad beat" is losing with 80%+ equity, a "suckout" winning with 20% or less.</p>`;
+  app.innerHTML = `<h1>${t("lp.title")}</h1>
+  <p>${t("lp.allin")}</p>
+  <div class="box"><p>${t("lp.equity")}</p>
+  <p>${t("lp.ev")}</p>
+  <p>${t("lp.actual")}</p>
+  <p>${t("lp.luck")}</p>
+  <h2>${t("lp.badgeTitle")}</h2>
+  <p>${t("lp.badge")}</p>
+  <p>${t("lp.levels")}</p>
+  <p>${t("lp.bb")}</p>
+  <p>${t("lp.moment")}</p></div>
+  <h2>${t("lp.exampleTitle")}</h2>
+  <p>${t("lp.example", {aa: cards("As Ah"), kk: cards("Kd Kc")})}</p>
+  <p>${t("lp.exampleMath")}</p>
+  <h2>${t("lp.readingTitle")}</h2>
+  <p>${t("lp.reading")}</p>
+  <p class="m">${t("lp.limits")}</p>`;
 }
 
 // ---- Router -----------------------------------------------------------------
 let routeSeq = 0;                                       // views drawn after a newer route started are dropped
-async function route() {
+async function route(keepScroll) {
   routeSeq++;
-  const h = location.hash || "#/";
+  const h = location.hash || "#/", y = window.scrollY;
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
     a.getAttribute("href") === h || h.startsWith(a.getAttribute("href") + "?")
       || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));
@@ -858,12 +919,17 @@ async function route() {
     else if (h === "#/analysis" || h.startsWith("#/analysis?")) await viewAnalysis(new URLSearchParams(h.split("?")[1] || "").get("tab"));
     else if (h === "#/import") await viewImport();
     else if (h === "#/luck") viewLuck();
-    else app.innerHTML = "<p>Page not found.</p>";
-  } catch (err) { app.innerHTML = `<p class="warn">Something went wrong: ${esc(err.message)}</p>`; }
-  window.scrollTo(0, 0);
+    else app.innerHTML = `<p>${t("common.notFound")}</p>`;
+  } catch (err) { app.innerHTML = `<p class="warn">${t("common.error", {e: esc(err.message)})}</p>`; }
+  window.scrollTo(0, keepScroll === true ? y : 0);
 }
-window.addEventListener("hashchange", route);
-api("/api/settings").then(st => document.body.classList.toggle("two-color", st.four_color === false)).catch(() => {}).finally(route);
+window.addEventListener("hashchange", () => route());
+// the saved language, or the system language the first time
+api("/api/settings").then(st => {
+  document.body.classList.toggle("two-color", st.four_color === false);
+  return st.lang;
+}).catch(() => null).then(saved => setLang(LANGS.includes(saved) ? saved
+  : (navigator.language || "").toLowerCase().startsWith("pl") ? "pl" : "en")).finally(() => route());
 </script>
 </body>
 </html>

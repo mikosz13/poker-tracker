@@ -12,6 +12,7 @@ from .analysis import analysis_data
 from .session import session_insights
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
+from .i18n import I18N, LANGS, pick
 from .importer import changed_files, import_files, list_files
 from .replay import hand_replay
 from .tournament_report import tournament_data
@@ -19,6 +20,7 @@ from .tournament_report import tournament_data
 SITE = "GGPoker"
 WEB = Path(__file__).resolve().parent / "web"
 SESSION_GAP_HOURS = 3        # tournaments closer together than this belong to the same session
+THEMES = ("light", "dark")   # without a saved theme the page follows the system
 WATCH_SECONDS = 20           # how often a watched folder is checked for new exports
 
 
@@ -83,7 +85,7 @@ def group_session(tournaments, gap_hours=SESSION_GAP_HOURS):
     return session
 
 
-def last_session(db, site=SITE):
+def last_session(db, site=SITE, lang="en"):
     """Tournaments of the most recent session (see group_session), with what happened in it."""
     session = group_session(tournaments_list(db, site))
     if not session:
@@ -95,7 +97,7 @@ def last_session(db, site=SITE):
             "with_result": len(known),
             "luck_bb": sum(float(t["luck_bb"] or 0) for t in session),
             "from": str(min(t["first_hand"] for t in session))[:16], "to": str(session[0]["last_hand"])[:16],
-            "insights": session_insights(db, session, site)}
+            "insights": session_insights(db, session, site, lang)}
 
 
 def tournament_detail(db, tournament_id, site=SITE):
@@ -225,15 +227,23 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             path = self.path.split("?", 1)[0]
             if path in ("/", "/index.html"):
                 page = (WEB / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
+                with Database(url) as db:
+                    theme = get_setting(db, "theme")
+                if theme in THEMES:                               # the saved theme from the first paint
+                    page = page.replace('<html lang="en">', f'<html lang="en" data-theme="{theme}">', 1)
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
+            if path.startswith("/i18n/") and path[6:-5] in LANGS and path.endswith(".json"):
+                return self._send(200, (I18N / path[6:]).read_bytes())
+            query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
+            lang = pick((query.get("lang") or [None])[0])          # the language of texts made here
             with Database(url) as db:
                 if path == "/api/dashboard":                          # ?period=24h|3d|1w|2w|4w|3m|6m|max
-                    query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
                     period = (query.get("period") or [get_setting(db, "dashboard_period") or "max"])[0]
                     period = period if period in PERIODS else "max"
-                    return self._send(200, {"dashboard": dashboard_data(db, period=period), "session": last_session(db)})
+                    return self._send(200, {"dashboard": dashboard_data(db, period=period),
+                                            "session": last_session(db, lang=lang)})
                 if path == "/api/analysis":                           # always the whole history
-                    return self._send(200, analysis_data(db))
+                    return self._send(200, analysis_data(db, lang=lang))
                 if path == "/api/tournaments":
                     return self._send(200, tournaments_list(db))
                 if path.startswith("/api/tournament/"):
@@ -248,7 +258,8 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 if path == "/api/settings":
                     return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
                                             "watch": get_setting(db, "watch") == "1",
-                                            "four_color": get_setting(db, "four_color") != "0"})
+                                            "four_color": get_setting(db, "four_color") != "0",
+                                            "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
                 if path == "/api/status":
                     return self._send(200, status_payload(db))
             self._send(404, {"error": "not found"})
@@ -260,9 +271,10 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             if self.path == "/api/import":
                 folder = (body.get("path") or "").strip()
                 if not folder or not Path(folder).expanduser().exists():
-                    return self._send(400, {"error": "Folder not found. Paste the folder where you save PokerCraft exports."})
+                    return self._send(400, {"error": "Folder not found. Paste the folder where you save PokerCraft exports.",
+                                            "code": "folder_not_found"})
                 if not job.start(folder, skip_unchanged=not body.get("rescan"), source="manual"):
-                    return self._send(409, {"error": "An import is already running."})
+                    return self._send(409, {"error": "An import is already running.", "code": "import_running"})
                 with Database(url) as db:
                     set_setting(db, "import_folder", folder)
                     return self._send(202, status_payload(db))
@@ -270,15 +282,20 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
-            if self.path == "/api/display":                       # deck colours and the dashboard period
+            if self.path == "/api/display":                       # deck colours, period, language, theme
                 with Database(url) as db:
+                    if body.get("lang") in LANGS:
+                        set_setting(db, "lang", body["lang"])
+                    if body.get("theme") in THEMES:
+                        set_setting(db, "theme", body["theme"])
                     if "four_color" in body:
                         set_setting(db, "four_color", "1" if body["four_color"] else "0")
                     if body.get("dashboard_period") in PERIODS:
                         set_setting(db, "dashboard_period", body["dashboard_period"])
                     db.commit()
                     return self._send(200, {"four_color": get_setting(db, "four_color") != "0",
-                                            "dashboard_period": get_setting(db, "dashboard_period") or "max"})
+                                            "dashboard_period": get_setting(db, "dashboard_period") or "max",
+                                            "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
             self._send(404, {"error": "not found"})
 
     class Server(ThreadingHTTPServer):

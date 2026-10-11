@@ -7,6 +7,7 @@ from datetime import datetime
 
 from .analysis import confidence, load_hands
 from .dashboard import luck_badge
+from .i18n import money, num, t
 from .tournament_report import SITE
 
 MIN_HANDS_VS_USUAL = 50      # fewer session hands than this: no comparison with your usual play
@@ -91,8 +92,8 @@ def max_at_once(intervals):
     return best
 
 
-def session_insights(db, tournaments, site=SITE):
-    """tournaments: rows of the session as tournaments_list builds them (newest first)."""
+def session_insights(db, tournaments, site=SITE, lang="en"):
+    """tournaments: rows of the session as tournaments_list builds them (newest first); lang: of the summary."""
     tids = {t["tournament_id"] for t in tournaments}
     if not tids:
         return None
@@ -136,33 +137,40 @@ def session_insights(db, tournaments, site=SITE):
                "best": {"name": best["name"], "place": best["finish_place"], "players": best["players"]} if best else None}
     result = {"busts": busts, "beats": beats, "pots": pots, "luck": badge, "vs_usual": vs_usual(mine, usual_play(db, tids, site)),
               "numbers": numbers, "hands": len(mine)}
-    result["summary"] = summary_sentence(tournaments, result)
+    result["summary"] = summary_sentence(tournaments, result, lang)
     return result
 
 
-def summary_sentence(tournaments, s):
-    known = [t for t in tournaments if t["profit"] is not None]
-    itm = sum(1 for t in known if _f(t["prize_won"]) > 0)
-    parts = [f"{len(tournaments)} tournament{'s' if len(tournaments) != 1 else ''}"]
+LUCK_KEYS = {"Very lucky": "luck.veryLucky", "Lucky": "luck.lucky", "Average": "luck.average",
+             "Bad run": "luck.badRun", "Worst run": "luck.worstRun", "No all-ins": "luck.none"}
+
+
+def summary_sentence(tournaments, s, lang="en"):
+    known = [x for x in tournaments if x["profit"] is not None]
+    itm = sum(1 for x in known if _f(x["prize_won"]) > 0)
+    parts = [t(lang, "sum.tournaments", n=len(tournaments))]
     if known:
-        profit = sum(_f(t["profit"]) for t in known)
-        parts.append(f"{itm} in the money, {'+' if profit >= 0 else '−'}${abs(profit):,.2f}"
-                     + (f" ({len(tournaments) - len(known)} without a summary yet)" if len(known) < len(tournaments) else ""))
+        profit = sum(_f(x["profit"]) for x in known)
+        parts.append(t(lang, "sum.result", itm=itm, profit=money(lang, profit, sign=True))
+                     + (t(lang, "sum.withoutSummary", n=len(tournaments) - len(known))
+                        if len(known) < len(tournaments) else ""))
     else:
-        parts.append("no summaries yet, so no result")
+        parts.append(t(lang, "sum.noResult"))
     text = ", ".join(parts) + "."
     b = s["luck"]
     if b["count"]:
-        luck = f" All-in luck {'+' if b['luck_bb'] >= 0 else '−'}{abs(b['luck_bb']):,.0f} BB, {b['level'].lower()}"
-        text += luck + (f" (about 1 in {b['one_in']})." if b.get("one_in") and b["level"] != "Average" else ".")
+        luck = t(lang, "sum.luck", luck=num(lang, b["luck_bb"], 0, sign=True),
+                 level=t(lang, LUCK_KEYS[b["level"]]).lower())
+        text += luck + (t(lang, "sum.oneIn", one_in=num(lang, b["one_in"]))
+                        if b.get("one_in") and b["level"] != "Average" else ".")
     if s["busts"]:
-        text += f" Busted {len(s['busts'])} time{'s' if len(s['busts']) != 1 else ''}"
+        text += " " + t(lang, "sum.busts", n=len(s["busts"]))
         # the most painful bust: as the favourite, for the most chips (equity x BB lost)
         worst = max((x for x in s["busts"] if x["equity"] is not None and x["equity"] >= 0.5 and x["rival_cards"]),
                     key=lambda x: x["equity"] * abs(x["net_bb"]), default=None)
         if worst and worst["rival_cards"]:
-            text += (f"; worth a look: {_short(worst['hero_cards'])} vs {_short(worst['rival_cards'])} "
-                     f"in {worst['name']}")
+            text += t(lang, "sum.worth", hero=_short(worst["hero_cards"]), rival=_short(worst["rival_cards"]),
+                      name=worst["name"])
         text += "."
     return text
 

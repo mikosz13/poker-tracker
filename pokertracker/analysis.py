@@ -15,13 +15,14 @@ from collections import defaultdict
 import numpy as np
 
 from .dashboard import hand_class
+from .i18n import num, t
 from .tournament_report import SITE
 
 HIDE_BELOW = 30          # fewer hands than this: the spot is not tested
 SMALL_BELOW = 100        # fewer hands than this: shown as a small sample
 MIN_GROUP = 300          # stack depths and positions need this many hands to be tested
 DEPTHS = ((0, 10, "<10 BB"), (10, 15, "10-15 BB"), (15, 25, "15-25 BB"), (25, 40, "25-40 BB"), (40, 10 ** 9, "40+ BB"))
-FOLD_TO_3BET_DEPTHS = ((0, 20, "under 20 BB"), (20, 40, "20-40 BB"), (40, 10 ** 9, "40+ BB"))
+FOLD_TO_3BET_DEPTHS = ((0, 20, "<20 BB"), (20, 40, "20-40 BB"), (40, 10 ** 9, "40+ BB"))
 FOLD_TO_3BET_HIGH = 0.70  # above this, opponents can 3-bet you with anything (rough guide)
 FOLD_TO_3BET_GUIDE = 0.55  # roughly where solid players are; used only to size the leak
 UNRANKED_POSITIONS = ("SB", "BB", "BTN/SB")
@@ -176,18 +177,11 @@ def _worst(hands, k=5):
 
 # ---- the family of tested spots -------------------------------------------------------------------------------
 
-DEPTH_TIPS = {
-    "10-15 BB": "At 10-15 BB most hands should be all-in or fold. Avoid raising and folding, and avoid calling.",
-    "25-40 BB": "At 25-40 BB re-shoving all-in over an open is often the best play. Calling and playing after the "
-                "flop with this stack loses for you.",
-    "40+ BB": "With a deep stack small edges after the flop decide. Review the biggest losses: were they one-pair hands "
-              "paid off to the river?",
-}
-LINES = (("open", "Open raising"), ("3bet", "3-betting"), ("4bet_cold", "4-betting"), ("open_shove", "Open shoving"),
-         ("3bet_shove", "Re-shoving all-in"))
+DEPTH_TIPS = {"10-15 BB": "an.tip.depth10", "25-40 BB": "an.tip.depth25", "40+ BB": "an.tip.depth40"}
+LINES = ("open", "3bet", "4bet_cold", "open_shove", "3bet_shove")    # titles: an.line.<spot>
 
 
-def _versus_fold(key, title, played, tip):
+def _versus_fold(key, played, lang):
     """A decision from a blind compared with folding in the same hand, which would have lost exactly the blind and
     ante Hero posted. The difference per hand is (EV-adjusted result + posted chips)."""
     if len(played) < HIDE_BELOW:
@@ -195,29 +189,21 @@ def _versus_fold(key, title, played, tip):
     mean, se = _mean_se([h["adj_bb"] + h["posted_bb"] for h in played])
     played_mean = sum(h["adj_bb"] for h in played) / len(played)
     fold_mean = -sum(h["posted_bb"] for h in played) / len(played)
-    return {"key": key, "title": title, "kind": "vs_fold", "hands": len(played), "value": round(mean, 2),
-            "z": mean / se if se else None, "played": round(played_mean, 2), "folded": round(fold_mean, 2),
-            "cost_bb": round(-mean * len(played), 0), "gain_bb": round(mean * len(played), 0), "tip": tip,
-            "worst": _worst(played)}
+    return {"key": key, "title": t(lang, f"an.t.{key}"), "kind": "vs_fold", "hands": len(played),
+            "value": round(mean, 2), "z": mean / se if se else None, "played": round(played_mean, 2),
+            "folded": round(fold_mean, 2), "cost_bb": round(-mean * len(played), 0),
+            "gain_bb": round(mean * len(played), 0), "tip": t(lang, f"an.tip.{key}"), "worst": _worst(played)}
 
 
-def spot_tests(hands):
+def spot_tests(hands, lang="en"):
     """Every spot checked, with its z score (negative = worse than the baseline). One family of tests."""
     tests = []
     by = defaultdict(list)
     for h in hands:
         by[(h["position"], h["spot"])].append(h)
-    tests.append(_versus_fold(
-        "bb_defence", "Big blind: calling an open", by[("BB", "call_vs_open")],
-        "On average your calls from the big blind end worse than folding would have. Call less with offsuit hands "
-        "that are easily dominated (e.g. KJo, QTo, A8o) against early positions, 3-bet your strongest hands instead "
-        "of calling, and do not pay off to the river with one pair out of position."))
-    tests.append(_versus_fold(
-        "sb_complete", "Small blind: completing or limping", by[("SB", "limp")],
-        "From the small blind you play out of position for the whole hand. Raise or fold instead of completing."))
-    tests.append(_versus_fold(
-        "sb_flat", "Small blind: calling an open", by[("SB", "call_vs_open")],
-        "Calling from the small blind invites the big blind in and leaves you out of position. 3-bet or fold more."))
+    tests.append(_versus_fold("bb_defence", by[("BB", "call_vs_open")], lang))
+    tests.append(_versus_fold("sb_complete", by[("SB", "limp")], lang))
+    tests.append(_versus_fold("sb_flat", by[("SB", "call_vs_open")], lang))
 
     # folding after your own open was 3-bet: a frequency against a rough guide, by stack depth
     for lo, hi, label in FOLD_TO_3BET_DEPTHS:
@@ -228,14 +214,12 @@ def spot_tests(hands):
         freq = len(folds) / len(faced)
         se = (FOLD_TO_3BET_HIGH * (1 - FOLD_TO_3BET_HIGH) / len(faced)) ** 0.5
         lost = -sum(h["adj_bb"] for h in folds) / len(folds) if folds else 0.0
-        tests.append({"key": f"fold_to_3bet_{label}", "title": f"Folding to 3-bets after your open ({label})",
+        tests.append({"key": f"fold_to_3bet_{label}", "title": t(lang, "an.t.fold_to_3bet", depth=label),
                       "kind": "frequency", "hands": len(faced), "value": round(100 * freq, 1),
                       "z": -(freq - FOLD_TO_3BET_HIGH) / se,          # folding more than the guide is the bad side
-                      "guide": "rough guide: around half; above 70 % opponents can 3-bet you with anything",
+                      "guide": t(lang, "an.guide.fold_to_3bet"),
                       "cost_bb": round(max(0.0, freq - FOLD_TO_3BET_GUIDE) * len(faced) * lost, 0), "gain_bb": 0,
-                      "tip": "You fold most of the time when your open is re-raised. Open a little tighter from early "
-                             "positions so you have hands to continue with, and with 20-40 BB answer more 3-bets "
-                             "with an all-in or a call.",
+                      "tip": t(lang, "an.tip.fold_to_3bet"),
                       # one-sided: folding rarely is not praise (it can mean calling too much)
                       "side": "leak", "worst": _worst(folds)})
 
@@ -253,50 +237,49 @@ def spot_tests(hands):
     for label in [d[2] for d in DEPTHS]:
         g = [h for h in hands if depth_label(h["stack_bb"]) == label]
         if len(g) >= MIN_GROUP:
-            tests.append(group_test(f"depth_{label}", f"Stack {label}", g,
-                                    DEPTH_TIPS.get(label, "Review the biggest losses at this stack depth.")))
+            tests.append(group_test(f"depth_{label}", t(lang, "an.t.depth", depth=label), g,
+                                    t(lang, DEPTH_TIPS.get(label, "an.tip.depth"))))
     for pos in sorted({h["position"] for h in hands if h["position"] and h["position"] not in UNRANKED_POSITIONS}):
         g = [h for h in hands if h["position"] == pos]
         if len(g) >= MIN_GROUP:
-            tests.append(group_test(f"position_{pos}", f"Position {pos}", g,
-                                    "The button should be your best seat. Fewer calls, more raises, and keep betting "
-                                    "when checked to." if pos == "BTN" else "Play a little tighter from this seat."))
+            tests.append(group_test(f"position_{pos}", t(lang, "an.t.position", pos=pos), g,
+                                    t(lang, "an.tip.positionBTN" if pos == "BTN" else "an.tip.position")))
     classes = defaultdict(list)
     for h in hands:
         if k := hand_class(h["cards"]):
             classes[k].append(h)
     for k, g in sorted(classes.items()):
         if len(g) >= HIDE_BELOW:
-            tests.append(group_test(f"hand_{k}", f"Starting hand {k}", g,
-                                    "With this many hands a result depends mostly on a few big pots. Look at those "
-                                    "pots: was it a dominated hand calling a raise?", kind="net_bb", vs_fold=True,
-                                    side="leak"))                   # winning with QQ is no praise
-    for spot, title in LINES:
+            tests.append(group_test(f"hand_{k}", t(lang, "an.t.hand", hand=k), g, t(lang, "an.tip.hand"),
+                                    kind="net_bb", vs_fold=True, side="leak"))   # winning with QQ is no praise
+    for spot in LINES:
         g = [h for h in hands if h["spot"] == spot]
         if len(g) >= HIDE_BELOW:
-            t = group_test(f"line_{spot}", title, g, "", kind="net_bb", side="strength")
-            t["praise"] = f"{t['gain_bb']:+,.0f} BB in {len(g)} hands ({t['gain_bb'] / len(g):+.2f} BB per hand)."
-            t["line"] = True
-            tests.append(t)
-    return [t for t in tests if t and t["z"] is not None]
+            x = group_test(f"line_{spot}", t(lang, f"an.line.{spot}"), g, "", kind="net_bb", side="strength")
+            x["praise"] = t(lang, "an.praise", n=len(g), bb=num(lang, x["gain_bb"], 0, sign=True),
+                            per=num(lang, x["gain_bb"] / len(g), 2, sign=True))
+            x["line"] = True
+            tests.append(x)
+    return [x for x in tests if x and x["z"] is not None]
 
 
-def classify(tests):
+def classify(tests, lang="en"):
     """Correct the whole family for multiple comparisons and split it into leaks and strengths."""
-    q = benjamini_hochberg([p_value(t["z"], t.get("side", "two")) for t in tests])
+    q = benjamini_hochberg([p_value(x["z"], x.get("side", "two")) for x in tests])
     leaks, strengths = [], []
-    for t, qi in zip(tests, q):
+    for x, qi in zip(tests, q):
         conf = confidence_from_q(qi)
         if not conf:
             continue
-        t = dict(t, q=round(qi, 4), z=round(t["z"], 2), confidence=conf, sample=_sample(t["hands"]))
-        side = t.get("side", "two")
-        if t["z"] < 0 and t["cost_bb"] > 0 and side != "strength":
-            leaks.append(t)
-        elif t["z"] > 0 and t["gain_bb"] >= 0 and side != "leak":
-            text = t.get("praise") or f"{t['value']:+.1f} bb/100 in {t['hands']} hands."
-            strengths.append({"key": t["key"], "title": t["title"], "hands": t["hands"], "sample": t["sample"],
-                              "confidence": conf, "z": t["z"], "q": t["q"], "text": text, "value": t["gain_bb"]})
+        x = dict(x, q=round(qi, 4), z=round(x["z"], 2), confidence=conf, sample=_sample(x["hands"]))
+        side = x.get("side", "two")
+        if x["z"] < 0 and x["cost_bb"] > 0 and side != "strength":
+            leaks.append(x)
+        elif x["z"] > 0 and x["gain_bb"] >= 0 and side != "leak":
+            text = x.get("praise") or t(lang, "an.strengthPer100", n=x["hands"],
+                                        value=num(lang, x["value"], 1, sign=True))
+            strengths.append({"key": x["key"], "title": x["title"], "hands": x["hands"], "sample": x["sample"],
+                              "confidence": conf, "z": x["z"], "q": x["q"], "text": text, "value": x["gain_bb"]})
     leaks.sort(key=lambda x: (x["confidence"] != "likely", -x["cost_bb"]))
     strengths.sort(key=lambda x: (x["confidence"] != "likely", -x["value"]))
     return leaks, strengths
@@ -305,7 +288,7 @@ def classify(tests):
 # ---- money -------------------------------------------------------------------------------------------------------
 
 MIN_TOURNAMENTS = 10     # money groups with fewer tournaments are not judged
-TIERS = ((0, 5, "under $5"), (5, 15, "$5-15"), (15, 30, "$15-30"), (30, 10 ** 9, "$30+"))
+TIERS = ((0, 5, "under5"), (5, 15, "5-15"), (15, 30, "15-30"), (30, 10 ** 9, "30+"))    # labels: money.tier.<key>
 
 
 def bootstrap_roi(pairs, samples=BOOTSTRAP_SAMPLES, seed=BOOTSTRAP_SEED):
@@ -334,18 +317,19 @@ def roi_interval(trs, samples=BOOTSTRAP_SAMPLES, seed=BOOTSTRAP_SEED):
     return None if b is None else {k: b[k] for k in ("low", "high", "level", "samples")}
 
 
-def _money_group(label, pairs, kind):
+def _money_group(key, label, pairs, kind):
     cost = sum(c for c, _ in pairs)
     ret = sum(r for _, r in pairs)
-    g = {"label": label, "kind": kind, "tournaments": len(pairs), "cost": round(cost, 2), "returned": round(ret, 2),
-         "profit": round(ret - cost, 2), "roi_pct": round(100 * (ret - cost) / cost, 1) if cost else None,
-         "interval": None, "verdict": "too few tournaments", "confidence": None}
+    g = {"key": key, "label": label, "kind": kind, "tournaments": len(pairs), "cost": round(cost, 2),
+         "returned": round(ret, 2), "profit": round(ret - cost, 2),
+         "roi_pct": round(100 * (ret - cost) / cost, 1) if cost else None,
+         "interval": None, "verdict_key": "too_few", "confidence": None}
     if len(pairs) >= MIN_TOURNAMENTS:
         g["boot"] = bootstrap_roi(pairs)
     return g
 
 
-def money(db, site=SITE):
+def money(db, site=SITE, lang="en"):
     """Money over the whole history, judged like the leaks: every group with enough tournaments is one test (its
     bootstrap p-value), the family is corrected with Benjamini-Hochberg, and only results beyond chance get a verdict.
 
@@ -354,21 +338,24 @@ def money(db, site=SITE):
     prize only in tournaments without a re-entry (the first entry lasted to the end)."""
     trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, profit, reentries, format "
                    "FROM tournament_results WHERE site = ?", (site,))
-    cost = sum(_f(t["total_cost"]) for t in trs)
-    profit = sum(_f(t["profit"]) for t in trs)
-    pair = lambda t: (_f(t["total_cost"]), _f(t["cash_won"]))
-    tiers = [_money_group(label, [pair(t) for t in trs if lo <= _f(t["buyin_total"]) < hi], "tier")
-             for lo, hi, label in TIERS if any(lo <= _f(t["buyin_total"]) < hi for t in trs)]
+    cost = sum(_f(r["total_cost"]) for r in trs)
+    profit = sum(_f(r["profit"]) for r in trs)
+    pair = lambda r: (_f(r["total_cost"]), _f(r["cash_won"]))
+    tiers = [_money_group(key, t(lang, f"money.tier.{key}"), [pair(r) for r in trs if lo <= _f(r["buyin_total"]) < hi],
+                          "tier")
+             for lo, hi, key in TIERS if any(lo <= _f(r["buyin_total"]) < hi for r in trs)]
     formats = []
-    for fmt in sorted({t["format"] or "unknown" for t in trs}):
-        g = [t for t in trs if (t["format"] or "unknown") == fmt]
-        m = _money_group(fmt, [pair(t) for t in g], "format")
-        m["tickets"] = round(sum(_f(t["ticket_value"]) for t in g), 2)       # satellites: seats are not cash
+    for fmt in sorted({r["format"] or "unknown" for r in trs}):
+        g = [r for r in trs if (r["format"] or "unknown") == fmt]
+        m = _money_group(fmt, t(lang, f"format.{fmt}"), [pair(r) for r in g], "format")
+        m["tickets"] = round(sum(_f(r["ticket_value"]) for r in g), 2)       # satellites: seats are not cash
         formats.append(m)
-    first = _money_group("first entries", [(_f(t["buyin_total"]), 0.0 if int(t["reentries"] or 0) else _f(t["cash_won"]))
-                                           for t in trs], "entries")
-    re_entries = _money_group("re-entries", [(_f(t["buyin_total"]) * int(t["reentries"]), _f(t["cash_won"]))
-                                             for t in trs if int(t["reentries"] or 0) > 0], "entries")
+    first = _money_group("first", t(lang, "money.firstEntries"),
+                         [(_f(r["buyin_total"]), 0.0 if int(r["reentries"] or 0) else _f(r["cash_won"])) for r in trs],
+                         "entries")
+    re_entries = _money_group("re", t(lang, "money.reEntries"),
+                              [(_f(r["buyin_total"]) * int(r["reentries"]), _f(r["cash_won"]))
+                               for r in trs if int(r["reentries"] or 0) > 0], "entries")
 
     family = [g for g in tiers + formats + [first, re_entries] if g.get("boot")]
     for g, q in zip(family, benjamini_hochberg([g["boot"]["p"] for g in family])):
@@ -376,10 +363,10 @@ def money(db, site=SITE):
         g["interval"] = {"low": b["low"], "high": b["high"], "level": 95}
         g["q"] = round(q, 4)
         g["confidence"] = confidence_from_q(q) if (b["high"] < 0 or b["low"] > 0) else None
-        g["verdict"] = (("losing" if b["high"] < 0 else "winning") + " beyond chance") if g["confidence"] \
-            else "too little data to tell"
+        g["verdict_key"] = ("losing" if b["high"] < 0 else "winning") if g["confidence"] else "too_little"
     for g in tiers + formats + [first, re_entries]:
         g.pop("boot", None)
+        g["verdict"] = t(lang, f"money.verdict.{g['verdict_key']}")
         g["share_of_spend_pct"] = round(100 * g["cost"] / cost, 1) if cost else None
         g["share_of_result_pct"] = round(100 * g["profit"] / profit, 1) if profit else None
 
@@ -390,29 +377,30 @@ def money(db, site=SITE):
     return {"tournaments": len(trs), "cost": round(cost, 2), "profit": round(profit, 2),
             "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs),
             "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
-            "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries)}
+            "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang)}
 
 
-def money_facts(tiers, formats, first, re_entries):
+def money_facts(tiers, formats, first, re_entries, lang="en"):
     """Facts, not advice, and only about groups judged beyond chance."""
     facts = []
+    pct = lambda x, sign=False: num(lang, x, 0, sign) + "%"
     sig = sorted([g for g in tiers if g["confidence"]], key=lambda g: -g["share_of_spend_pct"])
     for i, g in enumerate(sig):
-        word = "loses" if g["profit"] < 0 else "wins"
-        tail = ", so it has the biggest effect on your overall result." if i == 0 else "."
-        facts.append(f"{g['label']} {word} beyond chance and accounts for {g['share_of_spend_pct']:.0f} % of your spend"
-                     + tail)
+        facts.append(t(lang, "money.fact.tier" + ("Loses" if g["profit"] < 0 else "Wins"), label=g["label"],
+                       share=pct(g["share_of_spend_pct"]))
+                     + t(lang, "money.fact.biggest" if i == 0 else "money.fact.end"))
     for g in formats:
         if g["confidence"]:
-            facts.append(f"{g['label'].capitalize()} tournaments {'lose' if g['profit'] < 0 else 'win'} beyond chance "
-                         f"({g['tournaments']} tournaments, {g['share_of_spend_pct']:.0f} % of your spend).")
+            facts.append(t(lang, "money.fact.format" + ("Loses" if g["profit"] < 0 else "Wins"), Label=g["label"].capitalize(),
+                           tournaments=t(lang, "common.tournaments", n=g["tournaments"]),
+                           share=pct(g["share_of_spend_pct"])))
     if (first["confidence"] or re_entries["confidence"]) and first["roi_pct"] is not None:
         if re_entries["roi_pct"] is None:                              # no re-entries in the history
-            facts.append(f"First entries return {first['roi_pct']:+.0f} %; you have made no re-entries.")
+            facts.append(t(lang, "money.fact.noReentries", first=pct(first["roi_pct"], True)))
         else:
-            facts.append(f"First entries return {first['roi_pct']:+.0f} % and re-entries {re_entries['roi_pct']:+.0f} % "
-                         f"(re-entries start with {re_entries.get('avg_start_bb') or 0:.0f} BB on average, first "
-                         f"entries with {first.get('avg_start_bb') or 0:.0f} BB).")
+            facts.append(t(lang, "money.fact.entries", first=pct(first["roi_pct"], True),
+                           re=pct(re_entries["roi_pct"], True), re_bb=num(lang, re_entries.get("avg_start_bb") or 0),
+                           first_bb=num(lang, first.get("avg_start_bb") or 0)))
     return facts
 
 
@@ -431,24 +419,25 @@ def overview(hands, db, site=SITE):
                        "luck_bb": round(_f(a["luck"]), 1)}}
 
 
-def all_in_strength(db, site=SITE):
+def all_in_strength(db, site=SITE, lang="en"):
     """Not a test: the all-in EV is an expectation over every runout, so it is shown as a fact."""
     a = db.query("SELECT COUNT(*) AS n, SUM(ev_bb) AS ev FROM hero_allins WHERE site = ?", (site,))[0]
     if int(a["n"]) >= HIDE_BELOW and _f(a["ev"]) > 0:
-        return {"key": "allin_ev", "title": "Getting it in good", "hands": int(a["n"]), "sample": _sample(int(a["n"])),
-                "confidence": None, "text": f"Your all-ins are worth {_f(a['ev']):+,.0f} BB on average outcomes "
-                                            f"({int(a['n'])} all-ins): you put the money in as the favourite.",
+        return {"key": "allin_ev", "title": t(lang, "an.t.allin_ev"), "hands": int(a["n"]),
+                "sample": _sample(int(a["n"])), "confidence": None,
+                "text": t(lang, "an.allinText", n=int(a["n"]), ev=num(lang, _f(a["ev"]), 0, sign=True)),
                 "value": _f(a["ev"])}
     return None
 
 
-def analysis_data(db, site=SITE):
-    """The Analysis view: always the whole history."""
+def analysis_data(db, site=SITE, lang="en"):
+    """The Analysis view: always the whole history. lang: the language of titles, tips and facts."""
     hands = load_hands(db, site)
-    tests = spot_tests(hands)
-    leaks, strengths = classify(tests)
-    if (a := all_in_strength(db, site)) is not None:
+    tests = spot_tests(hands, lang)
+    leaks, strengths = classify(tests, lang)
+    if (a := all_in_strength(db, site, lang)) is not None:
         strengths.insert(0, a)
-    return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths, "money": money(db, site),
-            "tested": len(tests), "thresholds": {"hide_below": HIDE_BELOW, "small_below": SMALL_BELOW,
-                                                 "q_likely": Q_LIKELY, "q_possible": Q_POSSIBLE}}
+    return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths,
+            "money": money(db, site, lang), "tested": len(tests),
+            "thresholds": {"hide_below": HIDE_BELOW, "small_below": SMALL_BELOW,
+                           "q_likely": Q_LIKELY, "q_possible": Q_POSSIBLE}}

@@ -27,6 +27,7 @@ flowchart LR
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |
 | `tournament_report.py`, `dashboard.py` | Report data + text/HTML rendering |
 | `server.py`, `app.py`, `web/index.html` | Local-only HTTP API, background import job, folder watcher, desktop window |
+| `i18n.py`, `web/i18n/en.json`, `web/i18n/pl.json` | App texts in English and Polish: one key file per language for the page and the server, plural forms, number formats |
 
 ## Decisions
 
@@ -41,6 +42,11 @@ flowchart LR
 - **Upgrade databases, never rebuild them.** `schema.sql` always describes the latest schema; an older database runs
   the numbered steps in `migrations.py` on startup. A rebuild would throw away the equity cache and require the
   original export files, which PokerCraft only keeps for 90 days.
+- **One set of translation files for the page and the server.** Texts the server writes (session summary, leak tips,
+  money facts) come from the same `web/i18n/<lang>.json` as the page, in the language the page asks for. Plural forms
+  follow the CLDR rules (Polish one/few/many), numbers in Polish use a decimal comma and a non-breaking space between
+  thousands. Poker jargon stays in English in every language (see `docs/glossary-pl.md`). The CLI HTML reports stay
+  English.
 - **Say "unknown" instead of guessing.** Small samples, unknown starting stacks, unknown cards and shared knockouts
   are flagged rather than estimated.
 
