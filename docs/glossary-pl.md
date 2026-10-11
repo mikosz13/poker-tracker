@@ -146,3 +146,16 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 - replayer → zostaje **replayer**
 - Money → **Kasa**
 - busted → **wylot**
+
+## 8. Odmiana przez liczby (w aplikacji)
+
+Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama
+reguła w `pokertracker/i18n.py`; testy dla 1, 2, 5, 12, 22, 25).
+
+| n | turniej | ręka | wylot | all-in |
+|---|---|---|---|---|
+| 1 | 1 turniej | 1 ręka | 1 wylot | 1 all-in |
+| 2, 22 | 2 turnieje | 2 ręce | 2 wyloty | 2 all-iny |
+| 5, 12, 25 | 5 turniejów | 5 rąk | 5 wylotów | 5 all-inów |
+
+Gdzie odmiana byłaby niezręczna (np. podsumowanie importu), używamy formy „etykieta: liczba” („nowe ręce: 120”).
