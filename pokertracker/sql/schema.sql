@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS tournaments (
     stage           INTEGER,                 -- day of a multi-day tournament: 1, 2, ... (99 = final day)
     advanced_to     TEXT,                    -- "Day 2" when Hero went through to the next day
     advanced_chips  NUMERIC,                 -- chips carried to the next day
-    first_day_id    BIGINT,                  -- for a later day: the day-1 tournament it continues (NULL: not found)
+    first_day_id    BIGINT,                  -- unused since schema 6 (see event_id)
+    event_id        BIGINT,                  -- multi-day event: its last day (flights that went through, Day 2, ...)
     reentries       INTEGER,
     has_summary     BOOLEAN NOT NULL DEFAULT FALSE,
     starting_stack  NUMERIC,                 -- most common first-hand stack for this name + buy-in; NULL = unknown

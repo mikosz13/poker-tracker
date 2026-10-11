@@ -2,7 +2,7 @@
 import json
 import secrets
 import threading
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -14,7 +14,7 @@ from .tickets import ticket_entries, tickets_won
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .i18n import I18N, LANGS, pick
-from .importer import (changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
+from .importer import (DAY2_WAIT_DAYS, changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
                        restore_tournament)
 from .replay import hand_replay
 from .tournament_report import tournament_data
@@ -44,10 +44,10 @@ def _ts(x):
 
 def tournaments_list(db, site=SITE):
     rows = db.query(
-        "SELECT t.tournament_id, t.name, t.format, t.buyin_total, t.players, "
+        "SELECT t.tournament_id, t.name, t.format, COALESCE(r.buyin_total, t.buyin_total) AS buyin_total, t.players, "
         "COALESCE(r.finish_place, t.finish_place) AS finish_place, t.prize_won, t.prize_is_ticket, t.prize_ticket, "
         "t.reentries, t.has_summary, t.started_at, COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, "
-        "t.first_day_id, r.last_stage, r.in_the_money, r.cashed, r.place_pct, "
+        "t.event_id, r.days, r.in_the_money, r.cashed, r.place_pct, "
         "(SELECT MIN(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS first_hand, "
         "(SELECT MAX(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS last_hand, "
         "(SELECT COUNT(*) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS hands, "
@@ -67,8 +67,22 @@ def tournaments_list(db, site=SITE):
         r["tags"] = sorted(tags.get(r["tournament_id"], []))
         r["date"] = str(r["started_at"] or r["first_hand"] or "")[:16]
         r["ticket_entry"] = r["tournament_id"] in entered      # information only: the cost is the full buy-in
+        r["day_status"] = day_status(r)
     rows.sort(key=lambda r: r["date"], reverse=True)
     return rows
+
+
+def day_status(t, now=None):
+    """For a day-1 advance: "event" when it is part of a multi-day event with a later day imported, "waiting" while its
+    Day 2 may still come, "not_played" when none came within DAY2_WAIT_DAYS; None otherwise."""
+    if not t.get("advanced_to"):
+        return None
+    if t.get("event_id") and t["event_id"] != t["tournament_id"]:
+        return "event"
+    started = _ts(t["started_at"]) if t.get("started_at") else None
+    if started and (now or datetime.now()) - started > timedelta(days=DAY2_WAIT_DAYS):
+        return "not_played"
+    return "waiting"
 
 
 def group_session(tournaments, gap_hours=SESSION_GAP_HOURS):
@@ -110,6 +124,12 @@ def tournament_detail(db, tournament_id, site=SITE):
     data = tournament_data(db, tournament_id, site)
     if data is None:
         return None
+    t = db.query("SELECT tournament_id, name, event_id, advanced_to, started_at FROM tournaments WHERE site = ? AND "
+                 "tournament_id = ?", (site, tournament_id))[0]
+    if t["event_id"] and t["event_id"] != tournament_id:          # a flight counted in its multi-day event
+        e = db.query("SELECT tournament_id, name FROM tournaments WHERE site = ? AND tournament_id = ?", (site, t["event_id"]))
+        data["event"] = e[0] if e else None
+    data["day_status"], data["advanced_to"] = day_status(t), t["advanced_to"]
     won = tickets_won(db, site)
     data["satellite_win"] = next((x for x in won if x["tournament_id"] == tournament_id), None)
     data["ticket_entry"] = next((x for x in won if x["used_in"] and x["used_in"]["tournament_id"] == tournament_id), None)

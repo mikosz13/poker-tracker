@@ -641,5 +641,14 @@
  "money.byBuyinExact": "Według kwoty buy-inu",
  "money.byCategory": "Według kategorii",
  "money.tickets": "Bilety",
- "pos.evNote": "bb/100 bez szczęścia w all-inach (wg EV)."
+ "pos.evNote": "bb/100 bez szczęścia w all-inach (wg EV).",
+ "adv.notPlayed": "Awans, {day} nierozegrany",
+ "ev.counted": "liczony w {link}",
+ "ev.flights": {
+  "one": "z {n} flightem dnia 1",
+  "few": "z {n} flightami dnia 1",
+  "many": "z {n} flightami dnia 1",
+  "other": "z {n} flightami dnia 1"
+ },
+ "ev.note": "Ten flight przeszedł do {day}: jego koszt i gotówka z KO liczą się w {link}, jako jeden turniej z jednym miejscem końcowym."
 }

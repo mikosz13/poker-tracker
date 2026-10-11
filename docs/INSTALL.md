@@ -9,12 +9,15 @@ Free desktop app for GGPoker tournament players. Your data never leaves your com
 2. **Uruchom ją.**
    - Mac: przenieś do Aplikacji i otwórz. Jak macOS zablokuje, kliknij **Gotowe**, wejdź w
      **Ustawienia → Prywatność i ochrona → Otwórz mimo to**.
-   - Windows: **Więcej informacji → Uruchom mimo to**.
+   - Windows: jak pojawi się SmartScreen, kliknij **Więcej informacji → Uruchom mimo to** (aplikacja nie jest
+     podpisana).
 3. **Zrób jeden folder na eksporty**, np. `Dokumenty/PokerCraft`.
 4. **W PokerCraft pobieraj do tego folderu historie rąk i podsumowania turniejów.** Zipy też mogą być.
-5. **W aplikacji wejdź w Import**, wklej ścieżkę do folderu, zaznacz **„Watch this folder”** i kliknij **Import**.
+5. **W aplikacji wejdź w Import**, wklej ścieżkę do folderu, zaznacz **„Obserwuj ten folder”**, kliknij **Importuj**,
+   a w podglądzie **Importuj zaznaczone**.
 6. **Gotowe.** Po każdej sesji wrzucaj nowe pliki do tego folderu, a aplikacja sama je wciągnie, gdy jest włączona.
-7. **Obczajasz:** Dashboard (jak poszła sesja), Analysis (co poprawić), replayer (ręce do obejrzenia).
+7. **Obczajasz:** Pulpit (jak poszła sesja), Analiza (co poprawić), replayer (ręce do obejrzenia). Język (PL | EN) i
+   motyw zmienisz w prawym górnym rogu.
 
 ## Getting started (EN)
 
@@ -23,12 +26,14 @@ Free desktop app for GGPoker tournament players. Your data never leaves your com
 2. **Start it.**
    - Mac: move it to Applications and open it. If macOS blocks it, click **Done**, then
      **System Settings → Privacy & Security → Open Anyway**.
-   - Windows: **More info → Run anyway**.
+   - Windows: if SmartScreen appears, click **More info → Run anyway** (the app is not code-signed).
 3. **Make one folder for your exports**, e.g. `Documents/PokerCraft`.
 4. **In PokerCraft, download your hand histories and tournament summaries into it.** Zips are fine.
-5. **In the app, open Import**, paste the folder path, tick **"Watch this folder"** and click **Import**.
+5. **In the app, open Import**, paste the folder path, tick **"Watch this folder"**, click **Import**, then
+   **Import selected** in the preview.
 6. **Done.** After every session, drop the new files into that folder; the app picks them up while it is open.
 7. **Then look at:** Dashboard (how the session went), Analysis (what to fix), the replayer (hands to review).
+   Language (PL | EN) and theme are in the top right corner.
 
 ---
 

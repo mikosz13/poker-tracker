@@ -628,5 +628,12 @@
  "money.byBuyinExact": "By exact buy-in",
  "money.byCategory": "By category",
  "money.tickets": "Tickets",
- "pos.evNote": "bb/100 with all-in luck removed (EV)."
+ "pos.evNote": "bb/100 with all-in luck removed (EV).",
+ "adv.notPlayed": "Advanced, {day} not played",
+ "ev.counted": "counted in {link}",
+ "ev.flights": {
+  "one": "with {n} day-1 flight",
+  "other": "with {n} day-1 flights"
+ },
+ "ev.note": "This flight went through to {day}: its cost and knockout cash count in {link}, one tournament with one final place."
 }

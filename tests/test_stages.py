@@ -41,6 +41,14 @@ You received a total of $45.10.
 """
 
 
+def flight(tid, name, started, reentries, ko):
+    """A day-1 flight that went through to Day 2, in the format of STAGE1_ADVANCED."""
+    re_line = f"You have re-entered {reentries} times, and" if reentries else "You"
+    return (f"Tournament #{tid}, {name}, Hold'em No Limit\nBuy-in: $2.1+$0.4+$2.5\n5000 Players\n"
+            f"Total Prize Pool: $1,000,000\nTournament started {started} \n400th : Hero, $0 Entry${ko}\n"
+            f"You finished the tournament in 400th place.\n{re_line} have advanced to Day2 with 30,000 chips.\n")
+
+
 def result(db, tid):
     rows = db.query("SELECT * FROM tournament_results WHERE tournament_id = ?", (tid,))
     return rows[0] if rows else None
@@ -80,12 +88,37 @@ class StageImportTests(unittest.TestCase):
     def test_day2_with_zero_buyin_is_not_a_freeroll_and_joins_day1(self):
         import_texts(self.db, [("d2.txt", DAY2), ("s1.txt", STAGE1_ADVANCED)])     # any order
         self.assertEqual(excluded_tournaments(self.db), {})
-        self.assertEqual(self.db.scalar("SELECT first_day_id FROM tournaments WHERE tournament_id = 900103"), 900101)
-        self.assertIsNone(result(self.db, 900103))                  # counted under day 1
-        r = result(self.db, 900101)
-        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["finish_place"], r["cashed"]),
-                         (10.0, 52.12, 120, 1))                     # $7.02 + $45.10; ITM on the day that paid
+        self.assertEqual([self.db.scalar(f"SELECT event_id FROM tournaments WHERE tournament_id = {i}")
+                          for i in (900101, 900103)], [900103, 900103])
+        self.assertIsNone(result(self.db, 900101))                  # counted under the event's last day
+        r = result(self.db, 900103)
+        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["finish_place"], r["cashed"], r["days"]),
+                         (10.0, 52.12, 120, 1, 2))                  # $7.02 + $45.10; cashed on the day that paid
         self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM tournament_results"), 1)
+
+    def test_every_flight_joins_the_one_day2(self):
+        # Mik's case: several day-1 flights went through (the name changed from "$1M GTD" to "$1M"), one Day 2 stack
+        flights = [flight(900111, "$5 Ocean KO Opener, $1M GTD [Stage 1]", "2026/10/05 10:30:00", reentries=1, ko="7.02"),
+                   flight(900112, "$5 Ocean KO Opener, $1M GTD [Stage 1]", "2026/10/06 16:30:00", reentries=0, ko="4.46"),
+                   flight(900113, "$5 Ocean KO Opener, $1M [Stage 1]", "2026/10/09 14:30:00", reentries=6, ko="0.67")]
+        bust = STAGE1_BUST.replace("#900102", "#900114")              # a flight without an advance stays on its own
+        import_texts(self.db, [(f"f{i}", t) for i, t in enumerate(flights)] + [("bust", bust), ("d2", DAY2)])
+        r = result(self.db, 900103)
+        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["reentries"], r["days"]),
+                         (50.0, 57.25, 7, 4))                       # 2 + 1 + 7 entries x $5; KO cash + Day 2 cash
+        self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM tournament_results"), 2)    # the event and the bust
+        self.assertIsNone(self.db.scalar("SELECT event_id FROM tournaments WHERE tournament_id = 900114"))
+
+    def test_an_advance_waits_for_day2_then_shows_not_played(self):
+        from datetime import datetime
+        from pokertracker.server import day_status
+        import_texts(self.db, [("s1.txt", STAGE1_ADVANCED)])
+        row = self.db.query("SELECT * FROM tournaments WHERE tournament_id = 900101")[0]
+        self.assertEqual(day_status(row, now=datetime(2026, 10, 7)), "waiting")
+        self.assertEqual(day_status(row, now=datetime(2026, 10, 20)), "not_played")
+        import_texts(self.db, [("d2.txt", DAY2)])
+        row = self.db.query("SELECT * FROM tournaments WHERE tournament_id = 900101")[0]
+        self.assertEqual(day_status(row, now=datetime(2026, 10, 20)), "event")
 
     def test_day2_without_day1_counts_on_its_own_at_no_cost(self):
         import_texts(self.db, [("d2.txt", DAY2)])

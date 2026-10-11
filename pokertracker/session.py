@@ -188,7 +188,7 @@ def summary_sentence(tournaments, s, lang="en"):
                       value=money(lang, float(x["prize_ticket"])))
     # going through to the next day of a multi-day tournament (not ITM by itself)
     for x in tournaments:
-        if x.get("advanced_to") and not x.get("last_stage"):
+        if x.get("advanced_to") and not x.get("event_id"):       # still waiting for its Day 2
             text += t(lang, "sum.advanced", day=_day(lang, x["advanced_to"]), name=x["name"])
     return text
 

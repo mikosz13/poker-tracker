@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 5
+LATEST = 6
 
 
 def repair_positions(db):
@@ -102,8 +102,14 @@ def _v5_satellites_by_name(db):
             refresh_classification(db, r["site"], r["tournament_id"])
 
 
+def _v6_multi_day_events(db):
+    """Every flight that went through joins its Day 2 (and later days) as one event; computed from what is stored."""
+    from .importer import refresh_stages                            # here, to avoid an import cycle
+    refresh_stages(db)
+
+
 MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards,
-              4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name}
+              4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name, 6: _v6_multi_day_events}
 
 
 # Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of
@@ -112,7 +118,8 @@ MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found
 COLUMNS = (("hands", "button_seat", "INTEGER"), ("tournaments", "starting_stack", "NUMERIC"),
            ("tournaments", "entries_found", "INTEGER"), ("tournaments", "prize_ticket", "NUMERIC"),
            ("tournaments", "stage", "INTEGER"), ("tournaments", "advanced_to", "TEXT"),
-           ("tournaments", "advanced_chips", "NUMERIC"), ("tournaments", "first_day_id", "BIGINT"))
+           ("tournaments", "advanced_chips", "NUMERIC"), ("tournaments", "first_day_id", "BIGINT"),
+           ("tournaments", "event_id", "BIGINT"))
 
 
 def add_missing_columns(db):
