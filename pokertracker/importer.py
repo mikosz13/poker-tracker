@@ -1,5 +1,6 @@
 """Import GGPoker hand histories and tournament summaries into the database (idempotent)."""
 import json
+import re
 import subprocess
 import zipfile
 from dataclasses import dataclass, field
@@ -250,15 +251,17 @@ def _store_summary(db, t: Tournament):
     db.execute(
         "INSERT INTO tournaments (site, tournament_id, name, format, buyin_total, buyin_prize, buyin_fee, "
         "buyin_bounty, players, prize_pool, started_at, finish_place, prize_won, prize_is_ticket, reentries, "
-        "has_summary) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
+        "has_summary, prize_ticket, stage, advanced_to, advanced_chips) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
         "ON CONFLICT (site, tournament_id) DO UPDATE SET name = excluded.name, format = excluded.format, "
         "buyin_total = excluded.buyin_total, buyin_prize = excluded.buyin_prize, buyin_fee = excluded.buyin_fee, "
         "buyin_bounty = excluded.buyin_bounty, players = excluded.players, prize_pool = excluded.prize_pool, "
         "started_at = excluded.started_at, finish_place = excluded.finish_place, prize_won = excluded.prize_won, "
         "prize_is_ticket = excluded.prize_is_ticket, reentries = excluded.reentries, "
-        "has_summary = excluded.has_summary",
+        "has_summary = excluded.has_summary, prize_ticket = excluded.prize_ticket, stage = excluded.stage, "
+        "advanced_to = excluded.advanced_to, advanced_chips = excluded.advanced_chips",
         (SITE, t.id, t.name, t.format, t.buyin_total, t.buyin_prize, t.buyin_fee, t.buyin_bounty, t.players,
-         t.prize_pool, t.started_at, t.finish_place, t.prize_won, t.prize_is_ticket, t.reentries, True))
+         t.prize_pool, t.started_at, t.finish_place, t.prize_won, t.prize_is_ticket, t.reentries, True,
+         t.prize_ticket, t.stage, t.advanced_to, t.advanced_chips))
 
 
 def refresh_entries(db, tournament_id):
@@ -284,15 +287,20 @@ def refresh_entries(db, tournament_id):
 def refresh_starting_stacks(db):
     """Set tournaments.starting_stack for every name + buy-in group from Hero's entries (NULL when unknown)."""
     groups = {}
-    for r in db.query("SELECT t.site, t.tournament_id, t.name, t.buyin_total, e.start_stack FROM tournaments t "
+    later = set()
+    for r in db.query("SELECT t.site, t.tournament_id, t.name, t.buyin_total, t.stage, e.start_stack FROM tournaments t "
                       "LEFT JOIN entries e ON e.site = t.site AND e.tournament_id = t.tournament_id"):
+        if (r["stage"] or 1) > 1:              # a later day starts with the chips carried over, not a starting stack
+            later.add((r["site"], r["tournament_id"]))
+            continue
         g = groups.setdefault((r["site"], r["name"], None if r["buyin_total"] is None else float(r["buyin_total"])),
                               {"ids": set(), "stacks": []})
         g["ids"].add(r["tournament_id"])
         if r["start_stack"] is not None:
             g["stacks"].append(float(r["start_stack"]))
     db.executemany("UPDATE tournaments SET starting_stack = ? WHERE site = ? AND tournament_id = ?",
-                   [(starting_stack(g["stacks"]), site, tid) for (site, _, _), g in groups.items() for tid in g["ids"]])
+                   [(starting_stack(g["stacks"]), site, tid) for (site, _, _), g in groups.items() for tid in g["ids"]]
+                   + [(None, site, tid) for site, tid in later])
 
 
 def excluded_tournaments(db, site=SITE):
@@ -426,7 +434,32 @@ def _import_one(db, stats, label, text, equity):
     return set(), set()
 
 
+STAGE_MARK = re.compile(r"[\[(]?\b(?:Stage|Day) ?\d+[A-Z]?\b[\])]?|[\[(]?\bFinal Day\b[\])]?", re.I)
+
+
+def _base_name(name):
+    return re.sub(r"\s+", " ", STAGE_MARK.sub("", name or "")).strip(" ,-")
+
+
+def refresh_stages(db, site=SITE):
+    """Link every later day (Day 2, Final Day) to the day-1 tournament it continues: the latest earlier day 1 of the
+    same name in which Hero went through. Without one, first_day_id stays NULL and the day counts on its own."""
+    days = db.query("SELECT tournament_id, name, stage, started_at, advanced_to FROM tournaments WHERE site = ? "
+                    "AND has_summary", (site,))
+    firsts = [d for d in days if (d["stage"] or 1) == 1 and d["advanced_to"]]
+    for d in days:
+        if (d["stage"] or 1) == 1:
+            continue
+        base, at = _base_name(d["name"]), str(d["started_at"] or "")
+        found = [f for f in firsts if _base_name(f["name"]) == base and str(f["started_at"] or "") <= at]
+        first = max(found, key=lambda f: str(f["started_at"] or ""), default=None)
+        db.execute("UPDATE tournaments SET first_day_id = ? WHERE site = ? AND tournament_id = ?",
+                   (first["tournament_id"] if first else None, site, d["tournament_id"]))
+
+
 def _refresh(db, hand_tids, all_tids):
+    if all_tids:
+        refresh_stages(db)
     for tid in sorted(hand_tids):
         refresh_entries(db, tid)
     if hand_tids or all_tids:

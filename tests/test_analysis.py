@@ -203,8 +203,9 @@ class AnalysisDataTests(unittest.TestCase):
 
 def tournament(db, tid, buyin, prize=0.0, reentries=0, fmt="bounty", ticket=False):
     db.execute("INSERT INTO tournaments (site, tournament_id, name, format, buyin_total, players, finish_place, prize_won, "
-               "prize_is_ticket, reentries, has_summary, started_at) VALUES ('GGPoker', ?, 'T', ?, ?, 100, 50, ?, ?, ?, TRUE, "
-               "'2026-01-01 10:00:00')", (tid, fmt, buyin, prize, ticket, reentries))
+               "prize_ticket, prize_is_ticket, reentries, has_summary, started_at) VALUES ('GGPoker', ?, 'T', ?, ?, 100, 50, "
+               "?, ?, ?, ?, TRUE, '2026-01-01 10:00:00')",
+               (tid, fmt, buyin, 0.0 if ticket else prize, prize if ticket else 0.0, ticket, reentries))
 
 
 class MoneyTests(unittest.TestCase):

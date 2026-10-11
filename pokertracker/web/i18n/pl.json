@@ -561,5 +561,15 @@
  "set.restoredNoFiles": "Przywrócono, ale jego plików nie ma już tam, gdzie były: wróci dopiero, gdy zaimportujesz je ponownie z opcją „Wczytaj wszystkie pliki od nowa”.",
  "set.rules": "Pominięte przez reguły",
  "set.rulesIntro": "Freerolle, nierozpoznane podsumowania i turnieje poza No-Limit Hold'em w $. O nich decydują reguły, więc nie da się ich przywrócić.",
- "set.rulesNone": "Brak."
+ "set.rulesNone": "Brak.",
+ "day.n": "Day {n}",
+ "day.final": "Final Day",
+ "sum.advanced": " Awans do {day} w {name}.",
+ "adv.label": {
+  "one": "Awans do {day} ({n} żeton)",
+  "few": "Awans do {day} ({n} żetony)",
+  "many": "Awans do {day} ({n} żetonów)",
+  "other": "Awans do {day} ({n} żetonu)"
+ },
+ "adv.withDay1": "liczony razem z dniem 1"
 }

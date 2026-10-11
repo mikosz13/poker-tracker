@@ -552,5 +552,13 @@
  "set.restoredNoFiles": "Restored, but its files are no longer where they were: it comes back only when you import them again with “Re-read every file”.",
  "set.rules": "Left out by the rules",
  "set.rulesIntro": "Freerolls, unreadable summaries and tournaments outside No-Limit Hold'em in $. The rules decide these, so they cannot be restored.",
- "set.rulesNone": "None."
+ "set.rulesNone": "None.",
+ "day.n": "Day {n}",
+ "day.final": "Final Day",
+ "sum.advanced": " Advanced to {day} in {name}.",
+ "adv.label": {
+  "one": "Advanced to {day} ({n} chip)",
+  "other": "Advanced to {day} ({n} chips)"
+ },
+ "adv.withDay1": "counted with day 1"
 }

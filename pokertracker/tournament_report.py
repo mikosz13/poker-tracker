@@ -92,7 +92,9 @@ def tournament_data(db, tournament_id, site=SITE):
             "hands": len(rows)}
     if res:
         r = res[0]
-        data["result"] = {"place": r["finish_place"], "players": r["players"], "prize": _f(r["prize_won"]),
+        data["result"] = {"place": r["finish_place"], "players": r["players"], "prize": _f(r["cash_won"]),
+                          "advanced_to": r["advanced_to"] if not r["last_stage"] else None,
+                          "advanced_chips": _f(r["advanced_chips"]),
                           "ticket": _f(r["ticket_value"]) > 0, "cost": _f(r["total_cost"]), "profit": _f(r["profit"]),
                           "roi_pct": _f(r["roi_pct"]), "started_at": str(r["started_at"])[:16]}
     if not rows:

@@ -29,22 +29,38 @@ FROM hands h
 JOIN hand_players hp ON hp.site = h.site AND hp.hand_id = h.hand_id
 WHERE hp.is_hero;
 
+-- One row per tournament with a summary. A tournament played over several days is one row, under its first day:
+-- the cost is paid on day 1 (buy-in x entries); the cash and tickets of every day add up; the place is the last
+-- day's. In the money only from a day with payouts: going through to the next day is not ITM by itself.
 -- ROI is cash-only; tickets (satellite seats) are reported separately.
 CREATE VIEW tournament_results AS
-WITH c AS (
+WITH later AS (
+    SELECT site, first_day_id, SUM(prize_won) AS cash, SUM(COALESCE(prize_ticket, 0)) AS ticket, MAX(stage) AS last_stage
+    FROM tournaments
+    WHERE has_summary AND COALESCE(stage, 1) > 1 AND first_day_id IS NOT NULL
+    GROUP BY site, first_day_id
+), c AS (
     SELECT t.site, t.tournament_id, t.name, COALESCE(t.format, 'unknown') AS format,
-           t.started_at, t.players, t.finish_place, t.reentries, t.buyin_total, t.prize_won,
-           t.buyin_total * (1 + COALESCE(t.reentries, 0)) AS total_cost,
-           CASE WHEN t.prize_is_ticket THEN 0 ELSE t.prize_won END AS cash_won,
-           CASE WHEN t.prize_is_ticket THEN t.prize_won ELSE 0 END AS ticket_value
+           t.started_at, t.players, t.reentries, t.buyin_total, t.prize_won,
+           COALESCE((SELECT x.finish_place FROM tournaments x WHERE x.site = t.site AND x.first_day_id = t.tournament_id
+                     AND x.has_summary ORDER BY x.stage DESC LIMIT 1), t.finish_place) AS finish_place,
+           CASE WHEN COALESCE(t.stage, 1) > 1 THEN 0
+                ELSE t.buyin_total * (1 + COALESCE(t.reentries, 0)) END AS total_cost,
+           t.prize_won + COALESCE(l.cash, 0) AS cash_won,
+           COALESCE(t.prize_ticket, 0) + COALESCE(l.ticket, 0) AS ticket_value,
+           COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, l.last_stage,
+           CASE WHEN COALESCE(l.cash, 0) + COALESCE(l.ticket, 0) > 0 THEN 1
+                WHEN t.advanced_to IS NULL AND t.prize_won + COALESCE(t.prize_ticket, 0) > 0 THEN 1
+                ELSE 0 END AS in_the_money
     FROM tournaments t
+    LEFT JOIN later l ON l.site = t.site AND l.first_day_id = t.tournament_id
     WHERE t.has_summary AND t.prize_won IS NOT NULL
+      AND NOT (COALESCE(t.stage, 1) > 1 AND t.first_day_id IS NOT NULL)
 )
 SELECT c.*,
        c.cash_won - c.total_cost AS profit,
        ROUND(100.0 * (c.cash_won - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_pct,
-       ROUND(100.0 * (c.cash_won + c.ticket_value - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_incl_tickets_pct,
-       CASE WHEN c.prize_won > 0 THEN 1 ELSE 0 END AS in_the_money
+       ROUND(100.0 * (c.cash_won + c.ticket_value - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_incl_tickets_pct
 FROM c;
 
 CREATE VIEW format_results AS

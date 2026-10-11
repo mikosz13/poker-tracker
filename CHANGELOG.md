@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Multi-day tournaments (e.g. "$5 Ocean KO Opener [Stage 1]"): going through to Day 2 shows as "Advanced to Day 2
+  (20,801 chips)" instead of a place, with its own icon, and in the last session's summary. Fixes: the knockout cash of
+  a day-1 advance ("$0 Entry$7.02") was lost, and re-entries written as "You have re-entered N times" were not
+  counted, so day-1 cost and return were wrong (on Mik's data: $37.92 cash and $70 of re-entries missing). A prize
+  with cash and a ticket counts both. A later day (Day 2, Final Day) with a $0 buy-in is never a freeroll: it joins its
+  day 1 as one tournament (cost paid on day 1, cash of every day, place of the last day, in the money only from a day
+  that paid). A later day's first stack is carried chips: it is not used as a starting stack or for late reg vs start.
+  Database schema 4 keeps a ticket's face value apart from cash; read the summaries again ("Re-read every file") so
+  existing day-1 tournaments get the fixes.
 - Control over what is imported. "Import" first lists the tournaments in the new or changed files (date, name,
   buy-in, hands, whether there is a summary), all ticked; ones the scope rules leave out are greyed with the reason.
   Unticked tournaments go on a lasting ignore list: their data is removed and they do not come back in later imports.

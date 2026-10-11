@@ -14,8 +14,13 @@ CREATE TABLE IF NOT EXISTS tournaments (
     prize_pool      NUMERIC,
     started_at      TIMESTAMP,
     finish_place    INTEGER,
-    prize_won       NUMERIC,                 -- cash, or face value of the ticket when prize_is_ticket
-    prize_is_ticket BOOLEAN NOT NULL DEFAULT FALSE,
+    prize_won       NUMERIC,                 -- cash (knockouts included)
+    prize_is_ticket BOOLEAN NOT NULL DEFAULT FALSE,   -- a ticket was won (prize_ticket > 0)
+    prize_ticket    NUMERIC,                 -- face value of the tickets won (e.g. a satellite seat)
+    stage           INTEGER,                 -- day of a multi-day tournament: 1, 2, ... (99 = final day)
+    advanced_to     TEXT,                    -- "Day 2" when Hero went through to the next day
+    advanced_chips  NUMERIC,                 -- chips carried to the next day
+    first_day_id    BIGINT,                  -- for a later day: the day-1 tournament it continues (NULL: not found)
     reentries       INTEGER,
     has_summary     BOOLEAN NOT NULL DEFAULT FALSE,
     starting_stack  NUMERIC,                 -- most common first-hand stack for this name + buy-in; NULL = unknown

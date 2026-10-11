@@ -20,6 +20,7 @@ flowchart LR
 | `hands.py`, `summary.py` | Regex parsers for GGPoker hand histories and tournament summaries; chip conservation per hand |
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
+| `summary.py` (multi-day) | Prize split into cash and ticket face value; `stage`, `advanced_to`, `first_day_id`: a later day joins its day 1 in `tournament_results` |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
 | `scope.py`, `scope_review.py` | What is never imported: Sit & Go, PLO/Omaha and other games, non-dollar tournaments, cash games, freerolls ($0 buy-in) and unreadable summaries (whole tournament, remembered in `excluded_tournaments`); a read-only review of what the rules would remove; the player's ignore list shares `excluded_tournaments` (reason `ignored`), and `tournament_files` remembers which files held each tournament so a restored one is read again |
 | `sql/schema.sql`, `sql/views.sql` | Portable DDL and analytics views (same SQL on SQLite and PostgreSQL) |

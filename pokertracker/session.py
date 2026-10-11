@@ -147,7 +147,7 @@ LUCK_KEYS = {"Very lucky": "luck.veryLucky", "Lucky": "luck.lucky", "Average": "
 
 def summary_sentence(tournaments, s, lang="en"):
     known = [x for x in tournaments if x["profit"] is not None]
-    itm = sum(1 for x in known if _f(x["prize_won"]) > 0)
+    itm = sum(int(x["in_the_money"] or 0) for x in known)
     parts = [t(lang, "sum.tournaments", n=len(tournaments))]
     if known:
         profit = sum(_f(x["profit"]) for x in known)
@@ -172,7 +172,17 @@ def summary_sentence(tournaments, s, lang="en"):
             text += t(lang, "sum.worth", hero=_short(worst["hero_cards"]), rival=_short(worst["rival_cards"]),
                       name=worst["name"])
         text += "."
+    # going through to the next day of a multi-day tournament (not ITM by itself)
+    for x in tournaments:
+        if x.get("advanced_to") and not x.get("last_stage"):
+            text += t(lang, "sum.advanced", day=_day(lang, x["advanced_to"]), name=x["name"])
     return text
+
+
+def _day(lang, day):
+    """"Day 2" / "Final Day" in the page's language."""
+    n = day.split()[-1]
+    return t(lang, "day.final") if day.lower().startswith("final") else t(lang, "day.n", n=int(n))
 
 
 def _short(cards):
