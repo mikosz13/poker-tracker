@@ -239,7 +239,7 @@ class MoneyTests(unittest.TestCase):
         self.assertEqual((sat["verdict"], sat["tickets"], sat["returned"]), ("too few tournaments", 50.0, 0.0))
         self.assertAlmostEqual(sum(g["share_of_spend_pct"] for g in m["tiers"]), 100.0, delta=0.2)
         self.assertAlmostEqual(sum(g["share_of_result_pct"] for g in m["tiers"]), 100.0, delta=0.2)
-        self.assertEqual(m["facts"][0], "$30+ loses beyond chance and accounts for 82 % of your spend, so it has the "
+        self.assertEqual(m["facts"][0], "$30+ loses beyond chance and accounts for 82% of your spend, so it has the "
                                         "biggest effect on your overall result.")
         self.assertFalse([f for f in m["facts"] if "should" in f or "Play" in f])    # facts, not advice
 

@@ -23,4 +23,4 @@ build-backend = "setuptools.build_meta"
 packages = ["pokertracker"]
 
 [tool.setuptools.package-data]
-pokertracker = ["sql/*.sql", "web/*"]
+pokertracker = ["sql/*.sql", "web/*", "web/i18n/*.json"]
