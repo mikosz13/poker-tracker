@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Last session on the dashboard tells what happened at a glance:
+  - a summary sentence (result, all-in luck, busts and the bust worth a look),
+  - the session's luck badge,
+  - VPIP, PFR and bb/100 compared with your usual play (flagged only beyond chance),
+  - short numbers (time played, most tournaments at once, knockouts, re-entries and their cost, best finish),
+  - "Hands to review": every bust with both hands and your equity, bad beats and suckouts, and the biggest pots won
+    and lost, each opening the replayer.
 - The tournament list (and the dashboard's last session) loads in about 0.1 s instead of 0.7 s: knockouts are counted
   once for all tournaments instead of once per tournament.
 - The app window can be made no narrower than 800 px: the app is designed for a desktop window (the HTML

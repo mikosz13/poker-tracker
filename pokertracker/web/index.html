@@ -105,6 +105,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .conf{font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--bg);border:1px solid var(--line)}
 .finding .big{font-size:1.05rem;font-weight:700;margin:2px 0}.finding details{margin-top:6px}
 .finding summary{cursor:pointer;color:var(--blue);font-size:.88rem}
+.sess-sum{margin:8px 0 0;font-size:1rem;line-height:1.45}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -169,9 +170,19 @@ async function viewDashboard(period) {
   }
   let h = "<h1>Dashboard</h1>" + banner;
   if (s) {
+    const si = s.insights || {}, sn = si.numbers || {};
     h += `<div class="box"><b>Last session</b> <span class="m">${esc(s.from)} – ${esc(s.to)}</span>
+      ${si.summary ? `<p class="sess-sum">${esc(si.summary)}</p>` : ""}
       <div class="k" style="margin-top:8px"><div>Tournaments<b>${s.count}</b></div><div>Hands<b>${s.hands}</b></div>
       <div>Profit<b>${s.profit == null ? "–" : sgn(s.profit, 2, " $")}</b></div><div>All-in luck<b>${sgn(s.luck_bb, 1, " BB")}</b></div></div>
+      ${si.numbers ? `<p class="m" style="margin:8px 0 0">${[
+        sn.minutes != null ? `played ${Math.floor(sn.minutes / 60)} h ${sn.minutes % 60} min` : "",
+        `up to ${sn.max_at_once} at once`, `${sn.knockouts} knockouts`,
+        sn.reentries ? `${sn.reentries} re-entries (${money(sn.reentry_cost)})` : "no re-entries",
+        sn.best ? `best: ${sn.best.place}/${sn.best.players} in ${esc(sn.best.name)}` : ""].filter(Boolean).join(" · ")}</p>` : ""}
+      ${si.luck && si.luck.count ? sessionLuck(si.luck) : ""}
+      ${si.vs_usual && si.vs_usual.length ? vsUsual(si.vs_usual) : ""}
+      ${si.busts ? reviewHands(si) : ""}
       ${table(["Tournament", "Place", "Profit $", "Luck BB"], s.tournaments.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
         <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
         <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`))}</div>`;
@@ -260,6 +271,35 @@ function positionBox(list, rank) {
       ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">Heads-up (BTN/SB): ${sgn(by["BTN/SB"].bb_per_100, 0)} bb/100, ${by["BTN/SB"].hands} hands.</p>` : ""}`
     : `<p class="m">No position has ${rank.min_hands} hands in this period yet, so there is no ranking.</p>`;
   return `<div class="box"><h3>Strongest &amp; weakest position</h3>${body}</div>`;
+}
+
+// ---- Last session: luck, the session against your usual play, hands to review --------------------------------
+function sessionLuck(b) {
+  const cls = LEVELS.find(l => l[0] === b.level)?.[2] || "mid", sym = LEVELS.find(l => l[0] === b.level)?.[1] || "";
+  return `<p style="margin:8px 0 0"><span class="lv on ${cls}" style="display:inline-block;padding:2px 8px">${sym} ${esc(b.level)}</span>
+    <span class="m">${b.count} all-ins · luck ${sgn(b.luck_bb, 1, " BB")}${b.one_in && b.level !== "Average" ? ` · a run like this happens to about 1 in ${b.one_in} players` : ""}${b.small_sample ? " · small sample" : ""}</span></p>`;
+}
+function vsUsual(rows) {
+  return `<p style="margin:6px 0 0" class="m">Compared with your usual play: ${rows.map(r => {
+    const diff = r.confidence ? ` <b style="color:var(--orange)">${r.session > r.usual ? "higher" : "lower"}${r.confidence === "possible" ? " (could be chance)" : ""}</b>` : "";
+    return `${r.stat} ${num(r.session, 1)}${r.unit} (usually ${num(r.usual, 1)}${r.unit})${diff}`;
+  }).join(" · ")}</p>`;
+}
+function reviewHands(si) {
+  const story = x => `${x.hero_cards ? cards(x.hero_cards) : "–"} vs ${x.rival ? esc(x.rival) + " " : ""}${x.rival_cards ? cards(x.rival_cards) : '<span class="m">cards not shown</span>'}${
+    x.board ? ` <span class="m">on</span> ${cards(x.board)}` : ""}${x.equity != null ? ` <span class="m">· your equity ${num(100 * x.equity, 0)}%</span>` : ""}`;
+  // one cell for the hand (with what it was on a small line above) so it wraps on a phone, one for the result
+  const row = (x, extra = "") => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'">
+    <td style="text-align:left;white-space:normal">${extra ? `<div class="m" style="font-size:.8rem">${extra}</div>` : ""}${story(x)}</td>
+    <td style="vertical-align:top">${sgn(x.net_bb)}</td></tr>`;
+  const groups = [
+    ["Busts", si.busts.map(x => row(x, esc(x.name)))],
+    ["Bad beats and suckouts", si.beats.map(x => row(x, esc(x.kind)))],
+    ["Biggest pots lost", si.pots.lost.map(x => row(x))],
+    ["Biggest pots won", si.pots.won.map(x => row(x))]].filter(g => g[1].length);
+  const n = si.busts.length + si.beats.length + si.pots.lost.length + si.pots.won.length;
+  return n ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--blue)">Hands to review (${n})</summary>
+    ${groups.map(([title, rows]) => `<h3 style="font-size:.9rem;margin:10px 0 4px">${title}</h3>${table(["Hand", "BB"], rows)}`).join("")}</details>` : "";
 }
 
 function bindPeriods() {

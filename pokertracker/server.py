@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .analysis import analysis_data
+from .session import session_insights
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .importer import changed_files, import_files, list_files
@@ -80,7 +81,8 @@ def last_session(db, site=SITE):
             "profit": sum(float(t["profit"]) for t in known) if known else None,
             "with_result": len(known),
             "luck_bb": sum(float(t["luck_bb"] or 0) for t in session),
-            "from": str(session[-1]["first_hand"])[:16], "to": str(session[0]["last_hand"])[:16]}
+            "from": str(session[-1]["first_hand"])[:16], "to": str(session[0]["last_hand"])[:16],
+            "insights": session_insights(db, session, site)}
 
 
 def tournament_detail(db, tournament_id, site=SITE):
