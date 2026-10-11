@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+
+## 0.7.0 (2026-10-11)
+- **Upgrade:** the database goes from schema 3 to 5 on first start (a backup is made next to it first). Then run
+  Import once with "Re-read every file": multi-day tournaments get their knockout cash and re-entries, and freerolls
+  leave the database.
 - Tables say "Tournaments" instead of "n", with a tooltip on what is counted (for categories: a tournament counts
   under each of its labels, so the numbers add up to more than the total).
 - Places in the field apart for entries from the start and late registrations: with a late registration, players
