@@ -127,7 +127,7 @@
   "many": "{n} typów rąk",
   "other": "{n} typu rąk"
  },
- "hands.rankedNote": "Ranking według wyniku wśród {types}, które mają co najmniej {min} rozdań. Przy tak małej liczbie rąk wynik zależy głównie od kilku dużych pul.",
+ "hands.rankedNote": "Ranking według wyniku bez szczęścia w all-inach (wg EV) wśród {types}, które mają co najmniej {min} rozdań. Przy tak małej liczbie rąk wynik nadal zależy głównie od kilku dużych pul.",
  "pos.title": "Najmocniejsza i najsłabsza pozycja",
  "pos.strongest": "Najmocniejsza",
  "pos.weakest": "Najsłabsza",
@@ -629,5 +629,26 @@
  "col.count": "Turnieje",
  "col.countTip": "Liczba turniejów z podsumowaniem w tym wierszu.",
  "col.countTagTip": "Liczba turniejów z tą etykietą. Turniej ma kilka etykiet i liczy się przy każdej, więc suma jest większa niż liczba Twoich turniejów.",
- "col.countReTip": "Przy re-entry: turnieje z co najmniej jednym re-entry."
+ "col.countReTip": "Przy re-entry: turnieje z co najmniej jednym re-entry.",
+ "common.n": "n = {n}",
+ "common.few": "Za mało danych: mniej niż {min}, więc traktuj to jako zgrubną wskazówkę.",
+ "common.fewShort": "mała próbka",
+ "dash.more": "Więcej: late reg i pozycje",
+ "dash.moved": "Według buy-inu i kategorii: w {link}.",
+ "dash.movedLink": "Analiza → Finanse",
+ "tk.period": "W tym okresie",
+ "tk.allHistory": "Cała historia →",
+ "money.byBuyinExact": "Według kwoty buy-inu",
+ "money.byCategory": "Według kategorii",
+ "money.tickets": "Bilety",
+ "pos.evNote": "bb/100 bez szczęścia w all-inach (wg EV).",
+ "adv.notPlayed": "Awans, {day} nierozegrany",
+ "ev.counted": "liczony w {link}",
+ "ev.flights": {
+  "one": "z {n} flightem dnia 1",
+  "few": "z {n} flightami dnia 1",
+  "many": "z {n} flightami dnia 1",
+  "other": "z {n} flightami dnia 1"
+ },
+ "ev.note": "Ten flight przeszedł do {day}: jego koszt i gotówka z KO liczą się w {link}, jako jeden turniej z jednym miejscem końcowym."
 }

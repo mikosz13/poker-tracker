@@ -435,26 +435,45 @@ def _import_one(db, stats, label, text, equity):
 
 
 STAGE_MARK = re.compile(r"[\[(]?\b(?:Stage|Day) ?\d+[A-Z]?\b[\])]?|[\[(]?\bFinal Day\b[\])]?", re.I)
+DAY2_WAIT_DAYS = 7          # a day-1 advance with no later day after this long: "Day 2 not played"
 
 
 def _base_name(name):
-    return re.sub(r"\s+", " ", STAGE_MARK.sub("", name or "")).strip(" ,-")
+    """A multi-day tournament's name without the day marker and "GTD": its flights and days share it
+    ("$5 Ocean KO Opener, $1M GTD [Stage 1]" and "$5 Ocean KO Opener, $1M [Stage 1]" are one event)."""
+    s = re.sub(r"\bGTD\b", "", STAGE_MARK.sub("", name or ""), flags=re.I)
+    return re.sub(r"[\s,]+", " ", s).strip(" -").lower()
 
 
 def refresh_stages(db, site=SITE):
-    """Link every later day (Day 2, Final Day) to the day-1 tournament it continues: the latest earlier day 1 of the
-    same name in which Hero went through. Without one, first_day_id stays NULL and the day counts on its own."""
+    """Group multi-day events. Each later day (Day 2, Final Day), in time order, takes every earlier day of the same
+    event that Hero went through from and that no later day has taken yet (all the day-1 flights for one Day 2).
+    event_id = the event's last day for all its days; NULL for a tournament on its own (also a day-1 advance whose
+    Day 2 is not imported)."""
     days = db.query("SELECT tournament_id, name, stage, started_at, advanced_to FROM tournaments WHERE site = ? "
-                    "AND has_summary", (site,))
-    firsts = [d for d in days if (d["stage"] or 1) == 1 and d["advanced_to"]]
+                    "AND has_summary ORDER BY started_at, tournament_id", (site,))
+    group = {}                                   # tournament id -> the later day it went on to
     for d in days:
         if (d["stage"] or 1) == 1:
             continue
         base, at = _base_name(d["name"]), str(d["started_at"] or "")
-        found = [f for f in firsts if _base_name(f["name"]) == base and str(f["started_at"] or "") <= at]
-        first = max(found, key=lambda f: str(f["started_at"] or ""), default=None)
-        db.execute("UPDATE tournaments SET first_day_id = ? WHERE site = ? AND tournament_id = ?",
-                   (first["tournament_id"] if first else None, site, d["tournament_id"]))
+        for f in days:
+            if (f["tournament_id"] not in group and f["advanced_to"] and (f["stage"] or 1) < (d["stage"] or 1)
+                    and _base_name(f["name"]) == base and str(f["started_at"] or "") <= at):
+                group[f["tournament_id"]] = d["tournament_id"]
+
+    def last(tid):
+        while tid in group:
+            tid = group[tid]
+        return tid
+
+    event = {}
+    for d in days:
+        tid = d["tournament_id"]
+        if tid in group or (d["stage"] or 1) > 1:
+            event[tid] = last(tid)
+    db.executemany("UPDATE tournaments SET event_id = ? WHERE site = ? AND tournament_id = ?",
+                   [(event.get(d["tournament_id"]), site, d["tournament_id"]) for d in days])
 
 
 def _refresh(db, hand_tids, all_tids):

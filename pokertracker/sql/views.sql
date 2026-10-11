@@ -29,40 +29,41 @@ FROM hands h
 JOIN hand_players hp ON hp.site = h.site AND hp.hand_id = h.hand_id
 WHERE hp.is_hero;
 
--- One row per tournament with a summary. A tournament played over several days is one row, under its first day:
--- the cost is paid on day 1 (buy-in x entries); the cash and tickets of every day add up; the place is the last
--- day's. Cashed only from a day with payouts: going through to the next day is not cashing by itself.
+-- One row per tournament with a summary. A tournament played over several days is one row, under its last day: the
+-- cost of every day-1 flight that went through (buy-in x entries), the cash and tickets of every day, the last day's
+-- place. Cashed only on a day that paid: going through to the next day is not cashing by itself.
 -- Tickets count at face value on both sides: a satellite returns the ticket's value, the tournament entered with it
 -- costs its full buy-in, so the result over both equals the cash that moved. profit and roi_pct include tickets;
 -- cash_profit and roi_cash_pct are the cash part.
 CREATE VIEW tournament_results AS
-WITH later AS (
-    SELECT site, first_day_id, SUM(prize_won) AS cash, SUM(COALESCE(prize_ticket, 0)) AS ticket, MAX(stage) AS last_stage
+WITH ev AS (   -- a multi-day event (flights that went through, Day 2, ...) summed under its last day
+    SELECT site, event_id,
+           SUM(CASE WHEN COALESCE(stage, 1) > 1 THEN 0 ELSE buyin_total * (1 + COALESCE(reentries, 0)) END) AS cost,
+           SUM(prize_won) AS cash, SUM(COALESCE(prize_ticket, 0)) AS ticket, SUM(COALESCE(reentries, 0)) AS reentries,
+           MIN(started_at) AS started_at, COUNT(*) AS days,
+           MAX(CASE WHEN COALESCE(stage, 1) = 1 THEN buyin_total END) AS buyin_total,
+           MAX(CASE WHEN COALESCE(stage, 1) = 1 THEN format END) AS first_format
     FROM tournaments
-    WHERE has_summary AND COALESCE(stage, 1) > 1 AND first_day_id IS NOT NULL
-    GROUP BY site, first_day_id
+    WHERE has_summary AND event_id IS NOT NULL
+    GROUP BY site, event_id
 ), c AS (
-    SELECT t.site, t.tournament_id, t.name, COALESCE(t.format, 'unknown') AS format,
-           t.started_at, t.players, t.reentries, t.buyin_total, t.prize_won,
-           COALESCE((SELECT x.finish_place FROM tournaments x WHERE x.site = t.site AND x.first_day_id = t.tournament_id
-                     AND x.has_summary ORDER BY x.stage DESC LIMIT 1), t.finish_place) AS finish_place,
-           CASE WHEN COALESCE(t.stage, 1) > 1 THEN 0
-                ELSE t.buyin_total * (1 + COALESCE(t.reentries, 0)) END AS total_cost,
-           t.prize_won + COALESCE(l.cash, 0) AS cash_won,
-           COALESCE(t.prize_ticket, 0) + COALESCE(l.ticket, 0) AS ticket_value,
-           COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, l.last_stage,
-           CASE WHEN COALESCE(l.cash, 0) + COALESCE(l.ticket, 0) > 0 THEN 1
-                WHEN t.advanced_to IS NULL AND t.prize_won + COALESCE(t.prize_ticket, 0) > 0 THEN 1
-                ELSE 0 END AS cashed,
-           -- the place as a share of the field; not for a day-1 advance whose later days are not imported
-           CASE WHEN t.advanced_to IS NOT NULL AND l.last_stage IS NULL THEN NULL
-                ELSE 100.0 * COALESCE((SELECT x.finish_place FROM tournaments x WHERE x.site = t.site
-                     AND x.first_day_id = t.tournament_id AND x.has_summary ORDER BY x.stage DESC LIMIT 1), t.finish_place)
-                     / NULLIF(t.players, 0) END AS place_pct
+    SELECT t.site, t.tournament_id, t.name, COALESCE(e.first_format, t.format, 'unknown') AS format,
+           COALESCE(e.started_at, t.started_at) AS started_at, t.players,
+           COALESCE(e.reentries, t.reentries) AS reentries, COALESCE(e.buyin_total, t.buyin_total) AS buyin_total,
+           t.prize_won, t.finish_place,
+           COALESCE(e.cost, CASE WHEN COALESCE(t.stage, 1) > 1 THEN 0
+                                 ELSE t.buyin_total * (1 + COALESCE(t.reentries, 0)) END) AS total_cost,
+           COALESCE(e.cash, t.prize_won) AS cash_won,
+           COALESCE(e.ticket, COALESCE(t.prize_ticket, 0)) AS ticket_value,
+           COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, COALESCE(e.days, 1) AS days,
+           CASE WHEN t.advanced_to IS NULL AND t.prize_won + COALESCE(t.prize_ticket, 0) > 0 THEN 1 ELSE 0 END AS cashed,
+           -- the place as a share of the field; none while Hero is still through to a later day
+           CASE WHEN t.advanced_to IS NOT NULL THEN NULL
+                ELSE 100.0 * t.finish_place / NULLIF(t.players, 0) END AS place_pct
     FROM tournaments t
-    LEFT JOIN later l ON l.site = t.site AND l.first_day_id = t.tournament_id
+    LEFT JOIN ev e ON e.site = t.site AND e.event_id = t.tournament_id
     WHERE t.has_summary AND t.prize_won IS NOT NULL
-      AND NOT (COALESCE(t.stage, 1) > 1 AND t.first_day_id IS NOT NULL)
+      AND (t.event_id IS NULL OR t.event_id = t.tournament_id)
 )
 -- cashed: any cash or ticket. In a bounty tournament that can be knockouts alone (the summary gives only the total
 -- and hand histories hold no bounty payouts), so in_the_money is known only without bounties (NULL otherwise).

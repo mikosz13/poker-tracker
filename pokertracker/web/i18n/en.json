@@ -125,7 +125,7 @@
   "one": "{n} hand type",
   "other": "{n} hand types"
  },
- "hands.rankedNote": "Ranked by result among {types} with {min}+ hands. With this many hands, a result depends mostly on a few big pots.",
+ "hands.rankedNote": "Ranked by result with all-in luck removed (EV) among {types} with {min}+ hands. With this many hands, a result still depends mostly on a few big pots.",
  "pos.title": "Strongest &amp; weakest position",
  "pos.strongest": "Strongest",
  "pos.weakest": "Weakest",
@@ -613,8 +613,27 @@
  "places.introSplit": "Your final place as a share of the field. The line marks where a player of average skill lands (in each band in proportion to its width); it is shown only for entries from the start.",
  "places.lateNote": "No comparison with an average player here: players who busted before you sat down count in the field, so these places look better than they are.",
  "places.none": "No tournaments of this kind with a place yet.",
- "col.count": "Tournaments",
+ "col.count": "Count",
  "col.countTip": "Tournaments with a summary in this row.",
  "col.countTagTip": "Tournaments with this label. A tournament has several labels and counts under each, so the numbers add up to more than your total.",
- "col.countReTip": "For re-entries: tournaments with at least one re-entry."
+ "col.countReTip": "For re-entries: tournaments with at least one re-entry.",
+ "common.n": "n = {n}",
+ "common.few": "Too little data: fewer than {min} here, so read it as a rough hint.",
+ "common.fewShort": "small sample",
+ "dash.more": "More: late registration and positions",
+ "dash.moved": "By buy-in and by category: in {link}.",
+ "dash.movedLink": "Analysis → Money",
+ "tk.period": "In this period",
+ "tk.allHistory": "Whole history →",
+ "money.byBuyinExact": "By exact buy-in",
+ "money.byCategory": "By category",
+ "money.tickets": "Tickets",
+ "pos.evNote": "bb/100 with all-in luck removed (EV).",
+ "adv.notPlayed": "Advanced, {day} not played",
+ "ev.counted": "counted in {link}",
+ "ev.flights": {
+  "one": "with {n} day-1 flight",
+  "other": "with {n} day-1 flights"
+ },
+ "ev.note": "This flight went through to {day}: its cost and knockout cash count in {link}, one tournament with one final place."
 }
