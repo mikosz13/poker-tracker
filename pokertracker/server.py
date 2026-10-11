@@ -43,11 +43,13 @@ def tournaments_list(db, site=SITE):
         "(SELECT MIN(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS first_hand, "
         "(SELECT MAX(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS last_hand, "
         "(SELECT COUNT(*) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS hands, "
-        "r.total_cost, r.profit, r.roi_pct, l.luck_bb, l.allins, "
-        "(SELECT SUM(k.sole) FROM hero_knockouts k WHERE k.site = t.site AND k.tournament_id = t.tournament_id) AS knockouts "
+        "r.total_cost, r.profit, r.roi_pct, l.luck_bb, l.allins, k.knockouts "
         "FROM tournaments t "
         "LEFT JOIN tournament_results r ON r.site = t.site AND r.tournament_id = t.tournament_id "
         "LEFT JOIN tournament_luck l ON l.site = t.site AND l.tournament_id = t.tournament_id "
+        # knockouts grouped once: a correlated subquery ran the hero_knockouts view per tournament (about 1 s)
+        "LEFT JOIN (SELECT site, tournament_id, SUM(sole) AS knockouts FROM hero_knockouts GROUP BY site, tournament_id) k "
+        "ON k.site = t.site AND k.tournament_id = t.tournament_id "
         "WHERE t.site = ?", (site,))
     tags = {}
     for r in db.query("SELECT tournament_id, tag FROM tournament_tags WHERE site = ?", (site,)):
