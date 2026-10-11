@@ -46,7 +46,10 @@ def _strongest_showdown(rows, folded):
     if best is None:
         return None
     score, r = best
-    return {"hand_id": r["hand_id"], "hand": describe_hand(score), "hole_cards": r["hole_cards"], "board": r["board"],
+    cat, nib = score >> 20, [(score >> k) & 15 for k in (16, 12)]
+    # "hand" in English for the CLI; the app builds the name from the category and ranks (hand.cat.<n>)
+    return {"hand_id": r["hand_id"], "hand": describe_hand(score), "category": cat,
+            "ranks": [RANK_CHARS[n] for n in nib], "hole_cards": r["hole_cards"], "board": r["board"],
             "played_at": str(r["played_at"])[:16], "net_bb": r["net_bb"]}
 
 

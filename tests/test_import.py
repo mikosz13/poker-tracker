@@ -1,7 +1,7 @@
 import unittest
 
 from pokertracker.db import Database
-from pokertracker.importer import import_texts
+from pokertracker.importer import import_texts, skip_text
 from tests.fixtures import HISTORY, SUMMARY_BOUNTY, SUMMARY_SATELLITE
 
 
@@ -62,7 +62,8 @@ class ImportTests(unittest.TestCase):
 
     def test_junk_is_skipped_not_fatal(self):
         s = import_texts(self.db, [("notes.txt", "hello"), ("empty", "")])
-        self.assertEqual(len(s.skipped), 2)
+        self.assertEqual([(x["file"], x["code"]) for x in s.skipped], [("notes.txt", "not_gg"), ("empty", "not_gg")])
+        self.assertEqual(skip_text(s.skipped[0]), "notes.txt: not a GGPoker hand history or summary")      # the CLI
 
 
 if __name__ == "__main__":

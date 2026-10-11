@@ -45,6 +45,29 @@ class FileTests(unittest.TestCase):
                 self.assertLessEqual({"one", "few", "many"}, set(value), key)
 
 
+class LabelTests(unittest.TestCase):
+    def test_every_tag_has_a_label(self):
+        from pokertracker import classify as C
+        tags = {"format.bounty", "format.regular", "format.satellite", "mystery-bounty", "entry.start", "entry.late",
+                "re-entered", "stake.super", "field.huge", "speed.regular"}
+        tags |= {f"stake.{x}" for _, x in C.STAKE_TIERS} | {f"field.{x}" for _, x in C.FIELD_SIZES}
+        tags |= {f"speed.{x}" for _, x in C.SPEED_BOUNDS}
+        for lang in I.LANGS:
+            self.assertEqual([x for x in sorted(tags) if f"tag.{x}" not in I.strings(lang)], [], lang)
+
+    def test_hand_names_in_polish(self):
+        name = lambda cat, r0, r1="2": I.t("pl", f"hand.cat.{cat}", **{
+            "top": I.t("pl", f"rank.top.{r0}"), "topn": I.t("pl", f"rank.topn.{r0}"), "a": I.t("pl", f"rank.of.{r0}"),
+            "b": I.t("pl", f"rank.of.{r1}"), "an": I.t("pl", f"rank.pl.{r0}"), "bn": I.t("pl", f"rank.pl.{r1}")})
+        self.assertEqual([name(4, "A"), name(1, "K"), name(6, "A", "K"), name(2, "J", "8"), name(0, "Q")],
+                         ["strit do asa", "para króli", "full: asy na króle", "dwie pary: waletów i ósemek",
+                          "wysoka karta: dama"])
+        for lang in I.LANGS:
+            for c in "23456789TJQKA":
+                for form in ("top", "topn", "of", "pl"):
+                    self.assertIn(f"rank.{form}.{c}", I.strings(lang))
+
+
 class PluralTests(unittest.TestCase):
     def test_polish_rule(self):
         self.assertEqual([I.plural("pl", n) for n in (1, 2, 5, 12, 22, 25)], ["one", "few", "many", "many", "few", "many"])

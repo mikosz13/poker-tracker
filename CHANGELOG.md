@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Translated the rest of the app: tournament tags as readable labels ("Micro stakes (up to $5.50)",
+  "Players: 1,000+", "Satellite to …"), the strongest showdown hand by name in Polish ("strit do asa", "full: asy na
+  króle"), and the import's messages about skipped files (the import now reports a code per file; the CLI keeps
+  English text).
 - The app speaks Polish: a PL | EN switch in the top right corner, starting in the system language and remembered,
   switching at once (the replayer stays on the same step). Every text goes through translation files shared by the
   page and the server (session summary, tips, money facts), with Polish plural forms (1 turniej, 2 turnieje,

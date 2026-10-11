@@ -22,7 +22,7 @@ class ImportStats:
     allins: int = 0
     unchanged: int = 0
     tournaments: set = field(default_factory=set)
-    skipped: list = field(default_factory=list)
+    skipped: list = field(default_factory=list)     # {"file", "code", "detail"}: see SKIP_TEXT
     ignored: dict = field(default_factory=dict)     # reason -> {tournament id, or 'cash'}: never imported
 
     def ignored_counts(self):
@@ -31,6 +31,19 @@ class ImportStats:
 
     def ignore(self, reason, key):
         self.ignored.setdefault(reason, set()).add(key)
+
+    def skip(self, file, code, detail=""):
+        self.skipped.append({"file": file, "code": code, "detail": detail})
+
+
+# What a skipped file or hand means, in English (the CLI); the app translates the code (imp.skip.<code>)
+SKIP_TEXT = {"no_hands": "no hands recognised", "unrecognised_summary": "unrecognised summary format",
+             "not_gg": "not a GGPoker hand history or summary", "no_numpy": "all-in EV skipped: numpy is not installed",
+             "allin_failed": "all-in EV failed for hand {detail}"}
+
+
+def skip_text(s):
+    return f"{s['file']}: " + SKIP_TEXT[s["code"]].format(detail=s["detail"])
 
 
 def classify(text: str):
@@ -181,7 +194,7 @@ def _store_allins(db, hands):
     try:
         from .equity import compute_allin, precompute, prepare_allin
     except ImportError:
-        return 0, ["all-in EV skipped: numpy is not installed"]
+        return 0, [("no_numpy", "")]
     rows, warnings, count = [], [], 0
     cache = DbEquityCache(db)
     prepared = {}
@@ -189,7 +202,7 @@ def _store_allins(db, hands):
         try:
             prepared[h.hand_id] = prepare_allin(h, hero=HERO)
         except Exception as e:
-            warnings.append(f"all-in EV failed for hand {h.hand_id}: {e}")
+            warnings.append(("allin_failed", f"{h.hand_id}: {e}"))
     precompute([p for p in prepared.values() if p], cache)   # distinct matchups, spread over CPU cores
     for h in hands:
         if h.hand_id not in prepared:
@@ -197,7 +210,7 @@ def _store_allins(db, hands):
         try:
             res = compute_allin(h, cache=cache, prepared=prepared[h.hand_id]) if prepared[h.hand_id] else None
         except Exception as e:                      # one odd hand must not abort the whole import
-            warnings.append(f"all-in EV failed for hand {h.hand_id}: {e}")
+            warnings.append(("allin_failed", f"{h.hand_id}: {e}"))
             continue
         if not res:
             continue
@@ -277,13 +290,14 @@ def _import_one(db, stats, label, text, equity):
         hands = parse_hands(text)
         if not hands:
             if not ignored:                       # a file of only out-of-scope hands is not a problem
-                stats.skipped.append(f"{label}: no hands recognised")
+                stats.skip(label, "no_hands")
             return set(), set()
         new, dup, allins, warnings = _store_hands(db, hands, equity)
         stats.hands_new += new
         stats.hands_duplicate += dup
         stats.allins += allins
-        stats.skipped.extend(f"{label}: {w}" for w in warnings)
+        for code, detail in warnings:
+            stats.skip(label, code, detail)
         ids = {h.tournament_id for h in hands}
         stats.tournaments |= ids
         return ids, ids
@@ -294,13 +308,13 @@ def _import_one(db, stats, label, text, equity):
             stats.ignore(e.reason, e.tournament_id)
             return set(), set()
         except ValueError:
-            stats.skipped.append(f"{label}: unrecognised summary format")
+            stats.skip(label, "unrecognised_summary")
             return set(), set()
         _store_summary(db, t)
         stats.summary_files += 1
         stats.tournaments.add(t.id)
         return set(), {t.id}
-    stats.skipped.append(f"{label}: not a GGPoker hand history or summary")
+    stats.skip(label, "not_gg")
     return set(), set()
 
 
