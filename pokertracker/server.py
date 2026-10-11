@@ -10,6 +10,7 @@ from urllib.parse import parse_qs
 
 from .analysis import analysis_data
 from .session import session_insights
+from .tickets import ticket_entries, tickets_won
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .i18n import I18N, LANGS, pick
@@ -58,12 +59,14 @@ def tournaments_list(db, site=SITE):
         "LEFT JOIN (SELECT site, tournament_id, SUM(sole) AS knockouts FROM hero_knockouts GROUP BY site, tournament_id) k "
         "ON k.site = t.site AND k.tournament_id = t.tournament_id "
         "WHERE t.site = ?", (site,))
+    entered = ticket_entries(db, site)
     tags = {}
     for r in db.query("SELECT tournament_id, tag FROM tournament_tags WHERE site = ?", (site,)):
         tags.setdefault(r["tournament_id"], []).append(r["tag"])
     for r in rows:
         r["tags"] = sorted(tags.get(r["tournament_id"], []))
         r["date"] = str(r["started_at"] or r["first_hand"] or "")[:16]
+        r["ticket_entry"] = r["tournament_id"] in entered      # information only: the cost is the full buy-in
     rows.sort(key=lambda r: r["date"], reverse=True)
     return rows
 
@@ -107,6 +110,9 @@ def tournament_detail(db, tournament_id, site=SITE):
     data = tournament_data(db, tournament_id, site)
     if data is None:
         return None
+    won = tickets_won(db, site)
+    data["satellite_win"] = next((x for x in won if x["tournament_id"] == tournament_id), None)
+    data["ticket_entry"] = next((x for x in won if x["used_in"] and x["used_in"]["tournament_id"] == tournament_id), None)
     data["hand_list"] = db.query(
         "SELECT hh.hand_id, hh.played_at, hh.level, hh.position, hh.net_bb, hp.hole_cards, h.board "
         "FROM hero_hands hh JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "

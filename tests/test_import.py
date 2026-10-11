@@ -47,8 +47,9 @@ class ImportTests(unittest.TestCase):
         by_id = {r["tournament_id"]: r for r in self.db.query("SELECT * FROM tournament_results")}
         b, s = by_id[900001], by_id[900002]
         self.assertEqual((float(b["profit"]), float(b["roi_pct"])), (0.0, 0.0))
-        self.assertEqual((float(s["cash_won"]), float(s["ticket_value"]), float(s["roi_pct"])), (0.0, 50.0, -100.0))
-        self.assertEqual(float(s["roi_incl_tickets_pct"]), 900.0)
+        # the $50 seat for $5 counts at face value: ROI +900 %, of which cash -100 %
+        self.assertEqual((float(s["cash_won"]), float(s["ticket_value"]), float(s["roi_pct"])), (0.0, 50.0, 900.0))
+        self.assertEqual((float(s["profit"]), float(s["cash_profit"]), float(s["roi_cash_pct"])), (45.0, -5.0, -100.0))
         fr = {r["format"]: r for r in self.db.query("SELECT * FROM format_results")}
         self.assertEqual(set(fr), {"bounty", "satellite"})
 

@@ -52,7 +52,7 @@ class PostgresTests(unittest.TestCase):
         self.import_all()
         roi = {r["tournament_id"]: r for r in self.db.query("SELECT * FROM tournament_results")}
         self.assertEqual(float(roi[900001]["roi_pct"]), 0.0)
-        self.assertEqual(float(roi[900002]["roi_incl_tickets_pct"]), 900.0)
+        self.assertEqual((float(roi[900002]["roi_pct"]), float(roi[900002]["roi_cash_pct"])), (900.0, -100.0))
         d = tournament_data(self.db, 900003)
         self.assertEqual(d["knockouts"], {"sole": 2, "shared": 0})
         self.assertIn("knockouts: 2", render_text(d))

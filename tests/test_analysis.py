@@ -195,7 +195,7 @@ class AnalysisDataTests(unittest.TestCase):
         # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return
         self.assertEqual((re["tournaments"], re["cost"], re["returned"]), (1, 10.0, 20.0))
         # first entries: $10 + $5, and neither lasted to a cash prize (bounty re-entered, satellite paid a ticket)
-        self.assertEqual((first["tournaments"], first["cost"], first["returned"]), (2, 15.0, 0.0))
+        self.assertEqual((first["tournaments"], first["cost"], first["returned"]), (2, 15.0, 50.0))   # the $50 seat
         self.assertEqual(d["leaks"], [])
         self.assertEqual(d["money"]["roi_interval"]["level"], 95)
 
@@ -237,7 +237,7 @@ class MoneyTests(unittest.TestCase):
         self.assertEqual(tiers["$5-15"]["roi_pct"], 0.0)
         self.assertEqual(tiers["under $5"]["verdict"], "too few tournaments")
         sat = next(g for g in m["formats"] if g["label"] == "satellite")
-        self.assertEqual((sat["verdict"], sat["tickets"], sat["returned"]), ("too few tournaments", 50.0, 0.0))
+        self.assertEqual((sat["verdict"], sat["tickets"], sat["returned"]), ("too few tournaments", 50.0, 50.0))
         self.assertAlmostEqual(sum(g["share_of_spend_pct"] for g in m["tiers"]), 100.0, delta=0.2)
         self.assertAlmostEqual(sum(g["share_of_result_pct"] for g in m["tiers"]), 100.0, delta=0.2)
         self.assertEqual(m["facts"][0], "$30+ loses beyond chance and accounts for 82% of your spend, so it has the "

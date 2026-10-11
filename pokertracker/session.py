@@ -8,6 +8,7 @@ from datetime import datetime
 from .analysis import confidence, load_hands
 from .dashboard import luck_badge
 from .i18n import money, num, t
+from .summary import satellite_target
 from .tournament_report import SITE
 
 MIN_HANDS_VS_USUAL = 50      # fewer session hands than this: no comparison with your usual play
@@ -172,6 +173,11 @@ def summary_sentence(tournaments, s, lang="en"):
             text += t(lang, "sum.worth", hero=_short(worst["hero_cards"]), rival=_short(worst["rival_cards"]),
                       name=worst["name"])
         text += "."
+    # a satellite won: the seat it gives, at face value
+    for x in tournaments:
+        if float(x.get("prize_ticket") or 0) > 0:
+            text += t(lang, "sum.satellite", target=satellite_target(x["name"]) or x["name"],
+                      value=money(lang, float(x["prize_ticket"])))
     # going through to the next day of a multi-day tournament (not ITM by itself)
     for x in tournaments:
         if x.get("advanced_to") and not x.get("last_stage"):

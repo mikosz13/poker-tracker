@@ -126,7 +126,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
-.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2){text-align:left}tr.off td{opacity:.5}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
+.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -240,6 +240,18 @@ async function api(path, opts) {
   return j;
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+// a satellite ticket: counted at face value on both sides
+const TICKET_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
+function ticketsBox(k) {
+  const rows = k.items.slice(0, 6).map(x => `<tr><td>${shortDate(x.date)}</td><td style="text-align:left;white-space:normal">${esc(x.satellite)}</td>
+    <td style="text-align:left;white-space:normal">${esc(x.target || "–")}</td><td>${money(x.value)}</td>
+    <td style="text-align:left;white-space:normal">${x.used_in ? `${t("tk.used")} <a href="#/t/${x.used_in.tournament_id}">${esc(x.used_in.name)}</a>`
+      : `<span class="m">${t("tk.unusedOne")}</span>`}</td></tr>`);
+  return `<div class="box" style="margin:14px 0"><h3 style="margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${TICKET_ICON}${t("tk.title")}
+      <span style="text-transform:none;letter-spacing:0;font-weight:400"> · ${t("tk.scope")}</span></h3>
+    <p style="margin:0 0 6px">${t("tk.summary", {tickets: t("tk.count", {n: k.count}), value: `<b>${money(k.value)}</b>`})}${k.unused_value > 0 ? ` · <span style="color:var(--orange)">${t("tk.unused", {value: money(k.unused_value)})}</span>` : ""}</p>
+    ${table([t("col.date"), t("col.satellite"), t("col.target"), t("col.value"), t("col.status")], rows, "names tickets")}</div>`;
+}
 // going through to the next day of a multi-day tournament: not a place and not a ticket
 const DAY_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"><path d="M4 18h5v-5h5V8h6"/><path d="M16 4l4 4-4 4"/></svg>';
 const dayName = d => /^final/i.test(d) ? t("day.final") : t("day.n", {n: String(d).split(" ").pop()});
@@ -300,12 +312,14 @@ async function viewDashboard(period) {
     return;
   }
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
-  h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b></div>
-    <div>ROI<b>${roi}</b></div><div>${t("dash.itm")}<b>${pct(d.itm_pct)}</b><span class="m">${t("dash.itmOf", {itm: d.itm, n: d.tournaments})}</span></div>
+  const inclCash = x => d.tickets ? `<span class="m">${t("money.inclCash", {x})}</span>` : "";
+  h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b>${inclCash(sgn(d.cash_profit, 0, " $"))}</div>
+    <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div><div>${t("dash.itm")}<b>${pct(d.itm_pct)}</b><span class="m">${t("dash.itmOf", {itm: d.itm, n: d.tournaments})}</span></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
     <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
   h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
+  if (d.tickets_won && d.tickets_won.count) h += ticketsBox(d.tickets_won);
   h += `<h2>${t("dash.cashCumulative")}</h2><div class="tchart" id="c-profit"></div>`;
   h += `<h2>${t("dash.luck")}</h2><div class="tchart" id="c-luck"></div>
     <p class="legend"><i style="background:var(--blue);margin-left:0"></i>${t("dash.legendActual")}<i style="background:var(--orange)"></i>${t("dash.legendAdjusted")} · ${luckLink()}</p>`;
@@ -538,10 +552,11 @@ async function viewTournaments() {
         profit: sgn(profit, 2, " $"), roi: cost ? sgn(100 * profit / cost, 0, "%") : "–"})}</p>` +
       table([t("col.date"), t("col.tournament"), t("col.buyin"), t("col.place"), t("col.profitUsd"), t("col.kos"), t("col.luckBb")],
         rows.map(x => `<tr class="click" onclick="location.hash='#/t/${x.tournament_id}'">
-        <td>${shortDate(x.date)}</td><td>${esc(x.name)}</td><td>${x.buyin_total == null ? "–" : money(x.buyin_total)}</td>
-        <td>${x.advanced_to && !x.last_stage ? advanced(x, true) : `${x.finish_place ?? "–"}<span class="wide">/${x.players ?? "–"}</span>`}</td>
+        <td>${shortDate(x.date)}</td><td>${esc(x.name)}${x.ticket_entry ? ` <span class="tag" title="${esc(t("tk.entry"))}">${TICKET_ICON}${t("tk.entry")}</span>` : ""}</td><td>${x.buyin_total == null ? "–" : money(x.buyin_total)}</td>
+        <td>${Number(x.prize_ticket) > 0 ? `<span title="${esc(t("tk.won", {value: money(x.prize_ticket)}))}">${TICKET_ICON}${t("tk.wonShort", {value: money(x.prize_ticket)})}</span>`
+          : x.advanced_to && !x.last_stage ? advanced(x, true) : `${x.finish_place ?? "–"}<span class="wide">/${x.players ?? "–"}</span>`}</td>
         <td>${x.stage > 1 && x.first_day_id ? `<span class="m">${t("adv.withDay1")}</span>` : x.profit == null ? `<span class="m" title="${esc(t("list.noSummaryImported"))}"><span class="wide">${t("common.noSummary")}</span><span class="narrow">–</span></span>`
-          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>`}${x.prize_is_ticket ? `<span class="wide"> ${t("list.ticket")}</span>` : ""}</td>
+          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>`}</td>
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
@@ -577,9 +592,13 @@ async function viewTournament(id) {
   let h = `<p style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a href="#/tournaments">${t("tour.back")}</a>
     <button id="ign">${t("ign.button")}</button></p><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
-  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place}/${r.players}`}</b></div><div>${t("tour.prize")}<b>${money(r.prize)}${r.ticket ? " " + t("tour.ticket") : ""}</b></div>
-    <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
+  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place}/${r.players}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
+    <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b>${r.ticket_value > 0 && r.roi_cash_pct != null ? `<span class="m">${t("money.inclCash", {x: sgn(r.roi_cash_pct, 0, "%")})}</span>` : ""}</div></div>`;
   else h += `<p class="m">${t("tour.noSummary")}</p>`;
+  if (d.satellite_win) h += `<p>${TICKET_ICON}${t("tk.satNote", {target: esc(d.satellite_win.target), value: money(d.satellite_win.value)})}${d.satellite_win.used_in
+    ? ` <span class="m">· ${t("tk.used")} <a href="#/t/${d.satellite_win.used_in.tournament_id}">${esc(d.satellite_win.used_in.name)}</a></span>` : ""}</p>`;
+  if (d.ticket_entry) h += `<p class="m">${TICKET_ICON}${t("tk.entryNote", {value: money(d.ticket_entry.value),
+    satellite: `<a href="#/t/${d.ticket_entry.tournament_id}">${esc(d.ticket_entry.satellite)}</a>`})}</p>`;
   h += `<p>${d.tags.map(x => `<span class="tag">${tagLabel(x)}</span>`).join("")}</p>`;
   h += d.entries.map(e => `<p class="m">${t("tour.entry", {no: e.entry_no, level: e.level, bb: num(e.stack_bb, 0)})}</p>`).join("");
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
@@ -841,7 +860,8 @@ async function viewAnalysis(tab) {
       <td class="vcell">${verdict(g)}</td>${extra(g)}</tr>`);
     const head = ["", "n", t("col.spend"), t("col.profitUsd"), "ROI", t("col.ci95"), t("col.verdict")];
     h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 1, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
-          lo: num(ri.low, 0), hi: num(ri.high, 0)})}</p>
+          lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
+          ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 1, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
       <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
       <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}

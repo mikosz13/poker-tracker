@@ -22,6 +22,18 @@ ADVANCED = re.compile(r"advanced to (?P<day>Day ?\d+|Final Day|Stage ?\d+) with 
 STAGE = re.compile(r"\b(?:Stage|Day) ?(?P<n>\d+)[A-Z]?\b|\bFinal Day\b", re.I)
 
 
+# "$50 Satellite to #25: The BIG $500 ...", "$6 MEGA to WSOP: $54 ...", "Super Satellite to ...", "Step 2 to ...",
+# "Sat to ...", "Qualifier to ...": the target tournament after "to"
+SATELLITE = re.compile(r"\b(?:Super\s+)?(?:Satellite|Sat|MEGA(?:\s+Sat(?:ellite)?)?|Step\s*\d+|Qualifier)\b.*?\bto\s+"
+                       r"(?:#\d+:\s*)?(?P<target>.+?)(?:,\s*\d+\s+Seats)?$", re.I)
+
+
+def satellite_target(name):
+    """The tournament a satellite gives seats to, from its name, or None."""
+    m = SATELLITE.search(name or "")
+    return m["target"].strip() if m else None
+
+
 def stage_of(name):
     """1 for a first day (or a one-day tournament), N for "Stage N" / "Day N", 99 for a "Final Day"."""
     m = STAGE.search(name or "")
@@ -108,7 +120,8 @@ def parse_summary(text: str) -> Tournament:
     adv = ADVANCED.search(text)
     return Tournament(
         id=int(h["id"]), site="GGPoker", name=h["name"], game_type=h["game"],
-        format=("satellite" if "satellite" in h["name"].lower() else "bounty" if bounty > 0 else "regular"),
+        # a satellite by its name, or by a ticket worth something (a $0 "Entry" is going through to the next day)
+        format=("satellite" if satellite_target(h["name"]) or ticket > 0 else "bounty" if bounty > 0 else "regular"),
         buyin_prize=prize, buyin_fee=fee, buyin_bounty=bounty, buyin_total=round(prize + fee + bounty, 2),
         players=int(find(PLAYERS, "n", 0)),
         prize_pool=money(find(POOL, "pool")),

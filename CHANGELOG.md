@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Tickets count in ROI at face value, on both sides: a satellite returns the seat's value, and a tournament entered
+  with a ticket costs its full buy-in, so the total matches the cash that moved. Profit and ROI on the dashboard and in
+  Money include tickets, with "incl. cash" under them; Money's verdicts use the ROI with tickets. A won seat shows as
+  "Won ticket $500" with a ticket icon, the satellite's page and the session summary say "Satellite won: a ticket to
+  …", and a "Tickets" box on the dashboard lists every ticket with its status: used (with a link to the tournament it
+  was probably used in) or not used yet (its value apart: not real money yet). A tournament probably entered with a
+  ticket is marked "Ticket entry" (information only). Satellites are recognised by name ("Satellite", "MEGA",
+  "Super Satellite", "Sat", "Step N", "Qualifier" … "to …") or by a ticket worth something; schema 5 turns stored
+  "MEGA to" satellites (stored as regular) into satellites with their target.
 - Multi-day tournaments (e.g. "$5 Ocean KO Opener [Stage 1]"): going through to Day 2 shows as "Advanced to Day 2
   (20,801 chips)" instead of a place, with its own icon, and in the last session's summary. Fixes: the knockout cash of
   a day-1 advance ("$0 Entry$7.02") was lost, and re-entries written as "You have re-entered N times" were not

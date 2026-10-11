@@ -93,6 +93,8 @@ def tournament_data(db, tournament_id, site=SITE):
     if res:
         r = res[0]
         data["result"] = {"place": r["finish_place"], "players": r["players"], "prize": _f(r["cash_won"]),
+                          "ticket_value": _f(r["ticket_value"]), "cash_profit": _f(r["cash_profit"]),
+                          "roi_cash_pct": _f(r["roi_cash_pct"]),
                           "advanced_to": r["advanced_to"] if not r["last_stage"] else None,
                           "advanced_chips": _f(r["advanced_chips"]),
                           "ticket": _f(r["ticket_value"]) > 0, "cost": _f(r["total_cost"]), "profit": _f(r["profit"]),
