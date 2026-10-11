@@ -9,8 +9,8 @@ from pathlib import Path
 from .classify import refresh_classification
 from .hands import HERO, entries_from_rows, out_of_scope, parse_hands, starting_stack
 from .migrations import remove_tournaments
-from .scope import FREEROLL, UNRECOGNISED
-from .summary import OutOfScope, Tournament, UnrecognisedSummary, parse_summary
+from .scope import FREEROLL, UNRECOGNISED, USER, buyin_paid
+from .summary import STARTED, OutOfScope, Tournament, UnrecognisedSummary, parse_summary
 
 SITE = "GGPoker"
 # Safety fuse: this many unreadable summaries in one import (or more than this share of its summaries) look like a
@@ -35,6 +35,7 @@ class ImportStats:
     unrecognised: list = field(default_factory=list)    # (tournament id, name, file) waiting for the fuse
     to_check: list = field(default_factory=list)        # files the fuse kept: possibly a new GG format
     excluded: dict = None                               # tournament id -> reason, loaded once per import
+    source: str = None                                  # path of the file being read (import_files)
 
     def ignored_counts(self):
         """{reason: how many tournaments (or cash-game files)} that were left out on purpose."""
@@ -302,12 +303,47 @@ def excluded_tournaments(db, site=SITE):
 def exclude_tournament(db, tournament_id, reason, name=None, file=None, site=SITE):
     """Leave a whole tournament out: remember why and where it was seen, and remove everything stored about it."""
     row = db.query("SELECT files FROM excluded_tournaments WHERE site = ? AND tournament_id = ?", (site, tournament_id))
-    files = sorted(set(filter(None, (row[0]["files"] or "").split("\n") if row else [])) | ({file} if file else set()))
+    known = [r["path"] for r in db.query("SELECT path FROM tournament_files WHERE site = ? AND tournament_id = ?",
+                                         (site, tournament_id))]
+    if name is None:
+        name = db.scalar("SELECT name FROM tournaments WHERE site = ? AND tournament_id = ?", (site, tournament_id))
+    new = set(file) if isinstance(file, (list, set, tuple)) else {file} if file else set()
+    files = sorted(set(filter(None, (row[0]["files"] or "").split("\n") if row else [])) | set(known) | new)
     db.execute("INSERT INTO excluded_tournaments (site, tournament_id, name, reason, files, excluded_at) "
                "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT (site, tournament_id) DO UPDATE SET reason = excluded.reason, "
                "name = COALESCE(excluded.name, excluded_tournaments.name), files = excluded.files",
                (site, tournament_id, name, reason, "\n".join(files), datetime.now().isoformat(timespec="seconds")))
     remove_tournaments(db, [(site, tournament_id)])
+
+
+def ignore_tournaments(db, items, site=SITE):
+    """The player's choice: leave these tournaments out for good. items: ids, or (id, name, [files]) from a preview."""
+    for item in items:
+        tid, name, files = (item, None, []) if isinstance(item, int) else item
+        exclude_tournament(db, int(tid), USER, name, list(files or []), site)
+    db.commit()
+
+
+def restore_tournament(db, tournament_id, site=SITE):
+    """Take a tournament off the ignore list; its files count as changed, so the next import reads it again.
+    Returns how many of its files still exist (0: only "Re-read every file" with the files back can bring it)."""
+    row = db.query("SELECT files FROM excluded_tournaments WHERE site = ? AND tournament_id = ? AND reason = ?",
+                   (site, tournament_id, USER))
+    if not row:
+        return None
+    files = [f for f in (row[0]["files"] or "").split("\n") if f]
+    db.execute("DELETE FROM excluded_tournaments WHERE site = ? AND tournament_id = ?", (site, tournament_id))
+    for f in files:
+        db.execute("DELETE FROM imported_files WHERE path = ?", (f,))
+    db.commit()
+    return sum(1 for f in files if Path(f).is_file())
+
+
+def _remember_files(db, stats, ids):
+    path = stats.source
+    if path:
+        db.executemany("INSERT INTO tournament_files (site, tournament_id, path) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+                       [(SITE, tid, path) for tid in ids])
 
 
 def _settle_unrecognised(db, stats):
@@ -317,10 +353,10 @@ def _settle_unrecognised(db, stats):
         return
     n = len(pending)
     if n > FUSE_COUNT or (n > 1 and n / max(stats.summaries_read, 1) > FUSE_SHARE):
-        stats.to_check += sorted({f for _, _, f in pending})
+        stats.to_check += sorted({f for _, _, f, _ in pending})
         return
-    for tid, name, file in pending:
-        exclude_tournament(db, tid, UNRECOGNISED, name, file)
+    for tid, name, file, path in pending:
+        exclude_tournament(db, tid, UNRECOGNISED, name, path or file)
         stats.excluded[tid] = UNRECOGNISED
         stats.ignore(UNRECOGNISED, tid, file)
         stats.tournaments.discard(tid)
@@ -357,13 +393,14 @@ def _import_one(db, stats, label, text, equity):
             stats.skip(label, code, detail)
         ids = {h.tournament_id for h in hands}
         stats.tournaments |= ids
+        _remember_files(db, stats, ids)
         return ids, ids
     if kind == "summary":
         stats.summaries_read += 1
         try:
             t = parse_summary(text)
         except OutOfScope as e:                     # the whole tournament, with any hands imported before
-            exclude_tournament(db, e.tournament_id, e.reason, e.name, label)
+            exclude_tournament(db, e.tournament_id, e.reason, e.name, stats.source or label)
             stats.excluded[e.tournament_id] = e.reason
             stats.ignore(e.reason, e.tournament_id, label)
             stats.tournaments.discard(e.tournament_id)
@@ -372,12 +409,16 @@ def _import_one(db, stats, label, text, equity):
             if e.tournament_id is None:             # not even a GGPoker header: nothing to leave out
                 stats.skip(label, "unrecognised_summary")
             else:
-                stats.unrecognised.append((e.tournament_id, e.name, label))
+                stats.unrecognised.append((e.tournament_id, e.name, label, stats.source))
             return set(), set()
         if stats.excluded.get(t.id) == UNRECOGNISED:  # readable now (e.g. after a parser update): back in scope
             db.execute("DELETE FROM excluded_tournaments WHERE site = ? AND tournament_id = ?", (SITE, t.id))
             del stats.excluded[t.id]
+        elif t.id in stats.excluded:                # ignored by the player or left out by a rule: stays out
+            stats.ignore(stats.excluded[t.id], t.id, label)
+            return set(), set()
         _store_summary(db, t)
+        _remember_files(db, stats, {t.id})
         stats.summary_files += 1
         stats.tournaments.add(t.id)
         return set(), {t.id}
@@ -422,6 +463,7 @@ def import_files(db, files, equity=True, progress=None, skip_unchanged=False) ->
             stats.unchanged += 1
         else:
             hand_tids, all_tids = set(), set()
+            stats.source = str(f.resolve())
             for label, text in read_source(f):
                 h, a = _import_one(db, stats, label, text, equity)
                 hand_tids |= h
@@ -443,3 +485,106 @@ def changed_files_from(db, files):
 
 def import_path(db, path, equity=True, progress=None, skip_unchanged=False) -> ImportStats:
     return import_files(db, list_files(path), equity, progress, skip_unchanged)
+
+
+def _summary_basics(r, text):
+    """Date and dollar buy-in of a summary the parser does not take, for the preview list."""
+    started = STARTED.search(text)
+    buyin = next((line for line in text.splitlines() if line.startswith("Buy-in:")), "")
+    r["date"] = r["date"] or (started["ts"].replace("/", "-") if started else None)
+    if r["buyin"] is None and "$" in buyin:
+        r["buyin"] = buyin_paid(buyin)
+
+
+def preview_files(db, files, skip_unchanged=False, progress=None, site=SITE):
+    """What an import of these files would bring in, per tournament, without writing anything.
+
+    Each row: date, name, buy-in, hands in the files, whether there is a summary (in the files or already stored),
+    the scope reason that leaves it out (or "ignored" for the player's ignore list), and the files it is in.
+    Unreadable summaries follow the same safety fuse as the import: when it trips they are "to check", not left out.
+    """
+    files = list(files)
+    todo = set(changed_files_from(db, files)) if skip_unchanged else set(files)
+    excluded = excluded_tournaments(db, site)
+    rows, read, unreadable = {}, 0, []
+
+    def row(tid, name=None):
+        r = rows.setdefault(int(tid), {"tournament_id": int(tid), "name": None, "date": None, "buyin": None, "hands": 0,
+                                       "summary": False, "reason": None, "to_check": False, "files": set()})
+        r["name"] = r["name"] or name
+        return r
+
+    for i, f in enumerate(files, 1):
+        if f in todo:
+            path = str(f.resolve())
+            for label, text in read_source(f):
+                kind = classify(text or "")
+                if kind == "hands":
+                    for reason, ids in out_of_scope(text).items():
+                        for key in ids:
+                            if key != "cash":
+                                r = row(key)
+                                r["reason"] = r["reason"] or reason
+                                r["files"].add(path)
+                    for h in parse_hands(text):
+                        r = row(h.tournament_id, h.tournament_name)
+                        r["hands"] += 1
+                        r["date"] = min(filter(None, (r["date"], h.played_at)))
+                        r["buyin"] = r["buyin"] if r["buyin"] is not None else h.buyin_total
+                        r["files"].add(path)
+                elif kind == "summary":
+                    read += 1
+                    try:
+                        t = parse_summary(text)
+                        r = row(t.id, t.name)
+                        r.update(summary=True, buyin=t.buyin_total, date=t.started_at or r["date"])
+                    except OutOfScope as e:
+                        r = row(e.tournament_id, e.name)
+                        r["reason"] = e.reason
+                        _summary_basics(r, text)
+                    except UnrecognisedSummary as e:
+                        if e.tournament_id is None:
+                            continue
+                        r = row(e.tournament_id, e.name)
+                        unreadable.append(r)
+                        _summary_basics(r, text)
+                    r["files"].add(path)
+        if progress:
+            progress(i, len(files), f.name)
+    trips = len(unreadable) > FUSE_COUNT or (len(unreadable) > 1 and len(unreadable) / max(read, 1) > FUSE_SHARE)
+    for r in unreadable:
+        if trips:
+            r["to_check"] = True
+        else:
+            r["reason"] = r["reason"] or UNRECOGNISED
+    for r in rows.values():
+        if r["tournament_id"] in excluded and not r["reason"]:
+            r["reason"] = excluded[r["tournament_id"]]
+        stored = db.query("SELECT name, buyin_total, has_summary, started_at FROM tournaments WHERE site = ? AND "
+                          "tournament_id = ?", (site, r["tournament_id"]))
+        if stored:
+            s = stored[0]
+            r["name"] = r["name"] or s["name"]
+            r["summary"] = r["summary"] or bool(s["has_summary"])
+            r["buyin"] = r["buyin"] if r["buyin"] is not None else s["buyin_total"]
+            r["date"] = r["date"] or (str(s["started_at"]) if s["started_at"] else None)
+        r["in_database"] = bool(stored)
+        r["hands_stored"] = int(db.scalar("SELECT COUNT(*) FROM hands WHERE site = ? AND tournament_id = ?",
+                                          (site, r["tournament_id"])) or 0)
+        r["files"] = sorted(r["files"])
+        r["date"] = str(r["date"])[:16] if r["date"] else None
+    return {"tournaments": sorted(rows.values(), key=lambda r: r["date"] or "", reverse=True),
+            "files": len(todo), "unchanged": len(files) - len(todo), "fuse": trips}
+
+
+def excluded_list(db, site=SITE):
+    """{"ignored": the player's ignore list, "rules": tournaments the scope rules left out}, newest first."""
+    rows = db.query("SELECT tournament_id, name, reason, files, excluded_at FROM excluded_tournaments WHERE site = ? "
+                    "ORDER BY excluded_at DESC, tournament_id DESC", (site,))
+    out = {"ignored": [], "rules": []}
+    for r in rows:
+        files = [f for f in (r["files"] or "").split("\n") if f]
+        out["ignored" if r["reason"] == USER else "rules"].append({
+            "tournament_id": int(r["tournament_id"]), "name": r["name"], "reason": r["reason"],
+            "excluded_at": r["excluded_at"], "files": len(files), "files_found": sum(1 for f in files if Path(f).is_file())})
+    return out

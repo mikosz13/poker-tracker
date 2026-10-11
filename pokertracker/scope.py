@@ -12,6 +12,7 @@ NOT_DOLLARS = "not in $"
 CASH = "cash game"
 FREEROLL = "freeroll"                       # nothing paid to enter: promotions, freerolls (never a ticket entry)
 UNRECOGNISED = "unrecognised summary"      # a summary that cannot be read: the whole tournament is left out
+USER = "ignored"                            # the player chose to leave the tournament out (can be restored)
 REASONS = (SIT_AND_GO, OMAHA, OTHER_GAME, NOT_DOLLARS, CASH, FREEROLL, UNRECOGNISED)
 
 NLH = "Hold'em No Limit"

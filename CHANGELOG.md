@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Control over what is imported. "Import" first lists the tournaments in the new or changed files (date, name,
+  buy-in, hands, whether there is a summary), all ticked; ones the scope rules leave out are greyed with the reason.
+  Unticked tournaments go on a lasting ignore list: their data is removed and they do not come back in later imports.
+  The watched folder still imports by itself and skips ignored tournaments; afterwards a notice on every screen offers
+  "Review" with the same list. A tournament's page has "Ignore this tournament". ⚙ Settings (next to the theme
+  switch) lists ignored tournaments with "Restore" (it comes back at the next import of its files: the app remembers
+  which files held each tournament) and, read-only, the tournaments the rules left out.
 - Freerolls and promotions are never imported: a summary whose buy-in adds up to $0 (e.g. the Bounty Hunters
   Series Cash Drop) leaves the whole tournament out, together with any of its hands imported before; its hands stay out
   in later imports too. A ticket entry is never a freeroll: GGPoker writes it with the full buy-in. A summary that

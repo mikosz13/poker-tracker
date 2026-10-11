@@ -21,7 +21,7 @@ flowchart LR
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
-| `scope.py`, `scope_review.py` | What is never imported: Sit & Go, PLO/Omaha and other games, non-dollar tournaments, cash games, freerolls ($0 buy-in) and unreadable summaries (whole tournament, remembered in `excluded_tournaments`); a read-only review of what the rules would remove |
+| `scope.py`, `scope_review.py` | What is never imported: Sit & Go, PLO/Omaha and other games, non-dollar tournaments, cash games, freerolls ($0 buy-in) and unreadable summaries (whole tournament, remembered in `excluded_tournaments`); a read-only review of what the rules would remove; the player's ignore list shares `excluded_tournaments` (reason `ignored`), and `tournament_files` remembers which files held each tournament so a restored one is read again |
 | `sql/schema.sql`, `sql/views.sql` | Portable DDL and analytics views (same SQL on SQLite and PostgreSQL) |
 | `migrations.py` | Upgrades an existing database in place on startup (schema version in the database) |
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |

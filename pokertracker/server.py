@@ -13,7 +13,8 @@ from .session import session_insights
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .i18n import I18N, LANGS, pick
-from .importer import changed_files, import_files, list_files
+from .importer import (changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
+                       restore_tournament)
 from .replay import hand_replay
 from .tournament_report import tournament_data
 
@@ -144,16 +145,18 @@ class ImportJob:
         self.lock = threading.Lock()
         self.state = {"running": False}
 
-    def start(self, folder, skip_unchanged=True, source="manual"):
+    def start(self, folder, skip_unchanged=True, source="manual", preview=False, ignore=()):
+        """preview: only read the files and list their tournaments; ignore: (id, name, files) the player unticked."""
         with self.lock:
             if self.state.get("running"):
                 return False
             self.state = {"running": True, "done": 0, "total": 0, "current": "", "source": source, "folder": folder,
-                          "result": None, "error": None, "started_at": datetime.now().isoformat(timespec="seconds")}
-        threading.Thread(target=self._run, args=(folder, skip_unchanged), daemon=True).start()
+                          "mode": "preview" if preview else "import", "result": None, "preview": None, "error": None,
+                          "started_at": datetime.now().isoformat(timespec="seconds")}
+        threading.Thread(target=self._run, args=(folder, skip_unchanged, preview, list(ignore)), daemon=True).start()
         return True
 
-    def _run(self, folder, skip_unchanged):
+    def _run(self, folder, skip_unchanged, preview=False, ignore=()):
         try:
             with Database(self.url) as db:
                 files = list_files(Path(folder).expanduser())
@@ -162,12 +165,17 @@ class ImportJob:
                 def progress(done, total, name):
                     self.state.update(done=done, total=total, current=name)
 
+                if preview:
+                    self.state["preview"] = preview_files(db, files, skip_unchanged, progress)
+                    return
+                if ignore:
+                    ignore_tournaments(db, ignore)
                 s = import_files(db, files, progress=progress, skip_unchanged=skip_unchanged)
                 result = {"files": s.files, "hand_files": s.hand_files, "summary_files": s.summary_files,
                           "unchanged": s.unchanged, "hands_new": s.hands_new, "hands_duplicate": s.hands_duplicate,
                           "allins": s.allins, "tournaments": len(s.tournaments), "skipped": s.skipped,
                           "ignored": s.ignored_counts(), "ignored_files": s.ignored_file_lists(),
-                          "to_check": s.to_check,
+                          "to_check": s.to_check, "tournament_ids": sorted(s.tournaments),
                           "source": self.state["source"], "finished_at": datetime.now().isoformat(timespec="seconds")}
                 set_setting(db, "import_folder", folder)
                 set_setting(db, "last_import", json.dumps(result))
@@ -208,7 +216,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
 
     def status_payload(db):
         last = get_setting(db, "last_import")
-        return {**job.status(), "watch": get_setting(db, "watch") == "1",
+        return {**job.status(), "watch": get_setting(db, "watch") == "1", "import_seen": get_setting(db, "import_seen"),
                 "import_folder": get_setting(db, "import_folder"), "last_import": json.loads(last) if last else None}
 
     class Handler(BaseHTTPRequestHandler):
@@ -263,22 +271,43 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                                             "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
                 if path == "/api/status":
                     return self._send(200, status_payload(db))
+                if path == "/api/excluded":                           # the ignore list and what the rules left out
+                    return self._send(200, excluded_list(db))
+                if path == "/api/review":                             # tournaments of the last import, to untick
+                    last = json.loads(get_setting(db, "last_import") or "null") or {}
+                    ids = [int(x) for x in last.get("tournament_ids") or []]
+                    rows = [t for t in tournaments_list(db) if t["tournament_id"] in set(ids)]
+                    return self._send(200, {"finished_at": last.get("finished_at"), "source": last.get("source"),
+                                            "tournaments": [{k: t[k] for k in ("tournament_id", "name", "date",
+                                                             "buyin_total", "hands", "has_summary")} for t in rows]})
             self._send(404, {"error": "not found"})
 
         def do_POST(self):
             if self.headers.get("X-Token") != token:              # only our own page may trigger imports
                 return self._send(403, {"error": "forbidden"})
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
-            if self.path == "/api/import":
+            if self.path in ("/api/import", "/api/import/preview"):
                 folder = (body.get("path") or "").strip()
                 if not folder or not Path(folder).expanduser().exists():
                     return self._send(400, {"error": "Folder not found. Paste the folder where you save PokerCraft exports.",
                                             "code": "folder_not_found"})
-                if not job.start(folder, skip_unchanged=not body.get("rescan"), source="manual"):
+                ignore = [(int(x["id"]), x.get("name"), x.get("files") or []) for x in body.get("ignore") or []]
+                if not job.start(folder, skip_unchanged=not body.get("rescan"), source="manual",
+                                 preview=self.path.endswith("preview"), ignore=ignore):
                     return self._send(409, {"error": "An import is already running.", "code": "import_running"})
                 with Database(url) as db:
                     set_setting(db, "import_folder", folder)
                     return self._send(202, status_payload(db))
+            if self.path == "/api/ignore":                        # leave tournaments out for good
+                with Database(url) as db:
+                    ignore_tournaments(db, [int(x) for x in body.get("ids") or []])
+                    return self._send(200, excluded_list(db))
+            if self.path == "/api/restore":                       # back from the ignore list at the next import
+                with Database(url) as db:
+                    found = restore_tournament(db, int(body.get("id") or 0))
+                    if found is None:
+                        return self._send(404, {"error": "not on the ignore list", "code": "not_ignored"})
+                    return self._send(200, {"files_found": found, **excluded_list(db)})
             if self.path == "/api/watch":
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
@@ -289,6 +318,8 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                         set_setting(db, "lang", body["lang"])
                     if body.get("theme") in THEMES:
                         set_setting(db, "theme", body["theme"])
+                    if body.get("import_seen"):                   # the after-import notice was dismissed
+                        set_setting(db, "import_seen", str(body["import_seen"]))
                     if "four_color" in body:
                         set_setting(db, "four_color", "1" if body["four_color"] else "0")
                     if body.get("dashboard_period") in PERIODS:
