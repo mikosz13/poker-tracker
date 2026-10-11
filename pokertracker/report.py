@@ -9,7 +9,7 @@ def build_report(db) -> str:
     out = []
     formats = db.query("SELECT * FROM format_results ORDER BY format")
     if formats:
-        out.append("RESULTS BY FORMAT (ROI is cash only; tickets shown separately)")
+        out.append("RESULTS BY FORMAT (ROI counts tickets at face value)")
         for r in formats:
             n = int(r["tournaments"])
             ticket = f" | tickets ${_f(r['ticket_value'], 0)}" if float(r["ticket_value"]) else ""
@@ -19,7 +19,7 @@ def build_report(db) -> str:
 
     tags = db.query("SELECT * FROM tag_results ORDER BY tag")
     if tags:
-        out.append("BY CATEGORY (cash ROI; a tournament counts under each of its tags)")
+        out.append("BY CATEGORY (a tournament counts under each of its tags)")
         for r in tags:
             n = int(r["tournaments"])
             out.append(f"  {r['tag']:<34} n={n:<3} cost ${_f(r['total_cost'])} | cash ${_f(r['cash_won'])} | "
@@ -34,7 +34,7 @@ def build_report(db) -> str:
         out.append("TOURNAMENTS")
         for r in trs:
             notes = ["no hand history"] if int(r["hands"]) == 0 else []
-            prize = f"${_f(r['prize_won'])}" + (" ticket" if float(r["ticket_value"]) else "")
+            prize = f"${_f(r['cash_won'])}" + (f" + ticket ${_f(r['ticket_value'])}" if float(r["ticket_value"]) else "")
             out.append(f"  {str(r['started_at'])[:10]}  {str(r['name'])[:34]:<34} {r['format']:<9} "
                        f"{r['finish_place']}/{r['players']}  cost ${_f(r['total_cost'])}  won {prize}"
                        + (f"  [{'; '.join(notes)}]" if notes else ""))

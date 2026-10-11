@@ -13,13 +13,6 @@ from .summary import OutOfScope, UnrecognisedSummary, parse_summary
 
 BUYIN = re.compile(r"^Buy-in: (.*)$", re.M)
 RECEIVED = re.compile(r"received a total of (.*?)\.?\s*$", re.M)
-GENERIC = {"wsop", "online", "nlh", "the"}
-
-
-def _words(name):
-    return {w for w in re.findall(r"\$?[\w]+", (name or "").lower()) if w not in GENERIC}
-
-
 def review(db, folder, site=SITE):
     """{"remove": [...], "fuse": {...}, "ticket_entries": [...]}; nothing is written."""
     out, read, unreadable = {}, 0, 0
@@ -52,22 +45,11 @@ def review(db, folder, site=SITE):
 
 
 def ticket_entries(db, site=SITE):
-    """Tournaments started after a satellite won a seat to a tournament of the same name: probably a ticket entry."""
-    won = db.query("SELECT t.tournament_id, t.name, t.started_at, t.prize_won, g.tag FROM tournaments t "
-                   "JOIN tournament_tags g ON g.site = t.site AND g.tournament_id = t.tournament_id "
-                   "WHERE t.site = ? AND t.prize_is_ticket AND g.tag LIKE 'target:%'", (site,))
-    rows = db.query("SELECT tournament_id, name, started_at, buyin_total FROM tournaments WHERE site = ? AND format <> "
-                    "'satellite' AND has_summary", (site,))
-    found = []
-    for s in won:
-        target = _words(s["tag"].split(":", 1)[1])
-        for t in rows:
-            if target and target <= _words(t["name"]) and str(t["started_at"] or "") > str(s["started_at"] or ""):
-                found.append({"tournament_id": t["tournament_id"], "name": t["name"], "started_at": str(t["started_at"]),
-                              "buyin": float(t["buyin_total"] or 0), "satellite_id": s["tournament_id"],
-                              "satellite": s["name"], "ticket": float(s["prize_won"] or 0)})
-                break                                            # one ticket, the first tournament after it
-    return found
+    """Tournaments probably entered with a satellite ticket (see tickets.py): they always stay."""
+    from .tickets import tickets_won
+    return [{"tournament_id": x["used_in"]["tournament_id"], "name": x["used_in"]["name"],
+             "started_at": x["used_in"]["date"], "buyin": x["value"], "satellite_id": x["tournament_id"],
+             "satellite": x["satellite"], "ticket": x["value"]} for x in tickets_won(db, site) if x["used_in"]]
 
 
 def render(r):

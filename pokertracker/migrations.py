@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 4
+LATEST = 5
 
 
 def repair_positions(db):
@@ -90,8 +90,20 @@ def _v4_ticket_apart_from_cash(db):
     db.execute("UPDATE tournaments SET prize_ticket = 0 WHERE prize_ticket IS NULL")
 
 
+def _v5_satellites_by_name(db):
+    """Satellites named "MEGA to ...", "Super Satellite to ..." or "Step 2 to ...", or that paid a ticket, were stored as
+    regular or bounty tournaments; they become satellites with a target tag."""
+    from .classify import refresh_classification                   # here, to avoid an import cycle
+    from .summary import satellite_target
+    for r in db.query("SELECT site, tournament_id, name, format, prize_ticket FROM tournaments WHERE has_summary"):
+        if r["format"] != "satellite" and (satellite_target(r["name"]) or float(r["prize_ticket"] or 0) > 0):
+            db.execute("UPDATE tournaments SET format = 'satellite' WHERE site = ? AND tournament_id = ?",
+                       (r["site"], r["tournament_id"]))
+            refresh_classification(db, r["site"], r["tournament_id"])
+
+
 MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards,
-              4: _v4_ticket_apart_from_cash}
+              4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name}
 
 
 # Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of

@@ -7,6 +7,8 @@ import re
 import statistics
 from datetime import datetime
 
+from .summary import satellite_target
+
 MIN_LEVEL_PAIRS = 3          # consecutive-level pairs needed before the level length is trusted
 
 # Thresholds (total buy-in in $, field size, minutes per level)
@@ -14,7 +16,6 @@ STAKE_TIERS = [(5.5, "micro"), (30, "low"), (100, "mid"), (500, "high")]     # a
 FIELD_SIZES = [(50, "small"), (200, "medium"), (1000, "large")]              # above the last: "huge"
 SPEED_BOUNDS = [(3.5, "hyper"), (6.5, "turbo")]                              # above: "regular"
 
-SAT_TARGET = re.compile(r"Satellite to (?:#\d+: )?(?P<target>.+?)(?:, \d+ Seats)?$", re.I)
 
 
 def _ts(x):
@@ -44,8 +45,8 @@ def classify(name, fmt, buyin_total, players, minutes, first_entry_level, reentr
     low = (name or "").lower()
     if fmt != "satellite" and "mystery" in low:
         tags.append("mystery-bounty")
-    if fmt == "satellite" and (m := SAT_TARGET.search(name or "")):
-        tags.append(f"target:{m['target']}")
+    if fmt == "satellite" and (target := satellite_target(name)):
+        tags.append(f"target:{target}")
     if buyin_total is not None:
         total = float(buyin_total)
         tags.append("stake:" + next((lbl for lim, lbl in STAKE_TIERS if total <= lim), "super"))

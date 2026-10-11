@@ -336,11 +336,12 @@ def money(db, site=SITE, lang="en"):
     Re-entries: a re-entry is decided after the first entry busted, so without it the tournament would have returned
     nothing; the whole prize of a tournament with re-entries is the return of its re-entries. First entries return the
     prize only in tournaments without a re-entry (the first entry lasted to the end)."""
-    trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, profit, reentries, format "
-                   "FROM tournament_results WHERE site = ?", (site,))
+    trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, won_total, profit, "
+                   "cash_profit, reentries, format FROM tournament_results WHERE site = ?", (site,))
     cost = sum(_f(r["total_cost"]) for r in trs)
-    profit = sum(_f(r["profit"]) for r in trs)
-    pair = lambda r: (_f(r["total_cost"]), _f(r["cash_won"]))
+    profit = sum(_f(r["profit"]) for r in trs)                 # tickets at face value
+    cash_profit = sum(_f(r["cash_profit"]) for r in trs)
+    pair = lambda r: (_f(r["total_cost"]), _f(r["won_total"]))
     tiers = [_money_group(key, t(lang, f"money.tier.{key}"), [pair(r) for r in trs if lo <= _f(r["buyin_total"]) < hi],
                           "tier")
              for lo, hi, key in TIERS if any(lo <= _f(r["buyin_total"]) < hi for r in trs)]
@@ -348,13 +349,13 @@ def money(db, site=SITE, lang="en"):
     for fmt in sorted({r["format"] or "unknown" for r in trs}):
         g = [r for r in trs if (r["format"] or "unknown") == fmt]
         m = _money_group(fmt, t(lang, f"format.{fmt}"), [pair(r) for r in g], "format")
-        m["tickets"] = round(sum(_f(r["ticket_value"]) for r in g), 2)       # satellites: seats are not cash
+        m["tickets"] = round(sum(_f(r["ticket_value"]) for r in g), 2)       # the part of the return that is seats
         formats.append(m)
     first = _money_group("first", t(lang, "money.firstEntries"),
-                         [(_f(r["buyin_total"]), 0.0 if int(r["reentries"] or 0) else _f(r["cash_won"])) for r in trs],
+                         [(_f(r["buyin_total"]), 0.0 if int(r["reentries"] or 0) else _f(r["won_total"])) for r in trs],
                          "entries")
     re_entries = _money_group("re", t(lang, "money.reEntries"),
-                              [(_f(r["buyin_total"]) * int(r["reentries"]), _f(r["cash_won"]))
+                              [(_f(r["buyin_total"]) * int(r["reentries"]), _f(r["won_total"]))
                                for r in trs if int(r["reentries"] or 0) > 0], "entries")
 
     family = [g for g in tiers + formats + [first, re_entries] if g.get("boot")]
@@ -376,6 +377,7 @@ def money(db, site=SITE, lang="en"):
     first["avg_start_bb"], re_entries["avg_start_bb"] = (stacks.get(k, {}).get("avg_bb") for k in ("first", "re"))
     return {"tournaments": len(trs), "cost": round(cost, 2), "profit": round(profit, 2),
             "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs),
+            "cash_profit": round(cash_profit, 2), "roi_cash_pct": round(100 * cash_profit / cost, 1) if cost else None,
             "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
             "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang)}
 

@@ -32,7 +32,9 @@ WHERE hp.is_hero;
 -- One row per tournament with a summary. A tournament played over several days is one row, under its first day:
 -- the cost is paid on day 1 (buy-in x entries); the cash and tickets of every day add up; the place is the last
 -- day's. In the money only from a day with payouts: going through to the next day is not ITM by itself.
--- ROI is cash-only; tickets (satellite seats) are reported separately.
+-- Tickets count at face value on both sides: a satellite returns the ticket's value, the tournament entered with it
+-- costs its full buy-in, so the result over both equals the cash that moved. profit and roi_pct include tickets;
+-- cash_profit and roi_cash_pct are the cash part.
 CREATE VIEW tournament_results AS
 WITH later AS (
     SELECT site, first_day_id, SUM(prize_won) AS cash, SUM(COALESCE(prize_ticket, 0)) AS ticket, MAX(stage) AS last_stage
@@ -58,9 +60,11 @@ WITH later AS (
       AND NOT (COALESCE(t.stage, 1) > 1 AND t.first_day_id IS NOT NULL)
 )
 SELECT c.*,
-       c.cash_won - c.total_cost AS profit,
-       ROUND(100.0 * (c.cash_won - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_pct,
-       ROUND(100.0 * (c.cash_won + c.ticket_value - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_incl_tickets_pct
+       c.cash_won + c.ticket_value AS won_total,
+       c.cash_won + c.ticket_value - c.total_cost AS profit,
+       c.cash_won - c.total_cost AS cash_profit,
+       ROUND(100.0 * (c.cash_won + c.ticket_value - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_pct,
+       ROUND(100.0 * (c.cash_won - c.total_cost) / NULLIF(c.total_cost, 0), 1) AS roi_cash_pct
 FROM c;
 
 CREATE VIEW format_results AS
@@ -70,7 +74,8 @@ SELECT format,
        SUM(cash_won)           AS cash_won,
        SUM(ticket_value)       AS ticket_value,
        SUM(in_the_money)       AS itm,
-       ROUND(100.0 * (SUM(cash_won) - SUM(total_cost)) / NULLIF(SUM(total_cost), 0), 1) AS roi_pct
+       ROUND(100.0 * (SUM(cash_won) + SUM(ticket_value) - SUM(total_cost)) / NULLIF(SUM(total_cost), 0), 1) AS roi_pct,
+       ROUND(100.0 * (SUM(cash_won) - SUM(total_cost)) / NULLIF(SUM(total_cost), 0), 1) AS roi_cash_pct
 FROM tournament_results
 GROUP BY format;
 
@@ -142,7 +147,8 @@ SELECT g.tag,
        SUM(r.cash_won)         AS cash_won,
        SUM(r.ticket_value)     AS ticket_value,
        SUM(r.in_the_money)     AS itm,
-       ROUND(100.0 * (SUM(r.cash_won) - SUM(r.total_cost)) / NULLIF(SUM(r.total_cost), 0), 1) AS roi_pct
+       ROUND(100.0 * (SUM(r.cash_won) + SUM(r.ticket_value) - SUM(r.total_cost)) / NULLIF(SUM(r.total_cost), 0), 1) AS roi_pct,
+       ROUND(100.0 * (SUM(r.cash_won) - SUM(r.total_cost)) / NULLIF(SUM(r.total_cost), 0), 1) AS roi_cash_pct
 FROM tournament_results r
 JOIN tournament_tags g ON g.site = r.site AND g.tournament_id = r.tournament_id
 GROUP BY g.tag;

@@ -22,7 +22,7 @@ class DashboardTests(unittest.TestCase):
         self.assertAlmostEqual(d["cost"], 25.0)                      # $10 x 2 entries + $5 satellite
         self.assertAlmostEqual(d["cash"], 20.0)                      # satellite prize is a ticket
         self.assertAlmostEqual(d["tickets"], 50.0)
-        self.assertEqual(d["profit_curve"], [0.0, -5.0])             # chronological, cash only
+        self.assertEqual(d["profit_curve"], [0.0, 45.0])             # chronological, the $50 seat at face value
         self.assertEqual(len(d["bb_actual"]), 1)                     # only one tournament has hands
         a = d["allins"]
         self.assertAlmostEqual(d["bb_actual"][0] - d["bb_adjusted"][0], a["luck_bb"], places=1)
@@ -80,7 +80,7 @@ class PeriodTests(unittest.TestCase):
     def test_dated_chart_points(self):
         d = dashboard_data(self.db, now=self.now)
         self.assertEqual([(p["at"], p["total"]) for p in d["profit_points"]],
-                         [("2026-01-01 09:00", 0.0), ("2026-01-02 09:00", -5.0)])
+                         [("2026-01-01 09:00", 0.0), ("2026-01-02 09:00", 45.0)])
         self.assertEqual(d["bb_points"][0]["at"], "2026-01-01 10:00")
         self.assertAlmostEqual(d["bb_points"][0]["actual"] - d["bb_points"][0]["adjusted"], d["allins"]["luck_bb"],
                                places=1)
