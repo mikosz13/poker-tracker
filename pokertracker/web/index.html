@@ -126,7 +126,12 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
-.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
+.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}
+.band{display:grid;grid-template-columns:5.5em 1fr 6.5em;gap:10px;align-items:center;margin:6px 0}.band-l{font-size:.9rem}
+.band-bar{position:relative;height:14px;background:var(--bg);border:1px solid var(--line);border-radius:7px}
+.band-fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:7px}
+.band-exp,.band-key{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--fg);opacity:.7}
+.band-key{position:relative;display:inline-block;height:12px;vertical-align:middle;top:0}.band-v{text-align:right}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -240,6 +245,32 @@ async function api(path, opts) {
   return j;
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+// ITM only without bounties; in bounty tournaments only "cashed (place or bounty)" is known from the files
+const cashedHead = () => [`<span title="${esc(t("cashed.tip"))}">${t("col.cashed")}</span>`, t("col.cashedPct")];
+function itmTiles(itm, n, b) {
+  return `<div>${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>
+    ${b && b.n ? `<div title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
+}
+// top 10 % / 15 % of the field: facts (place / players), with a 95 % bootstrap interval over tournaments
+function topTiles(pl) {
+  if (!pl || !pl.n) return "";
+  return [["top10", "top.title10"], ["top15", "top.title15"]].map(([k, title]) => {
+    const x = pl[k], iv = x.interval;
+    return `<div title="${esc(t("places.tip"))}">${t(title)}<b>${pct(x.pct)}</b><span class="m">${iv
+      ? t("top.sub", {count: x.count, n: pl.n, lo: num(iv.low, 0), hi: num(iv.high, 0)}) : t("top.subShort", {count: x.count, n: pl.n})}</span></div>`;
+  }).join("");
+}
+// where Hero finishes, as a share of the field, against an average player's share of each band
+function placeChart(pl) {
+  if (!pl || !pl.n) return "";
+  const max = Math.max(60, ...pl.bands.map(b => b.pct || 0));
+  return `<h2 title="${esc(t("places.tip"))}">${t("places.title")}</h2><p class="m">${t("places.intro", {tournaments: t("common.tournaments", {n: pl.n})})}</p>
+    <div class="box">${pl.bands.map(b => `<div class="band"><span class="band-l">${t("band." + b.key)}</span>
+      <span class="band-bar"><span class="band-fill" style="width:${100 * (b.pct || 0) / max}%"></span>
+        <span class="band-exp" style="left:${100 * b.expected / max}%" title="${esc(t("places.expected", {x: b.expected}))}"></span></span>
+      <span class="band-v"><b>${pct(b.pct)}</b> <span class="m">(${b.count})</span></span></div>`).join("")}
+      <p class="m" style="margin:6px 0 0"><span class="band-key"></span> ${t("places.expected", {x: "10 / 15 / 25 / 50"})}</p></div>`;
+}
 // a satellite ticket: counted at face value on both sides
 const TICKET_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
 function ticketsBox(k) {
@@ -314,7 +345,7 @@ async function viewDashboard(period) {
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
   const inclCash = x => d.tickets ? `<span class="m">${t("money.inclCash", {x})}</span>` : "";
   h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b>${inclCash(sgn(d.cash_profit, 0, " $"))}</div>
-    <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div><div>${t("dash.itm")}<b>${pct(d.itm_pct)}</b><span class="m">${t("dash.itmOf", {itm: d.itm, n: d.tournaments})}</span></div>
+    <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div>${itmTiles(d.itm, d.itm_n, d.bounty_cashed)}${topTiles(d.places)}
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
     <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
@@ -325,17 +356,17 @@ async function viewDashboard(period) {
     <p class="legend"><i style="background:var(--blue);margin-left:0"></i>${t("dash.legendActual")}<i style="background:var(--orange)"></i>${t("dash.legendAdjusted")} · ${luckLink()}</p>`;
   if (d.allins.count) h += `<p>${t("dash.allinsLine", {allins: t("common.allins", {n: d.allins.count}), net: sgn(d.allins.net_bb), ev: sgn(d.allins.ev_bb), luck: sgn(d.allins.luck_bb)})}</p>`;
   const tagRows = pre => d.tags.filter(x => x.tag.startsWith(pre)).map(x =>
-    `<tr><td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+    `<tr><td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), "n", "ITM", "ITM %", "ROI"], entry)}` +
+  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), "n", ...cashedHead(), "ROI"], entry)}` +
     (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "");
-  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), "n", "ITM", "ITM %", t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
-    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.itm}</td><td>${pct(b.itm_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
+  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), "n", ...cashedHead(), t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
+    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.cashed}</td><td>${pct(b.cashed_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
   if (d.positions.length) h += `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   const other = d.tags.filter(x => !x.tag.startsWith("entry:")).map(x =>
-    `<tr><td>${tagLabel(x.tag)}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), "n", "ITM", "ITM %", "ROI"], other)}`;
+    `<tr><td>${tagLabel(x.tag)}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), "n", ...cashedHead(), "ROI"], other)}`;
   app.innerHTML = h;
   bindPeriods();
   charts = [];
@@ -831,8 +862,9 @@ async function viewAnalysis(tab) {
     h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
       <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">${t("an.evAdjusted", {x: sgn(o.bb_per_100_ev, 1)})}</span></div>
       <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? t("an.ci", {lo: num(ri.low, 0), hi: num(ri.high, 0)}) : ""}</span></div>
-      <div>ITM<b>${pct(o.itm_pct)}</b></div><div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
+      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}<div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
+      ${placeChart(o.places)}
       <p class="m">${t("an.v2")}</p>`;
   }
 
@@ -863,6 +895,7 @@ async function viewAnalysis(tab) {
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
           ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 1, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
       <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
+      ${o.places && o.places.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
       <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}
       <h2>${t("money.byFormat")}</h2>${table([...head, t("col.tickets")], rows(m.formats, g => `<td>${g.tickets ? money(g.tickets) : "–"}</td>`))}
@@ -1044,6 +1077,8 @@ function viewLuck() {
   <p>${t("lp.levels")}</p>
   <p>${t("lp.bb")}</p>
   <p>${t("lp.moment")}</p></div>
+  <h2>${t("lp.itmTitle")}</h2>
+  <p>${t("lp.itm")}</p>
   <h2>${t("lp.exampleTitle")}</h2>
   <p>${t("lp.example", {aa: cards("As Ah"), kk: cards("Kd Kc")})}</p>
   <p>${t("lp.exampleMath")}</p>

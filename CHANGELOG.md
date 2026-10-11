@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- ITM is shown only where the files can tell it: tournaments without bounties and satellites (a ticket counts).
+  In bounty tournaments the summary gives only the total and hand histories hold no bounty payouts, so a cash there
+  can be knockouts alone: the app shows "Cashed (place or bounty)" with an explanation, and tables show "Cashed".
+  New facts instead of an ITM estimate: "Top 10% / Top 15% of the field" (place / players) with a 95% bootstrap
+  interval on the dashboard and in Money, and a chart of where you finish (top 10%, 10–25%, 25–50%, 50–100%) against
+  an average player in Analysis, Overview. "How luck works" explains it. On Mik's data the old "ITM 29.6%" was
+  mostly knockout-only cashes: ITM without bounties 2 of 12, top 10% of the field 14% (95%: 9–19%).
 - Tickets count in ROI at face value, on both sides: a satellite returns the seat's value, and a tournament entered
   with a ticket costs its full buy-in, so the total matches the cash that moved. Profit and ROI on the dashboard and in
   Money include tickets, with "incl. cash" under them; Money's verdicts use the ROI with tickets. A won seat shows as

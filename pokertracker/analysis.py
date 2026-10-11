@@ -16,6 +16,7 @@ import numpy as np
 
 from .dashboard import hand_class
 from .i18n import num, t
+from .places import place_stats
 from .tournament_report import SITE
 
 HIDE_BELOW = 30          # fewer hands than this: the spot is not tested
@@ -410,9 +411,17 @@ def overview(hands, db, site=SITE):
     n = len(hands)
     a = db.query("SELECT COUNT(*) AS n, SUM(net_bb) AS net, SUM(ev_bb) AS ev, SUM(luck_bb) AS luck FROM hero_allins "
                  "WHERE site = ?", (site,))[0]
-    t = db.query("SELECT COUNT(*) AS n, SUM(in_the_money) AS itm FROM tournament_results WHERE site = ?", (site,))[0]
+    t = db.query("SELECT COUNT(*) AS n, SUM(cashed) AS cashed, SUM(in_the_money) AS itm, COUNT(in_the_money) AS itm_n, "
+                 "SUM(CASE WHEN format = 'bounty' THEN cashed ELSE 0 END) AS cashed_b, "
+                 "SUM(CASE WHEN format = 'bounty' THEN 1 ELSE 0 END) AS n_b FROM tournament_results WHERE site = ?",
+                 (site,))[0]
+    pct = lambda a, b: round(100 * int(a or 0) / int(b), 1) if int(b or 0) else None
     return {"hands": n, "tournaments": int(t["n"]),
-            "itm_pct": round(100 * int(t["itm"] or 0) / int(t["n"]), 1) if int(t["n"]) else None,
+            # ITM only without bounties; in bounty tournaments "cashed" (place or bounty) is what the files tell
+            "itm": int(t["itm"] or 0), "itm_n": int(t["itm_n"] or 0), "itm_pct": pct(t["itm"], t["itm_n"]),
+            "bounty_cashed": int(t["cashed_b"] or 0), "bounty_n": int(t["n_b"] or 0),
+            "bounty_cashed_pct": pct(t["cashed_b"], t["n_b"]),
+            "places": place_stats(db, site),
             "vpip_pct": round(100 * sum(h["vpip"] for h in hands) / n, 1) if n else None,
             "pfr_pct": round(100 * sum(h["pfr"] for h in hands) / n, 1) if n else None,
             "bb_per_100": round(100 * sum(h["net_bb"] for h in hands) / n, 1) if n else None,
