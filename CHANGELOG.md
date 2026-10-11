@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Multi-day events: every day-1 flight that went through joins its Day 2 (and later days) as one tournament under its
+  last day: the cost of all flights (buy-in × entries), the knockout cash of every flight plus the later days' prize,
+  and one final place. Flights are matched by name without the day marker and "GTD" (GGPoker renamed "$1M GTD" to
+  "$1M" mid-series), played before the Day 2 and not taken by another one. A flight in an event says "counted in …"
+  with a link; an advance whose Day 2 has not been imported shows "Advanced to Day 2" for 7 days, then "Advanced,
+  Day 2 not played". Database schema 6 groups what is stored.
 
 ## 0.7.0 (2026-10-11)
 - **Upgrade:** the database goes from schema 3 to 5 on first start (a backup is made next to it first). Then run
