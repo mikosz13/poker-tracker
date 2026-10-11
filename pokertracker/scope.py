@@ -10,7 +10,9 @@ OMAHA = "PLO/Omaha"
 OTHER_GAME = "other game"
 NOT_DOLLARS = "not in $"
 CASH = "cash game"
-REASONS = (SIT_AND_GO, OMAHA, OTHER_GAME, NOT_DOLLARS, CASH)
+FREEROLL = "freeroll"                       # nothing paid to enter: promotions, freerolls (never a ticket entry)
+UNRECOGNISED = "unrecognised summary"      # a summary that cannot be read: the whole tournament is left out
+REASONS = (SIT_AND_GO, OMAHA, OTHER_GAME, NOT_DOLLARS, CASH, FREEROLL, UNRECOGNISED)
 
 NLH = "Hold'em No Limit"
 OTHER_CURRENCY = re.compile(r"[¥€£₩₹₽]|CN¥|\bRMB\b")
@@ -31,6 +33,18 @@ def tournament_reason(name, game=None, amounts=""):
     if OTHER_CURRENCY.search(name or "") or OTHER_CURRENCY.search(amounts or ""):
         return NOT_DOLLARS
     return None
+
+
+def buyin_paid(buyin_line):
+    """Sum of the amounts on a summary's 'Buy-in:' line, or None without one.
+
+    A ticket entry is written with the full buy-in (e.g. 'Buy-in: $237.5+$25+$237.5' for a $500 seat won in a
+    satellite), so only a tournament nobody paid to enter adds up to zero.
+    """
+    if not buyin_line:
+        return None
+    amounts = re.findall(r"\d[\d,]*(?:\.\d+)?", buyin_line.split(":", 1)[-1])
+    return sum(float(a.replace(",", "")) for a in amounts) if amounts else None
 
 
 def hand_reason(header):

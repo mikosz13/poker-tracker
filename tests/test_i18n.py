@@ -188,7 +188,7 @@ class ServerDisplayTests(unittest.TestCase):
 ALLOWED_WORDS = {"VPIP", "PFR", "ROI", "ITM", "ALL-IN", "All-in", "all-in", "Hero", "Polski", "English", "Poker",
                  "Tracker"}
 ALLOWED_STRINGS = {"Very lucky", "Lucky", "Average", "Bad run", "Worst run",                  # luck level ids
-                   "Sit & Go", "PLO/Omaha", "other game", "not in $", "cash game",             # import reason ids
+                   "Sit & Go", "PLO/Omaha", "other game", "not in $", "cash game", "unrecognised summary",   # reason ids
                    "raises to",                                                         # replayer actions stay English
                    "Content-Type", "X-Token", "POST", "Hero"}
 

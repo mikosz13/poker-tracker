@@ -838,13 +838,17 @@ async function viewAnalysis(tab) {
 
 // ---- Import -----------------------------------------------------------------
 let poller = null;
-const REASONS = {"Sit & Go": "sng", "PLO/Omaha": "omaha", "other game": "other", "not in $": "currency", "cash game": "cash"};
+const REASONS = {"Sit & Go": "sng", "PLO/Omaha": "omaha", "other game": "other", "not in $": "currency", "cash game": "cash",
+                 "freeroll": "freeroll", "unrecognised summary": "unrecognised"};
+const fileList = files => `<ul style="margin:4px 0 0 18px;padding:0">${files.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`;
 const resultBox = r => `<div class="box"><b>${t(r.source === "auto" ? "imp.auto" : "imp.done")}</b>
   <span class="m">${dateTime(String(r.finished_at || "").replace("T", " "))}</span><br>
   ${t("imp.result", {files: r.files, hand_files: r.hand_files, summary_files: r.summary_files, unchanged: r.unchanged,
     new: r.hands_new, dup: r.hands_duplicate, allins: r.allins, tournaments: r.tournaments})}
   ${Object.keys(r.ignored || {}).length ? `<p class="m">${t("imp.ignored", {list:
     Object.entries(r.ignored).map(([why, n]) => REASONS[why] ? t("imp.reason." + REASONS[why], {n}) : `${n} ${esc(why)}`).join(", ")})}</p>` : ""}
+  ${Object.entries(r.ignored_files || {}).map(([why, files]) => `<div class="m" style="margin-top:6px">${t("imp.filesOf." + REASONS[why])}${fileList(files)}</div>`).join("")}
+  ${(r.to_check || []).length ? `<div class="warn" style="margin-top:8px">${t("imp.formatWarning", {n: r.to_check.length})}${fileList(r.to_check)}</div>` : ""}
   <p><a href="#/">${t("imp.openDashboard")}</a></p>${r.skipped.length ? `<p class="m">${t("imp.skipped")} ${r.skipped.map(x => typeof x === "string" ? esc(x)          // saved by an older version
     : `${esc(x.file)}: ${t("imp.skip." + x.code, {detail: esc(x.detail)})}`).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {

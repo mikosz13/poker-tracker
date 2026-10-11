@@ -166,7 +166,8 @@ class ImportJob:
                 result = {"files": s.files, "hand_files": s.hand_files, "summary_files": s.summary_files,
                           "unchanged": s.unchanged, "hands_new": s.hands_new, "hands_duplicate": s.hands_duplicate,
                           "allins": s.allins, "tournaments": len(s.tournaments), "skipped": s.skipped,
-                          "ignored": s.ignored_counts(),
+                          "ignored": s.ignored_counts(), "ignored_files": s.ignored_file_lists(),
+                          "to_check": s.to_check,
                           "source": self.state["source"], "finished_at": datetime.now().isoformat(timespec="seconds")}
                 set_setting(db, "import_folder", folder)
                 set_setting(db, "last_import", json.dumps(result))
