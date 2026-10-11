@@ -4,6 +4,9 @@ Tournament tracker for GGPoker. Imports PokerCraft exports (hand histories and t
 stores them in SQL and answers the questions a player actually has: *what is my ROI, where do I win and lose,
 how do I play at different stack depths?*
 
+**Players:** download the app from [Releases](https://github.com/mikosz13/poker-tracker/releases) and follow
+[Getting started / Jak zacząć](docs/INSTALL.md) (seven steps, English and Polish).
+
 ## Why
 
 I play tournaments on GGPoker as a hobby: mostly Bounty Hunters, now and then a satellite. Like most
