@@ -124,3 +124,16 @@ class KnockoutTests(unittest.TestCase):
         busted = {r["busted_nick"] for r in db.query("SELECT busted_nick FROM hero_knockouts")}
         self.assertEqual(busted, {"aaaa1111", "bbbb2222"})
         self.assertIn("knockouts: 2", T.render_text(T.tournament_data(db, 900003)))
+
+
+class TournamentListTests(unittest.TestCase):
+    def test_knockouts_per_tournament(self):
+        from pokertracker.server import tournaments_list
+        from tests.fixtures import HAND_3WAY
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", HISTORY), ("t", HAND_3WAY)])
+        ko = {r["tournament_id"]: r["knockouts"] for r in tournaments_list(db)}
+        self.assertEqual(ko[900003], 2)                                 # Hero's KK busts both short stacks
+        self.assertIsNone(ko[900001])                                   # no knockout in that tournament
