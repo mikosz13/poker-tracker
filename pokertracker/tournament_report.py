@@ -67,7 +67,7 @@ def tournament_data(db, tournament_id, site=SITE):
     res = db.query("SELECT * FROM tournament_results WHERE site = ? AND tournament_id = ?", (site, tournament_id))
     rows = db.query(
         "SELECT hh.hand_id, hh.level, hh.played_at, hh.big_blind, hh.position, hh.stack_bb, hh.net_won, hh.net_bb, "
-        "hh.vpip, hh.pfr, hp.hole_cards, h.board, h.showdown, h.total_pot FROM hero_hands hh "
+        "hh.decided, hh.vpip, hh.pfr, hp.hole_cards, h.board, h.showdown, h.total_pot FROM hero_hands hh "
         "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
         "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
         "WHERE hh.site = ? AND hh.tournament_id = ? ORDER BY hh.played_at, hh.hand_id", (site, tournament_id))
@@ -105,8 +105,10 @@ def tournament_data(db, tournament_id, site=SITE):
     n = len(rows)
     data["levels"] = (min(r["level"] for r in rows), max(r["level"] for r in rows))
     data["period"] = (str(rows[0]["played_at"])[:16], str(rows[-1]["played_at"])[:16])
-    data["vpip_pct"] = 100.0 * sum(r["vpip"] for r in rows) / n
-    data["pfr_pct"] = 100.0 * sum(r["pfr"] for r in rows) / n
+    decided = sum(r["decided"] for r in rows)                       # hands with a preflop decision
+    data["decided"] = decided
+    data["vpip_pct"] = 100.0 * sum(r["vpip"] for r in rows) / decided if decided else None
+    data["pfr_pct"] = 100.0 * sum(r["pfr"] for r in rows) / decided if decided else None
     data["net_bb"] = sum(r["net_bb"] for r in rows)
     last = rows[-1]
     end_bb = max(0.0, (last["stack_bb"] * last["big_blind"] + last["net_won"]) / last["big_blind"])
@@ -121,13 +123,14 @@ def tournament_data(db, tournament_id, site=SITE):
                                  "before_bb": round(r["stack_bb"], 1),
                                  "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1)} for r in rows]}
 
-    pos = defaultdict(lambda: {"hands": 0, "net_bb": 0.0, "vpip": 0, "pfr": 0})
+    pos = defaultdict(lambda: {"hands": 0, "decided": 0, "net_bb": 0.0, "vpip": 0, "pfr": 0})
     for r in rows:
         p = pos[r["position"] or "?"]
-        p["hands"] += 1; p["net_bb"] += r["net_bb"]; p["vpip"] += r["vpip"]; p["pfr"] += r["pfr"]
+        p["hands"] += 1; p["decided"] += r["decided"]; p["net_bb"] += r["net_bb"]; p["vpip"] += r["vpip"]; p["pfr"] += r["pfr"]
     plist = [{"position": k, "hands": v["hands"], "net_bb": round(v["net_bb"], 1),
               "bb_per_100": round(100 * v["net_bb"] / v["hands"], 1),
-              "vpip_pct": round(100 * v["vpip"] / v["hands"], 0), "pfr_pct": round(100 * v["pfr"] / v["hands"], 0)}
+              "vpip_pct": round(100 * v["vpip"] / v["decided"], 1) if v["decided"] else None,
+              "pfr_pct": round(100 * v["pfr"] / v["decided"], 1) if v["decided"] else None}
              for k, v in pos.items()]
     plist.sort(key=lambda p: -p["bb_per_100"])
     enough = [p for p in plist if p["hands"] >= MIN_POSITION_HANDS]
@@ -189,7 +192,7 @@ def render_text(d) -> str:
         return "\n".join(out + ["  no hand history imported"])
     s = d["stack"]
     out += [f"  {d['hands']} hands, levels {d['levels'][0]}-{d['levels'][1]}, {d['period'][0]} to {d['period'][1]}",
-            f"  VPIP {d['vpip_pct']:.1f}% | PFR {d['pfr_pct']:.1f}% | net {d['net_bb']:+.1f} BB",
+            f"  VPIP {d['vpip_pct'] or 0:.1f}% | PFR {d['pfr_pct'] or 0:.1f}% | net {d['net_bb']:+.1f} BB",
             f"  stack: {s['start_bb']:.0f} BB -> {s['end_bb']:.0f} BB, peak {s['peak_bb']:.0f} BB after {s['peak_after_hands']} hands"]
     bp, wp = d["best_position"], d["worst_position"]
     if bp:
@@ -278,7 +281,7 @@ def render_html(d) -> str:
         s, a = d["stack"], d["allins"]
         ko = d["knockouts"]
         ko_txt = str(ko["sole"]) + (f" +{ko['shared']} shared" if ko["shared"] else "")
-        parts.append(f"<div class=k><div>Hands<b>{d['hands']}</b></div><div>VPIP / PFR<b>{d['vpip_pct']:.0f} / {d['pfr_pct']:.0f}</b></div>"
+        parts.append(f"<div class=k><div>Hands<b>{d['hands']}</b></div><div>VPIP / PFR<b>{d['vpip_pct'] or 0:.1f}% / {d['pfr_pct'] or 0:.1f}%</b></div>"
                      f"<div>Net<b>{_sign(d['net_bb'], '{:+.0f} BB')}</b></div><div>Knockouts<b>{ko_txt}</b></div></div>")
         parts.append(f"<h2>Stack (BB)</h2>{_chart(s)}<p class=m>{s['start_bb']:.0f} to {s['end_bb']:.0f} BB, peak "
                      f"{s['peak_bb']:.0f} BB after {s['peak_after_hands']} hands</p>")

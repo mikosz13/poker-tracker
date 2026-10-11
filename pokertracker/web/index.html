@@ -126,7 +126,8 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
-.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}th span.tip{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}tr.few td{color:var(--muted)}tr.few td span{color:inherit!important}.k div.few b{color:var(--muted)}
+.wrap1 td:first-child{white-space:normal}details.more{margin-top:14px}details.more>summary{cursor:pointer;color:var(--blue);font-weight:600}th span.tip{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .band{display:grid;grid-template-columns:5.5em 1fr 6.5em;gap:10px;align-items:center;margin:6px 0}.band-l{font-size:.9rem}
 .band-bar{position:relative;height:14px;background:var(--bg);border:1px solid var(--line);border-radius:7px}
 .band-fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:7px}
@@ -245,13 +246,24 @@ async function api(path, opts) {
   return j;
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+// Money's folded detail tables (whole history): tournaments, cashed, profit and ROI per row
+function detailTable(title, first, list, label, countTip) {
+  if (!list || !list.length) return "";
+  return `<details class="more"><summary>${t(title)}</summary>${table([first, countHead(countTip), ...cashedHead(), t("col.profitUsd"), "ROI"],
+    list.map(x => `<tr class="${fewClass(x.n, MIN_T)}" title="${fewTip(x.n, MIN_T, "t")}"><td>${label(x)}</td><td>${x.n}</td><td>${x.cashed}</td>
+      <td>${pct(x.cashed_pct)}</td><td>${sgn(x.profit, 2)}</td><td>${x.roi_pct == null ? "–" : sgn(x.roi_pct, 0, "%")}</td></tr>`))}</details>`;
+}
+// small samples: greyed, with a tooltip (fewer than 10 tournaments or 30 hands)
+const MIN_T = 10, MIN_H = 30;
+const fewClass = (n, min) => n < min ? "few" : "";
+const fewTip = (n, min, unit) => n < min ? esc(t("common.few", {min: t(unit === "h" ? "common.handsN" : "common.tournaments", {n: min})})) : "";
 // ITM only without bounties; in bounty tournaments only "cashed (place or bounty)" is known from the files
 // "Tournaments" with what it counts in a tooltip (a dotted underline marks it)
 const countHead = (tip = "col.countTip") => `<span class="tip" title="${esc(t(tip))}">${t("col.count")}</span>`;
 const cashedHead = () => [`<span class="tip" title="${esc(t("cashed.tip"))}">${t("col.cashed")}</span>`, t("col.cashedPct")];
 function itmTiles(itm, n, b) {
-  return `<div>${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>
-    ${b && b.n ? `<div title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
+  return `<div class="${n ? fewClass(n, MIN_T) : ""}" title="${n ? fewTip(n, MIN_T, "t") : ""}">${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>
+    ${b && b.n ? `<div class="${fewClass(b.n, MIN_T)}" title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
 }
 // top 10 % / 15 % of the field: facts (place / players), with a 95 % bootstrap interval over tournaments
 function topTiles(split) {
@@ -259,7 +271,7 @@ function topTiles(split) {
   if (!pl || !pl.n) return "";
   return [["top10", "top.title10"], ["top15", "top.title15"]].map(([k, title]) => {
     const x = pl[k], iv = x.interval, part = s => s && s.n ? pct(s[k].pct) : "–";
-    return `<div title="${esc(t("places.tip"))}">${t(title)}<b>${pct(x.pct)}</b><span class="m">${iv
+    return `<div class="${fewClass(pl.n, MIN_T)}" title="${esc(t("places.tip"))}">${t(title)}<b>${pct(x.pct)}</b><span class="m">${iv
       ? t("top.sub", {count: x.count, n: pl.n, lo: num(iv.low, 0), hi: num(iv.high, 0)}) : t("top.subShort", {count: x.count, n: pl.n})}<br>
       ${t("top.split", {s: part(split.start), l: part(split.late)})}</span></div>`;
   }).join("");
@@ -281,13 +293,14 @@ function placeChart(split) {
 }
 // a satellite ticket: counted at face value on both sides
 const TICKET_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
-function ticketsBox(k) {
+function ticketsBox(k, period) {
   const rows = k.items.slice(0, 6).map(x => `<tr><td>${shortDate(x.date)}</td><td style="text-align:left;white-space:normal">${esc(x.satellite)}</td>
     <td style="text-align:left;white-space:normal">${esc(x.target || "–")}</td><td>${money(x.value)}</td>
     <td style="text-align:left;white-space:normal">${x.used_in ? `${t("tk.used")} <a href="#/t/${x.used_in.tournament_id}">${esc(x.used_in.name)}</a>`
       : `<span class="m">${t("tk.unusedOne")}</span>`}</td></tr>`);
   return `<div class="box" style="margin:14px 0"><h3 style="margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${TICKET_ICON}${t("tk.title")}
-      <span style="text-transform:none;letter-spacing:0;font-weight:400"> · ${t("tk.scope")}</span></h3>
+      <span style="text-transform:none;letter-spacing:0;font-weight:400"> · ${t(period ? "tk.period" : "tk.scope")}${period
+        ? ` · <a href="#/analysis?tab=money">${t("tk.allHistory")}</a>` : ""}</span></h3>
     <p style="margin:0 0 6px">${t("tk.summary", {tickets: t("tk.count", {n: k.count}), value: `<b>${money(k.value)}</b>`})}${k.unused_value > 0 ? ` · <span style="color:var(--orange)">${t("tk.unused", {value: money(k.unused_value)})}</span>` : ""}</p>
     ${table([t("col.date"), t("col.satellite"), t("col.target"), t("col.value"), t("col.status")], rows, "names tickets")}</div>`;
 }
@@ -358,23 +371,22 @@ async function viewDashboard(period) {
     <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
   h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
-  if (d.tickets_won && d.tickets_won.count) h += ticketsBox(d.tickets_won);
+  if (d.tickets_won && d.tickets_won.count) h += ticketsBox(d.tickets_won, true);
   h += `<h2>${t("dash.cashCumulative")}</h2><div class="tchart" id="c-profit"></div>`;
   h += `<h2>${t("dash.luck")}</h2><div class="tchart" id="c-luck"></div>
     <p class="legend"><i style="background:var(--blue);margin-left:0"></i>${t("dash.legendActual")}<i style="background:var(--orange)"></i>${t("dash.legendAdjusted")} · ${luckLink()}</p>`;
   if (d.allins.count) h += `<p>${t("dash.allinsLine", {allins: t("common.allins", {n: d.allins.count}), net: sgn(d.allins.net_bb), ev: sgn(d.allins.ev_bb), luck: sgn(d.allins.luck_bb)})}</p>`;
-  const tagRows = pre => d.tags.filter(x => x.tag.startsWith(pre)).map(x =>
-    `<tr><td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
-  const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), countHead(), ...cashedHead(), "ROI"], entry)}` +
-    (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "");
-  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), countHead(), ...cashedHead(), t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
-    `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.cashed}</td><td>${pct(b.cashed_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
-  if (d.positions.length) h += `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
-    `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
-  const other = d.tags.filter(x => !x.tag.startsWith("entry:")).map(x =>
-    `<tr><td>${tagLabel(x.tag)}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), countHead("col.countTagTip"), ...cashedHead(), "ROI"], other)}`;
+  // the detail tables: late registration and positions folded under "More"; buy-in and categories live in Money
+  const entry = d.tags.filter(x => x.tag.startsWith("entry:")).map(x => `<tr class="${fewClass(x.n, MIN_T)}" title="${fewTip(x.n, MIN_T, "t")}">
+    <td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+  const posRows = d.positions.map(p => `<tr class="${fewClass(p.hands, MIN_H)}" title="${fewTip(p.hands, MIN_H, "h")}">
+    <td>${esc(p.position)}</td><td>${p.hands}</td><td>${pct(p.vpip_pct)}</td><td>${pct(p.pfr_pct)}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100_ev, 0)}</td></tr>`);
+  if (entry.length || posRows.length) h += `<details class="more"><summary>${t("dash.more")}</summary>
+    ${entry.length ? `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), countHead(), ...cashedHead(), "ROI"], entry)}` +
+      (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "") : ""}
+    ${posRows.length ? `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", `<span class="tip" title="${esc(t("pos.evNote"))}">bb/100</span>`], posRows)}` : ""}
+    </details>`;
+  h += `<p class="m">${t("dash.moved", {link: `<a href="#/analysis?tab=money">${t("dash.movedLink")}</a>`})}</p>`;
   app.innerHTML = h;
   bindPeriods();
   charts = [];
@@ -400,7 +412,7 @@ function luckBox(b) {
 function handsBox(sh) {
   const kind = x => t(x.length === 2 ? "hand.pair" : x.endsWith("s") ? "hand.suited" : "hand.offsuit");
   const card = (title, g) => g ? `<div><span class="m">${title}</span><div class="hc">${esc(g.hand.slice(0, 2))}</div>
-      <span class="m">${kind(g.hand)}</span><br>${sgn(g.net_bb, 1, " BB")}<br><span class="m">${t("common.handsN", {n: g.hands})}</span></div>`
+      <span class="m">${kind(g.hand)}</span><br>${sgn(g.ev_bb, 1, " BB")}<br><span class="m">${t("common.handsN", {n: g.hands})}</span></div>`
     : `<div><span class="m">${title}</span><div class="hc">–</div></div>`;
   const body = sh.ranked ? `<div class="hcards">${card(t("hands.best"), sh.best)}${card(t("hands.worst"), sh.worst)}</div>`
     : `<p class="m">${t("hands.noRanking", {hands: t("common.handsN", {n: sh.min_hands})})}</p>`;
@@ -409,7 +421,7 @@ function handsBox(sh) {
 }
 const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
 const blinds = by => ["SB", "BB"].some(p => by[p]) ? `<p class="m" style="margin:4px 0 0">${["SB", "BB"].filter(p => by[p]).map(p =>
-    t("pos.blindLine", {blind: t(p === "SB" ? "pos.sb" : "pos.bb"), bb: sgn(by[p].bb_per_100, 0), hands: t("common.handsN", {n: by[p].hands})})).join(" · ")}.
+    t("pos.blindLine", {blind: t(p === "SB" ? "pos.sb" : "pos.bb"), bb: sgn(by[p].bb_per_100_ev, 0), hands: t("common.handsN", {n: by[p].hands})})).join(" · ")}.
     ${t("pos.blindsNote")}</p>` : "";
 function positionBox(list, rank) {
   const by = Object.fromEntries(list.map(p => [p.position, p]));
@@ -419,15 +431,15 @@ function positionBox(list, rank) {
     const cls = rank.best && rank.best.position === pos ? "best" : rank.worst && rank.worst.position === pos ? "worst"
       : p.hands < rank.min_hands ? "few" : "";
     return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(a)}%;top:${50 + 38 * Math.sin(a)}%"
-      title="${esc(t("pos.tip", {pos, bb: sgn(p.bb_per_100, 0).replace(/<[^>]+>/g, ""), hands: t("common.handsN", {n: p.hands})}))}">${esc(pos)}</div>`;
+      title="${esc(t("pos.tip", {pos, bb: sgn(p.bb_per_100_ev, 0).replace(/<[^>]+>/g, ""), hands: t("common.handsN", {n: p.hands})}))}">${esc(pos)}</div>`;
   };
-  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100, 0)} bb/100 <span class="m">(${t("common.handsN", {n: p.hands})})</span>` : "";
+  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100_ev, 0)} bb/100 <span class="m">(${t("common.handsN", {n: p.hands})})</span>` : "";
   const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
       <p style="margin:6px 0 0;font-size:.88rem">${line(t("pos.strongest"), rank.best)}${rank.worst ? "<br>" + line(t("pos.weakest"), rank.worst) : ""}</p>
       ${blinds(by)}
-      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">${t("pos.headsUp", {bb: sgn(by["BTN/SB"].bb_per_100, 0), hands: t("common.handsN", {n: by["BTN/SB"].hands})})}</p>` : ""}`
+      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">${t("pos.headsUp", {bb: sgn(by["BTN/SB"].bb_per_100_ev, 0), hands: t("common.handsN", {n: by["BTN/SB"].hands})})}</p>` : ""}`
     : `<p class="m">${t("pos.noRanking", {hands: t("common.handsN", {n: rank.min_hands})})}</p>`;
-  return `<div class="box"><h3>${t("pos.title")}</h3>${body}</div>`;
+  return `<div class="box"><h3 title="${esc(t("pos.evNote"))}">${t("pos.title")}</h3>${body}</div>`;
 }
 
 // ---- Last session: luck, the session against your usual play, hands to review --------------------------------
@@ -643,7 +655,7 @@ async function viewTournament(id) {
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
   if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; bindIgnore(d.tournament_id); return; }
   const s = d.stack, a = d.allins;
-  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
+  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b><span class="m">${t("common.n", {n: d.decided})}</span></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
   h += `<h2>${t("tour.stackTitle")}</h2><div class="tchart" id="c-stack"></div><p class="m">${t("tour.stackLine",
     {start: num(s.start_bb, 0), end: num(s.end_bb, 0), peak: num(s.peak_bb, 0), n: s.peak_after_hands})}</p>`;
@@ -836,7 +848,7 @@ function findingNumber(l) {
   if (l.kind === "vs_fold") return `${t("find.vsFold", {value: sgn(l.value, 2, " BB")})}
     <div class="m" style="font-weight:400">${t("find.vsFoldDetail", {played: sgn(l.played, 2), folded: sgn(l.folded, 2), hands: t("common.handsN", {n: l.hands})})}</div>`;
   if (l.kind === "vs_fold_total") return t("find.vsFoldTotal", {value: sgn(l.value, 0, " BB"), inHands});
-  if (l.kind === "frequency") return `${t("find.freq", {value: num(l.value, 0), n: l.hands})} <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
+  if (l.kind === "frequency") return `${t("find.freq", {value: num(l.value, 1), n: l.hands})} <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
   if (l.kind === "bb_per_100") return t("find.per100", {value: sgn(l.value, 1), inHands});
   return t("find.total", {value: sgn(l.value, 0, " BB"), inHands});
 }
@@ -867,7 +879,7 @@ async function viewAnalysis(tab) {
     <div class="seg">${ANALYSIS_TABS.map(k => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t("an.tab." + k)}</button></a>`).join("")}</div>`;
 
   if (tab === "overview") {
-    h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
+    h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${pct(o.vpip_pct)} / ${pct(o.pfr_pct)}</b><span class="m">${t("common.n", {n: o.decided})}</span></div>
       <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">${t("an.evAdjusted", {x: sgn(o.bb_per_100_ev, 1)})}</span></div>
       <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? t("an.ci", {lo: num(ri.low, 0), hi: num(ri.high, 0)}) : ""}</span></div>
       ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}<div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
@@ -893,15 +905,15 @@ async function viewAnalysis(tab) {
   if (tab === "money") {
     const shareRes = g => m.profit < 0 && g.profit < 0 ? t("money.ofLoss", {x: num(g.share_of_result_pct, 1)})
       : m.profit > 0 && g.profit > 0 ? t("money.ofProfit", {x: num(g.share_of_result_pct, 1)}) : "";
-    const rows = (list, extra = () => "") => list.map(g => `<tr><td>${esc(g.label)}</td><td>${g.tournaments}</td>
+    const rows = (list, extra = () => "") => list.map(g => `<tr class="${fewClass(g.tournaments, MIN_T)}" title="${fewTip(g.tournaments, MIN_T, "t")}"><td>${esc(g.label)}</td><td>${g.tournaments}</td>
       <td>${money(g.cost)}<div class="m" style="font-size:.78rem">${t("money.ofSpend", {x: num(g.share_of_spend_pct, 1)})}</div></td>
       <td>${sgn(g.profit, 2)}<div class="m" style="font-size:.78rem">${shareRes(g)}</div></td>
-      <td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td><td style="white-space:nowrap">${ciBar(g.interval)}</td>
+      <td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 0, "%")}</td><td style="white-space:nowrap">${ciBar(g.interval)}</td>
       <td class="vcell">${verdict(g)}</td>${extra(g)}</tr>`);
     const head = ["", countHead(), t("col.spend"), t("col.profitUsd"), "ROI", t("col.ci95"), t("col.verdict")];
-    h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 1, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
+    h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 0, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
-          ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 1, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
+          ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 0, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
       <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
       ${o.places && o.places.all && o.places.all.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
@@ -910,11 +922,14 @@ async function viewAnalysis(tab) {
       <p class="m">${t("money.cashOnly")}</p>
       <h2>${t("money.reVsFirst")}</h2>
       ${table(["", countHead("col.countReTip"), t("col.spent"), t("col.returned"), "ROI", t("col.ci95"), t("col.verdict"), t("col.startStack")],
-        [m.first_entries, m.re_entries].map(g => `<tr><td>${esc(g.label)}</td><td>${g.tournaments}</td><td>${money(g.cost)}</td>
-          <td>${money(g.returned)}</td><td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td>
+        [m.first_entries, m.re_entries].map(g => `<tr class="${fewClass(g.tournaments, MIN_T)}" title="${fewTip(g.tournaments, MIN_T, "t")}"><td>${esc(g.label)}</td><td>${g.tournaments}</td><td>${money(g.cost)}</td>
+          <td>${money(g.returned)}</td><td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 0, "%")}</td>
           <td style="white-space:nowrap">${ciBar(g.interval)}</td><td class="vcell">${verdict(g)}</td>
-          <td>${g.avg_start_bb == null ? "–" : bbUnit(g.avg_start_bb, 1)}</td></tr>`))}
-      <p class="m">${t("money.reNote")}</p>`;
+          <td>${g.avg_start_bb == null ? "–" : bbUnit(g.avg_start_bb, 1)}</td></tr>`), "wrap1")}
+      <p class="m">${t("money.reNote")}</p>
+      ${m.tickets && m.tickets.count ? ticketsBox(m.tickets, false) : ""}
+      ${detailTable("money.byBuyinExact", t("col.buyin"), m.by_buyin, x => money(x.key))}
+      ${detailTable("money.byCategory", t("col.tag"), m.by_tag, x => tagLabel(x.key), "col.countTagTip")}`;
   }
   app.innerHTML = h;
 }

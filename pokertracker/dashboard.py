@@ -128,7 +128,7 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         adjusted.append(round(j_run, 1))
         bb_points.append({"at": str(r["first_at"])[:16], "name": r["name"], "net_bb": round(_f(r["net_bb"]), 1),
                           "luck_bb": round(_f(r["luck_bb"]), 1), "actual": round(a_run, 1), "adjusted": round(j_run, 1)})
-    hero = db.query(f"SELECT COUNT(*) AS hands, SUM(vpip) AS vpip, SUM(pfr) AS pfr FROM hero_hands "
+    hero = db.query(f"SELECT COUNT(*) AS hands, SUM(decided) AS decided, SUM(vpip) AS vpip, SUM(pfr) AS pfr FROM hero_hands "
                     f"WHERE site = ?{h_when}", (site, *arg))[0]
     n_hands = int(hero["hands"])
     luck = db.query(f"SELECT COUNT(*) AS n, SUM(net_bb) AS net, SUM(ev_bb) AS ev, SUM(luck_bb) AS luck "
@@ -138,22 +138,26 @@ def dashboard_data(db, site=SITE, period="max", now=None):
     with_hands = db.scalar(f"SELECT COUNT(DISTINCT tournament_id) FROM hands WHERE site = ?{h_when}", (site, *arg)) or 0
     r_when = t_when.replace("started_at", "r.started_at")
     classes = {}
-    for r in db.query("SELECT hp.hole_cards, hp.net_won * 1.0 / h.big_blind AS net_bb FROM hands h "
-                      "JOIN hand_players hp ON hp.site = h.site AND hp.hand_id = h.hand_id "
-                      f"WHERE hp.is_hero AND h.site = ?{h_when.replace('played_at', 'h.played_at')}", (site, *arg)):
+    # ranked by the result with all-in luck removed (EV in all-in hands), so one lost coinflip does not decide it
+    for r in db.query("SELECT hp.hole_cards, hh.net_bb, hh.adj_bb FROM hero_hands hh "
+                      "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
+                      f"WHERE hh.site = ?{h_when.replace('played_at', 'hh.played_at')}", (site, *arg)):
         if k := hand_class(r["hole_cards"]):
-            g = classes.setdefault(k, {"hand": k, "hands": 0, "net_bb": 0.0})
+            g = classes.setdefault(k, {"hand": k, "hands": 0, "net_bb": 0.0, "ev_bb": 0.0})
             g["hands"] += 1
             g["net_bb"] += _f(r["net_bb"])
+            g["ev_bb"] += _f(r["adj_bb"])
     for g in classes.values():
-        g["net_bb"] = round(g["net_bb"], 1)
-    positions = [{"position": r["position"], "hands": int(r["hands"]), "net_bb": _f(r["net_bb"]),
-         "bb_per_100": _f(r["bb_per_100"]), "vpip_pct": _f(r["vpip_pct"]), "pfr_pct": _f(r["pfr_pct"])}
+        g["net_bb"], g["ev_bb"] = round(g["net_bb"], 1), round(g["ev_bb"], 1)
+    positions = [{"position": r["position"], "hands": int(r["hands"]), "decided": int(r["decided"] or 0),
+         "net_bb": _f(r["net_bb"]), "bb_per_100": _f(r["bb_per_100"]), "bb_per_100_ev": _f(r["bb_per_100_ev"]),
+         "vpip_pct": _f(r["vpip_pct"]), "pfr_pct": _f(r["pfr_pct"])}
         for r in db.query(
-            "SELECT position, COUNT(*) AS hands, 100.0 * SUM(vpip) / COUNT(*) AS vpip_pct, "
-            "100.0 * SUM(pfr) / COUNT(*) AS pfr_pct, SUM(net_bb) AS net_bb, "
-            "100.0 * SUM(net_bb) / COUNT(*) AS bb_per_100 FROM hero_hands "
-            f"WHERE site = ?{h_when} GROUP BY position ORDER BY bb_per_100 DESC", (site, *arg))]
+            "SELECT position, COUNT(*) AS hands, SUM(decided) AS decided, "
+            "100.0 * SUM(vpip) / NULLIF(SUM(decided), 0) AS vpip_pct, 100.0 * SUM(pfr) / NULLIF(SUM(decided), 0) AS pfr_pct, "
+            "SUM(net_bb) AS net_bb, 100.0 * SUM(net_bb) / COUNT(*) AS bb_per_100, "
+            "100.0 * SUM(adj_bb) / COUNT(*) AS bb_per_100_ev FROM hero_hands "
+            f"WHERE site = ?{h_when} GROUP BY position ORDER BY bb_per_100_ev DESC", (site, *arg))]
     allin_rows = db.query(f"SELECT equity, ev_bb, invested_bb, luck_bb FROM hero_allins WHERE site = ?{h_when}",
                           (site, *arg))
     return {
@@ -167,14 +171,15 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "bounty_cashed": {"n": len(bounty), "cashed": cashed_bounty,
                           "pct": _pct(cashed_bounty, len(bounty)) if bounty else None},
         "places": place_split(db, site, since),
-        "vpip_pct": 100 * _f(hero["vpip"]) / n_hands if n_hands else None,
-        "pfr_pct": 100 * _f(hero["pfr"]) / n_hands if n_hands else None,
+        "decided": int(hero["decided"] or 0),
+        "vpip_pct": 100 * _f(hero["vpip"]) / int(hero["decided"]) if int(hero["decided"] or 0) else None,
+        "pfr_pct": 100 * _f(hero["pfr"]) / int(hero["decided"]) if int(hero["decided"] or 0) else None,
         "profit_curve": profit_curve, "bb_actual": actual, "bb_adjusted": adjusted,
         "profit_points": profit_points, "bb_points": bb_points,
         "allins": {"count": int(luck["n"]), "net_bb": _f(luck["net"]), "ev_bb": _f(luck["ev"]),
                    "luck_bb": _f(luck["luck"])},
         "luck_badge": luck_badge(allin_rows),
-        "starting_hands": best_and_worst(list(classes.values()), "net_bb"),
+        "starting_hands": best_and_worst(list(classes.values()), "ev_bb"),
         "tags": [{"tag": r["tag"], "n": int(r["n"]), "cost": _f(r["cost"]), "cash": _f(r["cash"]) + _f(r["tickets"]),
                   "cashed": int(r["cashed"]), "cashed_pct": _pct(int(r["cashed"]), int(r["n"])),
                   "roi_pct": 100 * (_f(r["cash"]) + _f(r["tickets"]) - _f(r["cost"])) / _f(r["cost"]) if _f(r["cost"]) else None}
@@ -198,8 +203,8 @@ def dashboard_data(db, site=SITE, period="max", now=None):
                                        "GROUP BY buyin_total ORDER BY buyin_total", (site, *arg))],
         "positions": positions,
         # blinds lose money for almost every player and heads-up (BTN/SB) is a different game: shown, not ranked
-        "position_rank": best_and_worst([p for p in positions if p["position"] not in UNRANKED], "bb_per_100"),
-        "tickets_won": tickets_summary(db, site),                # the whole history: tickets are few
+        "position_rank": best_and_worst([p for p in positions if p["position"] not in UNRANKED], "bb_per_100_ev"),
+        "tickets_won": tickets_summary(db, site, since),         # this period; the whole history is in Money
         "recent": [{"date": str(t["started_at"])[:10], "name": t["name"], "buyin": _f(t["buyin_total"]),
                     "place": t["finish_place"], "players": t["players"], "cash": _f(t["cash_won"]),
                     "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])} for t in reversed(trs[-10:])],

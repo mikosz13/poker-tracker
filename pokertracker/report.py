@@ -45,8 +45,9 @@ def build_report(db) -> str:
         out.append(f"WITHOUT SUMMARY (no ROI yet): {', '.join(str(p['tournament_id']) for p in pending)}")
         out.append("")
 
-    hero = db.query("SELECT COUNT(*) AS hands, ROUND(100.0 * SUM(vpip) / COUNT(*), 1) AS vpip, "
-                    "ROUND(100.0 * SUM(pfr) / COUNT(*), 1) AS pfr, ROUND(SUM(net_bb), 0) AS net_bb FROM hero_hands")[0]
+    hero = db.query("SELECT COUNT(*) AS hands, ROUND(100.0 * SUM(vpip) / NULLIF(SUM(decided), 0), 1) AS vpip, "
+                    "ROUND(100.0 * SUM(pfr) / NULLIF(SUM(decided), 0), 1) AS pfr, ROUND(SUM(net_bb), 0) AS net_bb "
+                    "FROM hero_hands")[0]
     if int(hero["hands"]):
         out.append(f"HERO: {int(hero['hands'])} hands | VPIP {_f(hero['vpip'], 1)}% | PFR {_f(hero['pfr'], 1)}% "
                    f"| net {_f(hero['net_bb'], 0)} BB")
