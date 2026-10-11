@@ -80,7 +80,7 @@ class ServerTests(unittest.TestCase):
     def test_analysis_endpoint(self):
         status, body = self.get("/api/analysis")
         self.assertEqual(status, 200)
-        self.assertEqual(set(json.loads(body)), {"overview", "leaks", "strengths", "money", "thresholds"})
+        self.assertEqual(set(json.loads(body)), {"overview", "leaks", "strengths", "money", "tested", "thresholds"})
 
     def test_deck_colours_setting(self):
         four = lambda: json.loads(self.get("/api/settings")[1])["four_color"]

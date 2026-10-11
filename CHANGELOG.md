@@ -3,9 +3,11 @@
 ## Unreleased
 - New "Analysis" view over the whole history, with built-in tips: overview, leaks, strengths, and money and variance.
   Leaks are measured against a baseline (a big blind call compared with folding in the same spot, folding to 3-bets as
-  a frequency after your own open), never as raw sums. A finding is shown only when it stands out from chance: "likely"
-  beyond two standard errors, "possible" between one and two (starting-hand types stay "possible"). Every finding
-  shows its sample, a plain-words tip and the 5 worst hands. The ROI comes with a 95 % error margin.
+  a frequency after your own open), never as raw sums. A finding is shown only when it stands out from chance.
+  Every finding shows its sample, a plain-words tip and the 5 worst hands. Results are EV-adjusted (all-in EV instead of the actual
+  result in all-in hands); folding means losing exactly the blind and ante posted in that hand; all checked spots are
+  corrected together for multiple comparisons (Benjamini-Hochberg: "likely" at q <= 5 %, "possible" at q <= 20 %); the
+  ROI comes with a 95 % bootstrap interval over tournaments.
 
 ## 0.5.2 (2026-10-11)
 - Luck badge: all-ins drawing dead (equity 0) or locked (equity 1) add no variance, now covered by tests; when a period

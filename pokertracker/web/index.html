@@ -605,25 +605,29 @@ matchMedia("(max-width:560px)").addEventListener("change", () => {
 const CONF = {likely: "likely", possible: "possible – could still be chance"};
 function findingNumber(l) {
   if (l.kind === "vs_fold") return `${sgn(l.value, 2, " BB")} per hand compared with folding
-    <div class="m" style="font-weight:400">playing ${sgn(l.played.per_hand, 2)} BB per hand (${l.played.hands} hands) ·
-    folding ${sgn(l.folded.per_hand, 2)} BB per hand (${l.folded.hands} hands). Rough: you play other hands than you fold.</div>`;
+    <div class="m" style="font-weight:400">playing ${sgn(l.played, 2)} BB per hand · folding would have lost exactly
+    your blind and ante, ${sgn(l.folded, 2)} BB per hand · ${l.hands} hands</div>`;
+  if (l.kind === "vs_fold_total") return `${sgn(l.value, 0, " BB")} compared with folding it every time, in ${l.hands} hands`;
   if (l.kind === "frequency") return `${num(l.value, 0)}% of ${l.hands} times <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
   if (l.kind === "bb_per_100") return `${sgn(l.value, 1)} bb/100 in ${l.hands} hands`;
   return `${sgn(l.value, 0, " BB")} in ${l.hands} hands`;
 }
-const worstList = hands => `<details><summary>Show the ${hands.length} worst hands</summary>${table(["When", "Pos", "Cards", "Stack", "BB"],
+const worstList = hands => `<details><summary>Show the ${hands.length} worst hands</summary>${table(["When", "Pos", "Cards", "Stack", "BB (EV-adj.)", "BB"],
   hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(x.at)}</td><td>${esc(x.position || "")}</td>
-    <td>${x.cards ? cards(x.cards) : "–"}</td><td>${num(x.stack_bb, 0)} BB</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
+    <td>${x.cards ? cards(x.cards) : "–"}</td><td>${num(x.stack_bb, 0)} BB</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
 async function viewAnalysis() {
   const mine = routeSeq, a = await api("/api/analysis");
   if (mine !== routeSeq) return;
   const o = a.overview, m = a.money;
+  const ri = m.roi_interval;
   let h = `<h1>Analysis</h1><p class="m">Your whole history (${o.tournaments} tournaments with a summary, ${o.hands} hands).
-    A finding is shown only when it stands out from chance: <b>likely</b> means more than two typical swings away from
-    zero, <b>possible</b> one to two, so it could still be luck. Every number shows its sample.</p>`;
+    Results are EV-adjusted: in all-in hands the all-in EV replaces the actual result, so single coinflips do not
+    create findings. <b>${a.tested} spots checked</b>; the chance of false alarms is corrected for all of them together
+    (Benjamini–Hochberg): <b>likely</b> means a false-discovery rate under 5 %, <b>possible</b> under 20 %.</p>`;
   h += `<div class="k"><div>Hands<b>${o.hands}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
-    <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b></div><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">± ${num(m.roi_margin_pct, 0)}% (95%)</span></div>
+    <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">EV-adjusted ${sgn(o.bb_per_100_ev, 1)}</span></div>
+    <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? `95%: ${num(ri.low, 0)}% to ${num(ri.high, 0)}%` : ""}</span></div>
     <div>ITM<b>${num(o.itm_pct, 1)}%</b></div><div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
     <span class="m">actual ${sgn(o.allins.actual_bb, 0)} · luck ${sgn(o.allins.luck_bb, 0)}</span></div></div>`;
 
@@ -633,7 +637,8 @@ async function viewAnalysis() {
       <div class="big">${findingNumber(l)}</div><p style="margin:6px 0 0">${esc(l.tip)}</p>
       <p class="m" style="margin:4px 0 0">${l.sample === "small" ? "Small sample. " : ""}About ${num(l.cost_bb, 0)} BB over this history.</p>
       ${l.worst && l.worst.length ? worstList(l.worst) : ""}</div>`).join("")
-    : `<p class="m">Nothing stands out from chance yet. That is good news, or the sample is still small.</p>`;
+    : `<p class="m">Nothing stands out from chance among the ${a.tested} spots checked. No spot is clearly costing you
+        money beyond what luck can explain; with more hands smaller leaks can show up here.</p>`;
 
   h += `<h2>Strengths</h2>`;
   h += a.strengths.length ? a.strengths.map(x => `<div class="box finding good"><h3>${esc(x.title)}
@@ -641,8 +646,11 @@ async function viewAnalysis() {
     : `<p class="m">Nothing stands out from chance yet.</p>`;
 
   h += `<h2>Money and variance</h2>
-    <p>ROI ${sgn(m.roi_pct, 0, "%")} over ${m.tournaments} tournaments, give or take <b>${num(m.roi_margin_pct, 0)} points</b>
-      (95%). ${m.roi_margin_pct > 30 ? "Tournament results swing a lot, so at this sample the ROI still says little about your skill; the hand-by-hand findings above say more." : ""}</p>
+    <p>ROI ${sgn(m.roi_pct, 0, "%")} over ${m.tournaments} tournaments.${ri ? ` With 95% confidence it lies between
+      <b>${num(ri.low, 0)}%</b> and <b>${num(ri.high, 0)}%</b> (bootstrap over your tournaments, re-entries included).
+      ${ri.high < 0 ? "The whole interval is below zero: despite the swings, these tournaments have cost you money so far; only how much is uncertain."
+        : ri.low > 0 ? "The whole interval is above zero: you have been winning, beyond what the swings explain."
+        : "The interval includes zero: at this sample the ROI cannot tell a winning player from a losing one."}` : ""}</p>
     ${table(["Buy-in", "Tournaments", "Spend", "Share of spend", "Profit $", "ROI"], m.tiers.map(t => `<tr><td>${esc(t.tier)}</td>
       <td>${t.tournaments}</td><td>${money(t.cost)}</td><td>${num(t.share_of_spend_pct, 0)}%</td><td>${sgn(t.profit, 2)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`))}
     <p class="m">Re-entries: ${m.reentries.tournaments} tournaments with a re-entry cost ${money(m.reentries.extra_cost)} extra;
