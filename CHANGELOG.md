@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.6.0 (2026-10-11)
 - Last session on the dashboard tells what happened at a glance:
   - a summary sentence (result, all-in luck, busts and the bust worth a look),
   - the session's luck badge,
