@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Places in the field apart for entries from the start and late registrations: with a late registration, players
+  who busted before Hero sat down count in the field, so the share looks better than it is. "Where you finish" shows
+  both, with the average player's line only for entries from the start; the top 10% / 15% tiles show both under the
+  total, and every place figure explains it in a tooltip. Money's bootstrap reads tournaments in a fixed order, so the
+  overall interval and the groups' intervals come from the same resampling.
 - ITM is shown only where the files can tell it: tournaments without bounties and satellites (a ticket counts).
   In bounty tournaments the summary gives only the total and hand histories hold no bounty payouts, so a cash there
   can be knockouts alone: the app shows "Cashed (place or bounty)" with an explanation, and tables show "Cashed".

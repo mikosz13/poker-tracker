@@ -3,7 +3,7 @@ import html
 import math
 from datetime import datetime, timedelta
 
-from .places import place_stats
+from .places import place_split
 from .tickets import tickets_summary
 from .tournament_report import CSS, SITE, _sign
 
@@ -166,7 +166,7 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "itm": itm, "itm_n": len(known), "itm_pct": _pct(itm, len(known)) if known else None, "hands": n_hands,
         "bounty_cashed": {"n": len(bounty), "cashed": cashed_bounty,
                           "pct": _pct(cashed_bounty, len(bounty)) if bounty else None},
-        "places": place_stats(db, site, since),
+        "places": place_split(db, site, since),
         "vpip_pct": 100 * _f(hero["vpip"]) / n_hands if n_hands else None,
         "pfr_pct": 100 * _f(hero["pfr"]) / n_hands if n_hands else None,
         "profit_curve": profit_curve, "bb_actual": actual, "bb_adjusted": adjusted,

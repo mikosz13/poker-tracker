@@ -3,6 +3,10 @@
 place_pct = place / players x 100 (the final place, over every day of a multi-day tournament; a day-1 advance without
 its later days has none). Top 10 % and top 15 % of the field come with a 95 % bootstrap interval over tournaments.
 A player of average skill lands in each band in proportion to its width: 10 % of finishes in the top 10 %, and so on.
+
+A late registration flatters the share: players who busted before Hero sat down count in the field, so Hero's place is
+better against it than against the players Hero actually met. Hence the split by entry: only entries from the start
+compare fairly with an average player.
 """
 import numpy as np
 
@@ -23,11 +27,14 @@ def share_interval(flags, samples=SAMPLES, seed=SEED):
     return {"low": round(float(lo), 1), "high": round(float(hi), 1), "level": 95}
 
 
-def place_stats(db, site=SITE, since=None):
-    when = " AND started_at >= ?" if since else ""
+def place_stats(db, site=SITE, since=None, entry=None):
+    """entry: None for every tournament, "start" or "late" for one kind of first entry (from the entry tag)."""
+    when = " AND r.started_at >= ?" if since else ""
+    kind = (" AND EXISTS (SELECT 1 FROM tournament_tags g WHERE g.site = r.site AND g.tournament_id = r.tournament_id "
+            "AND g.tag = ?)") if entry else ""
     pcts = [float(r["place_pct"]) for r in db.query(
-        f"SELECT place_pct FROM tournament_results WHERE site = ? AND place_pct IS NOT NULL{when}",
-        (site, *((since,) if since else ())))]
+        f"SELECT r.place_pct FROM tournament_results r WHERE r.site = ? AND r.place_pct IS NOT NULL{when}{kind} "
+        "ORDER BY r.tournament_id", (site, *((since,) if since else ()), *((f"entry:{entry}",) if entry else ())))]
     n = len(pcts)
     out = {"n": n}
     for key, limit in (("top10", 10), ("top15", 15)):
@@ -38,3 +45,9 @@ def place_stats(db, site=SITE, since=None):
                     for key, lo, hi in BANDS
                     for c in [sum(1 for p in pcts if (p > lo or (lo == 0 and p >= 0)) and p <= hi)]]
     return out
+
+
+def place_split(db, site=SITE, since=None):
+    """Every tournament, and apart: entries from the start (fair against an average player) and late registrations."""
+    return {"all": place_stats(db, site, since), "start": place_stats(db, site, since, "start"),
+            "late": place_stats(db, site, since, "late")}
