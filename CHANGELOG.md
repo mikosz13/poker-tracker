@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+- Dashboard: the last session's tournament list scrolls inside its box (about 8 rows, the column header stays visible)
+  instead of growing the page, with "All tournaments →" opening the tournament list for the dashboard's period. The
+  tournament list has a period filter.
+
 ## 0.6.0 (2026-10-11)
 - docs/INSTALL.md starts with a seven-step "Getting started" in English and Polish (download, start, one export
   folder, import with "Watch this folder", done); README links to it.

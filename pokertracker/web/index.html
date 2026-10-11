@@ -106,6 +106,9 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .finding .big{font-size:1.05rem;font-weight:700;margin:2px 0}.finding details{margin-top:6px}
 .finding summary{cursor:pointer;color:var(--blue);font-size:.88rem}
 .sess-sum{margin:8px 0 0;font-size:1rem;line-height:1.45}
+.scrollbox{max-height:21rem;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+.scrollbox table{border-collapse:separate;border-spacing:0}   /* collapsed borders let rows show above a sticky header */
+.scrollbox th{position:sticky;top:0;background:var(--card);z-index:1;box-shadow:0 1px 0 var(--line)}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -151,7 +154,7 @@ function chart(series, colors = ["var(--blue)", "var(--orange)"]) {
     s.map((v, i) => `${(i * w / Math.max(s.length - 1, 1)).toFixed(1)},${y(v)}`).join(" ")}"/>`).join("");
   return `<svg class="chart" viewBox="0 0 ${w} ${h}"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" stroke="currentColor" stroke-opacity=".25"/>${lines}</svg>`;
 }
-const table = (head, rows) => `<div class="scroll"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
 const luckLink = '<a href="#/luck">How is luck calculated?</a>';
 
 // ---- Dashboard -------------------------------------------------------------
@@ -185,7 +188,8 @@ async function viewDashboard(period) {
       ${si.busts ? reviewHands(si) : ""}
       ${table(["Tournament", "Place", "Profit $", "Luck BB"], s.tournaments.map(t => `<tr class="click" onclick="location.hash='#/t/${t.tournament_id}'">
         <td>${esc(t.name)} <span class="m">$${num(t.buyin_total, 2)}</span></td><td>${t.finish_place ?? "–"}/${t.players ?? "–"}</td>
-        <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`))}</div>`;
+        <td>${t.profit == null ? '<span class="m">no summary</span>' : sgn(t.profit, 2)}</td><td>${sgn(t.luck_bb)}</td></tr>`), "scrollbox")}
+      <p style="margin:8px 0 0"><a href="#/tournaments?period=${encodeURIComponent(d.period)}">All tournaments →</a></p></div>`;
   }
   const label = PERIODS.find(p => p[0] === d.period)[1];
   h += `<h2>${d.period === "max" ? "All tournaments" : "Last " + esc(label)}</h2>
@@ -406,7 +410,9 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
 }
 
 // ---- Tournaments ------------------------------------------------------------
-let filters = {buyin: "", format: "", entry: ""};
+let filters = {buyin: "", format: "", entry: "", period: "max"};
+const SPANS_H = {"24h": 24, "3d": 72, "1w": 168, "2w": 336, "4w": 672, "3m": 91 * 24, "6m": 182 * 24};
+const inPeriod = (date, period) => !SPANS_H[period] || Date.parse(String(date).replace(" ", "T")) >= Date.now() - SPANS_H[period] * 3600e3;
 // "Oct 10", with the year only when it is not this year: keeps the date column narrow
 const shortDate = s => {
   const d = new Date(String(s).slice(0, 10) + "T12:00");
@@ -420,7 +426,7 @@ async function viewTournaments() {
   const opts = (vals, cur, label) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option ${String(v) === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
   const draw = () => {
-    const rows = all.filter(t => (!filters.buyin || String(t.buyin_total) === filters.buyin)
+    const rows = all.filter(t => inPeriod(t.date, filters.period) && (!filters.buyin || String(t.buyin_total) === filters.buyin)
       && (!filters.format || t.format === filters.format)
       && (!filters.entry || t.tags.includes("entry:" + filters.entry)));
     const done = rows.filter(t => t.profit != null);
@@ -434,11 +440,12 @@ async function viewTournaments() {
         <td>${t.hands ? (t.knockouts || 0) : "–"}</td><td>${t.luck_bb == null ? "–" : sgn(t.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>Tournaments</h1><div class="filters">
+    <select id="fp">${PERIODS.map(([k, t]) => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${k === "max" ? "Any time" : "Last " + t}</option>`).join("")}</select>
     <select id="fb">${opts(all.map(t => t.buyin_total), filters.buyin, "All buy-ins")}</select>
     <select id="ff">${opts(all.map(t => t.format), filters.format, "All formats")}</select>
     <select id="fe"><option value="">Any entry</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>From the start</option>
       <option value="late" ${filters.entry === "late" ? "selected" : ""}>Late registration</option></select></div><div id="list"></div>`;
-  for (const [id, key] of [["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
+  for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
     document.getElementById(id).onchange = e => { filters[key] = e.target.value; draw(); };
   draw();
 }
@@ -791,12 +798,16 @@ async function route() {
   routeSeq++;
   const h = location.hash || "#/";
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
-    a.getAttribute("href") === h || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));
+    a.getAttribute("href") === h || (a.getAttribute("href") === "#/tournaments" && /^#\/(t\/|hand\/|tournaments\?)/.test(h))));
   if (!h.startsWith("#/hand/")) { replay = null; stopPlay(); }
   try {
     let m;
     if (h === "#/" || h === "#") await viewDashboard();
-    else if (h === "#/tournaments") await viewTournaments();
+    else if (h === "#/tournaments" || h.startsWith("#/tournaments?")) {
+      const period = new URLSearchParams(h.split("?")[1] || "").get("period");
+      if (period) filters.period = period;
+      await viewTournaments();
+    }
     else if ((m = h.match(/^#\/t\/(\d+)$/))) await viewTournament(m[1]);
     else if ((m = h.match(/^#\/hand\/(\w+)$/))) await viewHand(m[1]);
     else if (h === "#/analysis") await viewAnalysis();
