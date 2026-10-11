@@ -3,8 +3,7 @@
 Zasada: tłumaczymy tylko to, co naturalnie brzmi po polsku. Pokerowy żargon zostaje po angielsku, bo tak mówią polscy
 gracze. Określenia stylu gry: termin angielski + polski w nawiasie (albo w dymku).
 
-Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = termin + polskie w nawiasie / dymku ·
-**?** = propozycja do decyzji Mika.
+Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = termin + polskie w nawiasie / dymku.
 
 ## 1. Pokerowy żargon: zostaje po angielsku (EN)
 
@@ -21,9 +20,8 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 | bounty, knockout (KO), bad beat, suckout, heads-up | EN | |
 | stack, Hero | EN | |
 | bb/100, BB (jednostka) | EN | |
-| spot | EN **?** | gracze mówią „spot”; alternatywa: „sytuacja” |
-| replayer | EN **?** | alternatywa: „odtwarzacz rąk” |
-| Dashboard | EN **?** | nazwa zakładki; alternatywa: „Pulpit” (brzmi sztucznie) |
+| spot | EN | gracze mówią „spot” |
+| replayer | EN | |
 
 ## 2. Tłumaczymy (PL)
 
@@ -58,17 +56,18 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 | prize | wygrana |
 | knockouts (licznik) | KO |
 | hands to review | ręce do przejrzenia |
-| busted | odpadnięcie (bust) |
+| busted / bust | wylot |
 | biggest pots won / lost | największe wygrane / przegrane pule |
 | compared with your usual play | w porównaniu z Twoją normą |
 | time played | czas gry |
 | most at once | najwięcej turniejów naraz |
 | best finish | najlepsze miejsce |
+| Dashboard (zakładka) | Pulpit |
 | Tournaments (zakładka) | Turnieje |
 | Analysis (zakładka) | Analiza |
 | Import (zakładka) | Import |
 | How luck works (zakładka) | Jak liczymy szczęście |
-| Overview / Money (zakładki Analizy) | Przegląd / Pieniądze |
+| Overview / Money (zakładki Analizy) | Przegląd / Kasa |
 | Leaks & strengths (zakładka) | Leaki (wycieki) i mocne strony |
 | Stack depth (zakładka v2) | Głębokość stacku |
 | Strengths | Mocne strony |
@@ -107,15 +106,15 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 
 ## 6. Przykładowe zdania z ekranów
 
-**Dashboard → Ostatnia sesja**
+**Pulpit → Ostatnia sesja**
 > 11 turniejów, 1 ITM, −45,31 $ (6 bez podsumowania). Szczęście w all-inach +286 BB: szczęście (mniej więcej 1 na 6
-> graczy). 16 odpadnięć; warto obejrzeć: JJ vs 96s w Bounty Hunters Hyper Special.
+> graczy). 16 wylotów; warto obejrzeć: JJ vs 96s w Bounty Hunters Hyper Special.
 
 > Czas gry 8 h 41 min · najwięcej 3 turnieje naraz · 24 KO · 5 re-entry (20,00 $) · najlepsze miejsce: 154/2841.
 
 > W porównaniu z Twoją normą: VPIP 35,3% (zwykle 30,5%) **wyżej** · PFR 24,1% (zwykle 21,1%) **wyżej**.
 
-**Dashboard → kafelki i wykresy**
+**Pulpit → kafelki i wykresy**
 > Turnieje 131 · Zysk (gotówka) −1 863 $ · ROI −55% · ITM 33,6% (44 z 131) · KO 143.
 > Mała próbka (18 turniejów). Przy tak małej próbce wyniki turniejowe to głównie wariancja.
 
@@ -127,7 +126,7 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 
 > **Re-shove all-in** · prawdopodobne · +298 BB w 167 rękach (+1,78 BB na rękę).
 
-**Analiza → Pieniądze**
+**Analiza → Kasa**
 > $30+: strata ponad przypadek; to 50% Twoich wydatków, więc ma największy wpływ na Twój ogólny wynik.
 
 > Pierwsze wejścia −58%, re-entry −47% (re-entry zaczynają średnio z 28 BB, pierwsze wejścia z 52 BB).
@@ -140,10 +139,10 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 
 > Wszystko liczymy w big blindach, więc all-in na 25/50 waży tyle samo co ten sam all-in na 500/1000.
 
-## 7. Do decyzji (?)
+## 7. Decyzje Mika (11.10.2026)
 
-1. **Dashboard**: zostaje „Dashboard” (proponuję) czy „Pulpit”?
-2. **spot**: zostaje „spot” (proponuję) czy „sytuacja”?
-3. **replayer**: zostaje „replayer” (proponuję) czy „odtwarzacz rąk”?
-4. **Money**: „Pieniądze” (proponuję) czy „Finanse”?
-5. **busted**: „odpadnięcie” (proponuję) czy „bust”?
+- Dashboard → **Pulpit**
+- spot → zostaje **spot**
+- replayer → zostaje **replayer**
+- Money → **Kasa**
+- busted → **wylot**

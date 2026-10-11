@@ -28,6 +28,6 @@ To be done after Money (#20) and before Analysis v2. Decisions by Mik (2026-10-1
 
 ## 4. Order
 1. `docs/glossary-pl.md`: every term with its decision (stays / translated / term + brackets) and example sentences from
-   several screens (Dashboard, Analysis, Last session, "How luck works"). Shown to Mik for approval before translating.
+   several screens (Dashboard, Analysis, Last session, "How luck works"). Approved by Mik on 2026-10-11.
 2. Implementation in a PR, checked visually in both languages (Polish texts are longer; nothing may be cut off at
    800 px).
