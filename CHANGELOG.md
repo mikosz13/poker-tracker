@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- The tournament list (and the dashboard's last session) loads in about 0.1 s instead of 0.7 s: knockouts are counted
+  once for all tournaments instead of once per tournament.
+- The app window can be made no narrower than 800 px: the app is designed for a desktop window (the HTML
+  reports from the command line stay phone friendly).
 - New "Analysis" view over the whole history, with built-in tips: overview, leaks, strengths, and money and variance.
   Leaks are measured against a baseline (a big blind call compared with folding in the same spot, folding to 3-bets as
   a frequency after your own open), never as raw sums. A finding is shown only when it stands out from chance.
