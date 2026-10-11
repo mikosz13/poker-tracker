@@ -625,5 +625,9 @@
  "places.late": "Late reg",
  "places.introSplit": "Twoje końcowe miejsce jako część pola. Kreska pokazuje, gdzie trafia gracz o przeciętnych umiejętnościach (do każdego przedziału proporcjonalnie do jego szerokości); tylko przy wejściach od startu.",
  "places.lateNote": "Tu bez porównania z przeciętnym graczem: w polu są gracze, którzy odpadli przed Twoim wejściem, więc te miejsca wyglądają lepiej, niż są.",
- "places.none": "Nie ma jeszcze takich turniejów z miejscem."
+ "places.none": "Nie ma jeszcze takich turniejów z miejscem.",
+ "col.count": "Turnieje",
+ "col.countTip": "Liczba turniejów z podsumowaniem w tym wierszu.",
+ "col.countTagTip": "Liczba turniejów z tą etykietą. Turniej ma kilka etykiet i liczy się przy każdej, więc suma jest większa niż liczba Twoich turniejów.",
+ "col.countReTip": "Przy re-entry: turnieje z co najmniej jednym re-entry."
 }

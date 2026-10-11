@@ -126,7 +126,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
-.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}
+.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}th span.tip{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .band{display:grid;grid-template-columns:5.5em 1fr 6.5em;gap:10px;align-items:center;margin:6px 0}.band-l{font-size:.9rem}
 .band-bar{position:relative;height:14px;background:var(--bg);border:1px solid var(--line);border-radius:7px}
 .band-fill{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:7px}
@@ -246,7 +246,9 @@ async function api(path, opts) {
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
 // ITM only without bounties; in bounty tournaments only "cashed (place or bounty)" is known from the files
-const cashedHead = () => [`<span title="${esc(t("cashed.tip"))}">${t("col.cashed")}</span>`, t("col.cashedPct")];
+// "Tournaments" with what it counts in a tooltip (a dotted underline marks it)
+const countHead = (tip = "col.countTip") => `<span class="tip" title="${esc(t(tip))}">${t("col.count")}</span>`;
+const cashedHead = () => [`<span class="tip" title="${esc(t("cashed.tip"))}">${t("col.cashed")}</span>`, t("col.cashedPct")];
 function itmTiles(itm, n, b) {
   return `<div>${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>
     ${b && b.n ? `<div title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
@@ -364,15 +366,15 @@ async function viewDashboard(period) {
   const tagRows = pre => d.tags.filter(x => x.tag.startsWith(pre)).map(x =>
     `<tr><td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
   const entry = tagRows("entry:");
-  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), "n", ...cashedHead(), "ROI"], entry)}` +
+  if (entry.length) h += `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), countHead(), ...cashedHead(), "ROI"], entry)}` +
     (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "");
-  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), "n", ...cashedHead(), t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
+  if (d.by_buyin.length) h += `<h2>${t("dash.byBuyin")}</h2>${table([t("col.buyin"), countHead(), ...cashedHead(), t("col.profitUsd"), "ROI"], d.by_buyin.map(b =>
     `<tr><td>${money(b.buyin)}</td><td>${b.n}</td><td>${b.cashed}</td><td>${pct(b.cashed_pct)}</td><td>${sgn(b.profit, 2)}</td><td>${sgn(b.roi_pct, 0, "%")}</td></tr>`))}`;
   if (d.positions.length) h += `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   const other = d.tags.filter(x => !x.tag.startsWith("entry:")).map(x =>
     `<tr><td>${tagLabel(x.tag)}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
-  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), "n", ...cashedHead(), "ROI"], other)}`;
+  if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), countHead("col.countTagTip"), ...cashedHead(), "ROI"], other)}`;
   app.innerHTML = h;
   bindPeriods();
   charts = [];
@@ -896,7 +898,7 @@ async function viewAnalysis(tab) {
       <td>${sgn(g.profit, 2)}<div class="m" style="font-size:.78rem">${shareRes(g)}</div></td>
       <td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td><td style="white-space:nowrap">${ciBar(g.interval)}</td>
       <td class="vcell">${verdict(g)}</td>${extra(g)}</tr>`);
-    const head = ["", "n", t("col.spend"), t("col.profitUsd"), "ROI", t("col.ci95"), t("col.verdict")];
+    const head = ["", countHead(), t("col.spend"), t("col.profitUsd"), "ROI", t("col.ci95"), t("col.verdict")];
     h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 1, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
           ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 1, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
@@ -907,7 +909,7 @@ async function viewAnalysis(tab) {
       <h2>${t("money.byFormat")}</h2>${table([...head, t("col.tickets")], rows(m.formats, g => `<td>${g.tickets ? money(g.tickets) : "–"}</td>`))}
       <p class="m">${t("money.cashOnly")}</p>
       <h2>${t("money.reVsFirst")}</h2>
-      ${table(["", "n", t("col.spent"), t("col.returned"), "ROI", t("col.ci95"), t("col.verdict"), t("col.startStack")],
+      ${table(["", countHead("col.countReTip"), t("col.spent"), t("col.returned"), "ROI", t("col.ci95"), t("col.verdict"), t("col.startStack")],
         [m.first_entries, m.re_entries].map(g => `<tr><td>${esc(g.label)}</td><td>${g.tournaments}</td><td>${money(g.cost)}</td>
           <td>${money(g.returned)}</td><td>${g.roi_pct == null ? "–" : sgn(g.roi_pct, 1, "%")}</td>
           <td style="white-space:nowrap">${ciBar(g.interval)}</td><td class="vcell">${verdict(g)}</td>

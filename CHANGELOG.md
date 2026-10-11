@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Tables say "Tournaments" instead of "n", with a tooltip on what is counted (for categories: a tournament counts
+  under each of its labels, so the numbers add up to more than the total).
 - Places in the field apart for entries from the start and late registrations: with a late registration, players
   who busted before Hero sat down count in the field, so the share looks better than it is. "Where you finish" shows
   both, with the average player's line only for entries from the start; the top 10% / 15% tiles show both under the
