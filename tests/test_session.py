@@ -107,7 +107,7 @@ class SessionInsightTests(unittest.TestCase):
 
     def test_summary_sentence(self):
         i = self.insights(900001)
-        self.assertTrue(i["summary"].startswith("1 tournament, 1 in the money, +$0.00."), i["summary"])
+        self.assertTrue(i["summary"].startswith("1 tournament, 1 cashed, +$0.00."), i["summary"])
         self.assertIn("Busted 1 time.", i["summary"])                   # an 18 % bust is not called a must-see
 
     def test_biggest_pots_and_no_opponent_ids(self):

@@ -73,7 +73,7 @@ class StageImportTests(unittest.TestCase):
         import_texts(self.db, [("s1.txt", STAGE1_ADVANCED), ("bust.txt", STAGE1_BUST)])
         r = result(self.db, 900101)
         self.assertEqual([round(float(r[k]), 2) for k in ("total_cost", "cash_won", "profit")], [10.0, 7.02, -2.98])
-        self.assertEqual(r["in_the_money"], 0)                      # going through to Day 2 is not ITM
+        self.assertEqual((r["cashed"], r["in_the_money"]), (0, None))  # going through to Day 2 is not cashing; bounty
         self.assertEqual((float(result(self.db, 900102)["total_cost"]), float(result(self.db, 900102)["cash_won"])),
                          (10.0, 0.0))
 
@@ -83,7 +83,7 @@ class StageImportTests(unittest.TestCase):
         self.assertEqual(self.db.scalar("SELECT first_day_id FROM tournaments WHERE tournament_id = 900103"), 900101)
         self.assertIsNone(result(self.db, 900103))                  # counted under day 1
         r = result(self.db, 900101)
-        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["finish_place"], r["in_the_money"]),
+        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["finish_place"], r["cashed"]),
                          (10.0, 52.12, 120, 1))                     # $7.02 + $45.10; ITM on the day that paid
         self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM tournament_results"), 1)
 
@@ -106,7 +106,7 @@ class StageImportTests(unittest.TestCase):
         rows = tournaments_list(self.db)
         text = summary_sentence(rows, {"luck": {"count": 0}, "busts": []}, "pl")
         self.assertIn("Awans do Day 2 w $5 Ocean KO Opener, $1M GTD [Stage 1].", text)
-        self.assertIn("0 ITM", text)
+        self.assertIn("0 z gotówką", text)
 
     def test_migration_moves_ticket_value_out_of_cash(self):
         self.db.execute("INSERT INTO tournaments (site, tournament_id, name, buyin_total, prize_won, prize_is_ticket, "

@@ -148,7 +148,7 @@ LUCK_KEYS = {"Very lucky": "luck.veryLucky", "Lucky": "luck.lucky", "Average": "
 
 def summary_sentence(tournaments, s, lang="en"):
     known = [x for x in tournaments if x["profit"] is not None]
-    itm = sum(int(x["in_the_money"] or 0) for x in known)
+    itm = sum(int(x["cashed"] or 0) for x in known)            # any cash or ticket: place or bounty
     parts = [t(lang, "sum.tournaments", n=len(tournaments))]
     if known:
         profit = sum(_f(x["profit"]) for x in known)

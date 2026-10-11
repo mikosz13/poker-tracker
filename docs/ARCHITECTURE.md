@@ -21,6 +21,7 @@ flowchart LR
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
 | `summary.py` (multi-day) | Prize split into cash and ticket face value; `stage`, `advanced_to`, `first_day_id`: a later day joins its day 1 in `tournament_results` |
+| `places.py` | Final place as a share of the field: top 10% / 15% with a bootstrap interval, and bands for the place chart |
 | `tickets.py` | Tickets won in satellites, and the tournament each was probably used in (information only; the cost stays the full buy-in) |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
 | `scope.py`, `scope_review.py` | What is never imported: Sit & Go, PLO/Omaha and other games, non-dollar tournaments, cash games, freerolls ($0 buy-in) and unreadable summaries (whole tournament, remembered in `excluded_tournaments`); a read-only review of what the rules would remove; the player's ignore list shares `excluded_tournaments` (reason `ignored`), and `tournament_files` remembers which files held each tournament so a restored one is read again |

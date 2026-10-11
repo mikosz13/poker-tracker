@@ -14,7 +14,7 @@ def build_report(db) -> str:
             n = int(r["tournaments"])
             ticket = f" | tickets ${_f(r['ticket_value'], 0)}" if float(r["ticket_value"]) else ""
             out.append(f"  {r['format']:<10} n={n:<3} cost ${_f(r['total_cost'])} | cash ${_f(r['cash_won'])}"
-                       f"{ticket} | ITM {int(r['itm'])}/{n} | ROI {_f(r['roi_pct'], 0)}%")
+                       f"{ticket} | cashed {int(r['cashed'])}/{n} | ROI {_f(r['roi_pct'], 0)}%")
         out.append("")
 
     tags = db.query("SELECT * FROM tag_results ORDER BY tag")
@@ -23,7 +23,7 @@ def build_report(db) -> str:
         for r in tags:
             n = int(r["tournaments"])
             out.append(f"  {r['tag']:<34} n={n:<3} cost ${_f(r['total_cost'])} | cash ${_f(r['cash_won'])} | "
-                       f"ITM {int(r['itm'])}/{n} | ROI {_f(r['roi_pct'], 0)}%")
+                       f"cashed {int(r['cashed'])}/{n} | ROI {_f(r['roi_pct'], 0)}%")
         out.append("")
 
     trs = db.query(

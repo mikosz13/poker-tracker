@@ -163,7 +163,20 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 Bilety liczymy do ROI po wartości nominalnej, po obu stronach: satelita = koszt buy-in, wygrana = wartość biletu;
 turniej docelowy = koszt pełny buy-in, nawet przy wejściu biletem.
 
-## 9. Odmiana przez liczby (w aplikacji)
+## 9. ITM, gotówka i miejsca (decyzja 11.10.2026)
+
+| EN | PL |
+|---|---|
+| ITM (only without bounties; a ticket counts) | ITM (tylko bez bounty; bilet się liczy) |
+| Cashed (place or bounty) | Z gotówką (miejsce lub bounty) |
+| Top 10% / 15% of the field | Top 10% / 15% pola |
+| Where you finish | Gdzie kończysz |
+
+W turniejach bounty podsumowanie podaje tylko łączną kwotę, a historie rąk nie zawierają wypłat bounty, więc nagrody
+za miejsce nie da się oddzielić od knockoutów. Top 10% / 15% pola to fakty (miejsce / liczba graczy), z przedziałem
+95% (bootstrap), bez założeń o strukturze wypłat.
+
+## 10. Odmiana przez liczby (w aplikacji)
 
 Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama
 reguła w `pokertracker/i18n.py`; testy dla 1, 2, 5, 12, 22, 25).

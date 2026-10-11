@@ -3,6 +3,7 @@ import html
 import math
 from datetime import datetime, timedelta
 
+from .places import place_stats
 from .tickets import tickets_summary
 from .tournament_report import CSS, SITE, _sign
 
@@ -101,7 +102,11 @@ def dashboard_data(db, site=SITE, period="max", now=None):
     cost = sum(_f(t["total_cost"]) for t in trs)
     cash = sum(_f(t["cash_won"]) for t in trs)
     tickets = sum(_f(t["ticket_value"]) for t in trs)
-    itm = sum(int(t["in_the_money"]) for t in trs)
+    # ITM is known only without bounties (a bounty cash can be knockouts alone); "cashed" counts any cash or ticket
+    known = [t for t in trs if t["in_the_money"] is not None]
+    itm = sum(int(t["in_the_money"]) for t in known)
+    bounty = [t for t in trs if t["format"] == "bounty"]
+    cashed_bounty = sum(int(t["cashed"]) for t in bounty)
     profit_curve, profit_points, running = [], [], 0.0
     for t in trs:
         running += _f(t["profit"])                      # tickets at face value
@@ -158,7 +163,10 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "tournaments": len(trs), "cost": cost, "cash": cash, "tickets": tickets, "profit": cash + tickets - cost,
         "roi_pct": 100 * (cash + tickets - cost) / cost if cost else None,
         "cash_profit": cash - cost, "roi_cash_pct": 100 * (cash - cost) / cost if cost else None,
-        "itm": itm, "itm_pct": _pct(itm, len(trs)), "hands": n_hands,
+        "itm": itm, "itm_n": len(known), "itm_pct": _pct(itm, len(known)) if known else None, "hands": n_hands,
+        "bounty_cashed": {"n": len(bounty), "cashed": cashed_bounty,
+                          "pct": _pct(cashed_bounty, len(bounty)) if bounty else None},
+        "places": place_stats(db, site, since),
         "vpip_pct": 100 * _f(hero["vpip"]) / n_hands if n_hands else None,
         "pfr_pct": 100 * _f(hero["pfr"]) / n_hands if n_hands else None,
         "profit_curve": profit_curve, "bb_actual": actual, "bb_adjusted": adjusted,
@@ -168,12 +176,12 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "luck_badge": luck_badge(allin_rows),
         "starting_hands": best_and_worst(list(classes.values()), "net_bb"),
         "tags": [{"tag": r["tag"], "n": int(r["n"]), "cost": _f(r["cost"]), "cash": _f(r["cash"]) + _f(r["tickets"]),
-                  "itm": int(r["itm"]), "itm_pct": _pct(int(r["itm"]), int(r["n"])),
+                  "cashed": int(r["cashed"]), "cashed_pct": _pct(int(r["cashed"]), int(r["n"])),
                   "roi_pct": 100 * (_f(r["cash"]) + _f(r["tickets"]) - _f(r["cost"])) / _f(r["cost"]) if _f(r["cost"]) else None}
                  for r in db.query(
                      "SELECT g.tag, COUNT(*) AS n, SUM(r.total_cost) AS cost, SUM(r.cash_won) AS cash, "
                      "SUM(r.ticket_value) AS tickets, "
-                     "SUM(r.in_the_money) AS itm FROM tournament_results r JOIN tournament_tags g "
+                     "SUM(r.cashed) AS cashed FROM tournament_results r JOIN tournament_tags g "
                      "ON g.site = r.site AND g.tournament_id = r.tournament_id "
                      f"WHERE r.site = ?{r_when} AND NOT (g.tag LIKE 'entry:%' AND {INCOMPLETE}) "
                      "GROUP BY g.tag ORDER BY g.tag", (site, *arg))],
@@ -183,10 +191,10 @@ def dashboard_data(db, site=SITE, period="max", now=None):
             "ON g.site = r.site AND g.tournament_id = r.tournament_id "
             f"WHERE r.site = ?{r_when} AND g.tag LIKE 'entry:%' AND {INCOMPLETE}", (site, *arg)) or 0),
         "by_buyin": [{"buyin": _f(r["buyin_total"]), "n": int(r["n"]), "cost": _f(r["cost"]), "profit": _f(r["profit"]),
-                      "itm": int(r["itm"]), "itm_pct": _pct(int(r["itm"]), int(r["n"])),
+                      "cashed": int(r["cashed"]), "cashed_pct": _pct(int(r["cashed"]), int(r["n"])),
                       "roi_pct": 100 * _f(r["profit"]) / _f(r["cost"]) if _f(r["cost"]) else None}
                      for r in db.query("SELECT buyin_total, COUNT(*) AS n, SUM(total_cost) AS cost, SUM(profit) AS profit, "
-                                       f"SUM(in_the_money) AS itm FROM tournament_results WHERE site = ?{t_when} "
+                                       f"SUM(cashed) AS cashed FROM tournament_results WHERE site = ?{t_when} "
                                        "GROUP BY buyin_total ORDER BY buyin_total", (site, *arg))],
         "positions": positions,
         # blinds lose money for almost every player and heads-up (BTN/SB) is a different game: shown, not ranked
@@ -224,7 +232,8 @@ def render_html(d) -> str:
              f"<p class=m>cost ${d['cost']:,.0f} | cash ${d['cash']:,.0f}"
              + (f" | tickets ${d['tickets']:,.0f} at face value, cash only {_sign(d['cash_profit'], '{:+,.0f} $')}"
                 if d["tickets"] else "")
-             + f" | in the money {d['itm']}/{d['tournaments']} | {d['hands']} hands</p>"]
+             + f" | cashed (place or bounty) {d['bounty_cashed']['cashed'] + d['itm']}/{d['tournaments']}"
+             + f" | {d['hands']} hands</p>"]
     if d["tournaments"] < SMALL_SAMPLE:
         parts.append(f"<p class=m><b>Small sample ({d['tournaments']} tournaments).</b> In tournaments, results this "
                      f"small are mostly variance, so do not read much into the ROI yet.</p>")
@@ -237,9 +246,9 @@ def render_html(d) -> str:
         parts.append(f"<p>{a['count']} all-ins: actual {_sign(a['net_bb'])} BB, EV {_sign(a['ev_bb'])} BB, "
                      f"luck {_sign(a['luck_bb'])} BB.</p>")
     if d["tags"]:
-        rows = "".join(f"<tr><td>{e(t['tag'])}</td><td>{t['n']}</td><td>{t['itm']}</td>"
+        rows = "".join(f"<tr><td>{e(t['tag'])}</td><td>{t['n']}</td><td>{t['cashed']}</td>"
                        f"<td>{_sign(t['roi_pct'], '{:+,.0f}%')}</td></tr>" for t in d["tags"])
-        parts.append(f"<h2>By category</h2><table><tr><th>Tag</th><th>n</th><th>ITM</th><th>ROI</th></tr>{rows}</table>")
+        parts.append(f"<h2>By category</h2><table><tr><th>Tag</th><th>n</th><th>Cashed</th><th>ROI</th></tr>{rows}</table>")
     if d["recent"]:
         rows = "".join(f"<tr><td>{r['date'][5:]}</td><td>${r['buyin']:,.0f}</td><td>{r['place']}/{r['players']}</td>"
                        f"<td>{_sign(r['profit'], '{:+,.0f}')}{' +ticket' if r['ticket'] else ''}</td></tr>" for r in d["recent"])

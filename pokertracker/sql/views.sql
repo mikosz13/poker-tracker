@@ -31,7 +31,7 @@ WHERE hp.is_hero;
 
 -- One row per tournament with a summary. A tournament played over several days is one row, under its first day:
 -- the cost is paid on day 1 (buy-in x entries); the cash and tickets of every day add up; the place is the last
--- day's. In the money only from a day with payouts: going through to the next day is not ITM by itself.
+-- day's. Cashed only from a day with payouts: going through to the next day is not cashing by itself.
 -- Tickets count at face value on both sides: a satellite returns the ticket's value, the tournament entered with it
 -- costs its full buy-in, so the result over both equals the cash that moved. profit and roi_pct include tickets;
 -- cash_profit and roi_cash_pct are the cash part.
@@ -53,13 +53,21 @@ WITH later AS (
            COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, l.last_stage,
            CASE WHEN COALESCE(l.cash, 0) + COALESCE(l.ticket, 0) > 0 THEN 1
                 WHEN t.advanced_to IS NULL AND t.prize_won + COALESCE(t.prize_ticket, 0) > 0 THEN 1
-                ELSE 0 END AS in_the_money
+                ELSE 0 END AS cashed,
+           -- the place as a share of the field; not for a day-1 advance whose later days are not imported
+           CASE WHEN t.advanced_to IS NOT NULL AND l.last_stage IS NULL THEN NULL
+                ELSE 100.0 * COALESCE((SELECT x.finish_place FROM tournaments x WHERE x.site = t.site
+                     AND x.first_day_id = t.tournament_id AND x.has_summary ORDER BY x.stage DESC LIMIT 1), t.finish_place)
+                     / NULLIF(t.players, 0) END AS place_pct
     FROM tournaments t
     LEFT JOIN later l ON l.site = t.site AND l.first_day_id = t.tournament_id
     WHERE t.has_summary AND t.prize_won IS NOT NULL
       AND NOT (COALESCE(t.stage, 1) > 1 AND t.first_day_id IS NOT NULL)
 )
+-- cashed: any cash or ticket. In a bounty tournament that can be knockouts alone (the summary gives only the total
+-- and hand histories hold no bounty payouts), so in_the_money is known only without bounties (NULL otherwise).
 SELECT c.*,
+       CASE WHEN c.format = 'bounty' THEN NULL ELSE c.cashed END AS in_the_money,
        c.cash_won + c.ticket_value AS won_total,
        c.cash_won + c.ticket_value - c.total_cost AS profit,
        c.cash_won - c.total_cost AS cash_profit,
@@ -73,7 +81,9 @@ SELECT format,
        SUM(total_cost)         AS total_cost,
        SUM(cash_won)           AS cash_won,
        SUM(ticket_value)       AS ticket_value,
+       SUM(cashed)             AS cashed,
        SUM(in_the_money)       AS itm,
+       COUNT(in_the_money)     AS itm_known,
        ROUND(100.0 * (SUM(cash_won) + SUM(ticket_value) - SUM(total_cost)) / NULLIF(SUM(total_cost), 0), 1) AS roi_pct,
        ROUND(100.0 * (SUM(cash_won) - SUM(total_cost)) / NULLIF(SUM(total_cost), 0), 1) AS roi_cash_pct
 FROM tournament_results
@@ -146,7 +156,9 @@ SELECT g.tag,
        SUM(r.total_cost)       AS total_cost,
        SUM(r.cash_won)         AS cash_won,
        SUM(r.ticket_value)     AS ticket_value,
+       SUM(r.cashed)           AS cashed,
        SUM(r.in_the_money)     AS itm,
+       COUNT(r.in_the_money)   AS itm_known,
        ROUND(100.0 * (SUM(r.cash_won) + SUM(r.ticket_value) - SUM(r.total_cost)) / NULLIF(SUM(r.total_cost), 0), 1) AS roi_pct,
        ROUND(100.0 * (SUM(r.cash_won) - SUM(r.total_cost)) / NULLIF(SUM(r.total_cost), 0), 1) AS roi_cash_pct
 FROM tournament_results r
