@@ -51,6 +51,39 @@ class NumbersTests(unittest.TestCase):
         self.assertEqual([S._short(c) for c in ("Kh Kd", "As Qd", "As Qs", "7s")], ["KK", "AQo", "AQs", "7s"])
 
 
+class SessionGroupingTests(unittest.TestCase):
+    def t(self, tid, start, end):
+        return {"tournament_id": tid, "first_hand": f"2026-01-01 {start}:00", "last_hand": f"2026-01-01 {end}:00"}
+
+    def test_a_break_longer_than_the_gap_ends_the_session(self):
+        from pokertracker.server import group_session
+        ts = [self.t(1, "20:00", "22:00"), self.t(2, "16:00", "18:30"), self.t(3, "10:00", "12:00")]
+        self.assertEqual([t["tournament_id"] for t in group_session(ts, gap_hours=3)], [1, 2])   # 1.5 h in, 4 h out
+
+    def test_a_tournament_running_alongside_a_long_one_belongs(self):
+        from pokertracker.server import group_session
+        # A 10:00-18:00, B 16:00-17:00, C 11:00-12:00: C ran during A, so it is in the session although it ended
+        # 4 h before B started
+        ts = [self.t("A", "10:00", "18:00"), self.t("B", "16:00", "17:00"), self.t("C", "11:00", "12:00")]
+        self.assertEqual([t["tournament_id"] for t in group_session(ts, gap_hours=3)], ["A", "B", "C"])
+
+    def test_parallel_tournaments_are_counted_by_overlap(self):
+        ts = [("10:00", "12:00"), ("11:00", "13:00"), ("11:30", "11:45"), ("13:00", "14:00")]
+        t = lambda x: datetime(2026, 1, 1, int(x[:2]), int(x[3:]))
+        self.assertEqual(S.max_at_once([(t(a), t(b)) for a, b in ts]), 3)               # 11:30-11:45: three at once
+
+
+class UsualPlayTests(unittest.TestCase):
+    def test_usual_play_leaves_the_session_out(self):
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", HISTORY), ("t", HAND_3WAY)])          # 900001: 3 hands, 900003: 1 hand
+        u = S.usual_play(db, {900003})
+        self.assertEqual(u["n"], 3)                                     # only the other tournament's hands
+        self.assertEqual(S.usual_play(db, {900001, 900003})["n"], 0)
+
+
 class SessionInsightTests(unittest.TestCase):
     def setUp(self):
         self.db = Database("sqlite:///:memory:")
