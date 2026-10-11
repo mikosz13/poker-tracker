@@ -8,6 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
 
+from .analysis import analysis_data
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .importer import changed_files, import_files, list_files
@@ -216,6 +217,8 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     period = (query.get("period") or [get_setting(db, "dashboard_period") or "max"])[0]
                     period = period if period in PERIODS else "max"
                     return self._send(200, {"dashboard": dashboard_data(db, period=period), "session": last_session(db)})
+                if path == "/api/analysis":                           # always the whole history
+                    return self._send(200, analysis_data(db))
                 if path == "/api/tournaments":
                     return self._send(200, tournaments_list(db))
                 if path.startswith("/api/tournament/"):

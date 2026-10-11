@@ -99,6 +99,12 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
   justify-content:center;font-size:.72rem;font-weight:700;background:var(--bg);border:2px solid var(--line);color:var(--fg)}
 .pc2.few{opacity:.4}.pc2.best{background:var(--pos);border-color:var(--pos);color:#fff}
 .pc2.worst{background:var(--neg);border-color:var(--neg);color:#fff}
+.finding{border-left:4px solid var(--line);margin:10px 0}.finding.likely{border-left-color:var(--neg)}
+.finding.possible{border-left-color:var(--orange)}.finding.good{border-left-color:var(--pos)}
+.finding h3{margin:0 0 4px;font-size:1rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.conf{font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--bg);border:1px solid var(--line)}
+.finding .big{font-size:1.05rem;font-weight:700;margin:2px 0}.finding details{margin-top:6px}
+.finding summary{cursor:pointer;color:var(--blue);font-size:.88rem}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -113,7 +119,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 </head>
 <body>
 <header><nav id="nav">
-  <a href="#/">Dashboard</a><a href="#/tournaments">Tournaments</a><a href="#/import">Import</a><a href="#/luck">How luck works</a>
+  <a href="#/">Dashboard</a><a href="#/tournaments">Tournaments</a><a href="#/analysis">Analysis</a><a href="#/import">Import</a><a href="#/luck">How luck works</a>
 </nav></header>
 <main id="app">Loading…</main>
 <script>
@@ -594,6 +600,64 @@ matchMedia("(max-width:560px)").addEventListener("change", () => {
   if (replay && document.getElementById("stage")) { const k = step; stopPlay(); renderHand(); replay.go(k); }
 });
 
+// ---- Analysis ---------------------------------------------------------------
+// Always the whole history. Built-in tips from clear rules; a finding shows only when it stands out from chance.
+const CONF = {likely: "likely", possible: "possible – could still be chance"};
+function findingNumber(l) {
+  if (l.kind === "vs_fold") return `${sgn(l.value, 2, " BB")} per hand compared with folding
+    <div class="m" style="font-weight:400">playing ${sgn(l.played, 2)} BB per hand · folding would have lost exactly
+    your blind and ante, ${sgn(l.folded, 2)} BB per hand · ${l.hands} hands</div>`;
+  if (l.kind === "vs_fold_total") return `${sgn(l.value, 0, " BB")} compared with folding it every time, in ${l.hands} hands`;
+  if (l.kind === "frequency") return `${num(l.value, 0)}% of ${l.hands} times <div class="m" style="font-weight:400">${esc(l.guide)}</div>`;
+  if (l.kind === "bb_per_100") return `${sgn(l.value, 1)} bb/100 in ${l.hands} hands`;
+  return `${sgn(l.value, 0, " BB")} in ${l.hands} hands`;
+}
+const worstList = hands => `<details><summary>Show the ${hands.length} worst hands</summary>${table(["When", "Pos", "Cards", "Stack", "BB (EV-adj.)", "BB"],
+  hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(x.at)}</td><td>${esc(x.position || "")}</td>
+    <td>${x.cards ? cards(x.cards) : "–"}</td><td>${num(x.stack_bb, 0)} BB</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
+
+async function viewAnalysis() {
+  const mine = routeSeq, a = await api("/api/analysis");
+  if (mine !== routeSeq) return;
+  const o = a.overview, m = a.money;
+  const ri = m.roi_interval;
+  let h = `<h1>Analysis</h1><p class="m">Your whole history (${o.tournaments} tournaments with a summary, ${o.hands} hands).
+    Results are EV-adjusted: in all-in hands the all-in EV replaces the actual result, so single coinflips do not
+    create findings. <b>${a.tested} spots checked</b>; the chance of false alarms is corrected for all of them together
+    (Benjamini–Hochberg): <b>likely</b> means a false-discovery rate under 5 %, <b>possible</b> under 20 %.</p>`;
+  h += `<div class="k"><div>Hands<b>${o.hands}</b></div><div>VPIP / PFR<b>${num(o.vpip_pct, 0)} / ${num(o.pfr_pct, 0)}</b></div>
+    <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">EV-adjusted ${sgn(o.bb_per_100_ev, 1)}</span></div>
+    <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? `95%: ${num(ri.low, 0)}% to ${num(ri.high, 0)}%` : ""}</span></div>
+    <div>ITM<b>${num(o.itm_pct, 1)}%</b></div><div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
+    <span class="m">actual ${sgn(o.allins.actual_bb, 0)} · luck ${sgn(o.allins.luck_bb, 0)}</span></div></div>`;
+
+  h += `<h2>Leaks</h2>`;
+  h += a.leaks.length ? a.leaks.map(l => `<div class="box finding ${l.confidence}">
+      <h3>${esc(l.title)} <span class="conf">${CONF[l.confidence]}</span></h3>
+      <div class="big">${findingNumber(l)}</div><p style="margin:6px 0 0">${esc(l.tip)}</p>
+      <p class="m" style="margin:4px 0 0">${l.sample === "small" ? "Small sample. " : ""}About ${num(l.cost_bb, 0)} BB over this history.</p>
+      ${l.worst && l.worst.length ? worstList(l.worst) : ""}</div>`).join("")
+    : `<p class="m">Nothing stands out from chance among the ${a.tested} spots checked. No spot is clearly costing you
+        money beyond what luck can explain; with more hands smaller leaks can show up here.</p>`;
+
+  h += `<h2>Strengths</h2>`;
+  h += a.strengths.length ? a.strengths.map(x => `<div class="box finding good"><h3>${esc(x.title)}
+      ${x.confidence ? `<span class="conf">${CONF[x.confidence]}</span>` : ""}</h3><p style="margin:0">${esc(x.text)}</p></div>`).join("")
+    : `<p class="m">Nothing stands out from chance yet.</p>`;
+
+  h += `<h2>Money and variance</h2>
+    <p>ROI ${sgn(m.roi_pct, 0, "%")} over ${m.tournaments} tournaments.${ri ? ` With 95% confidence it lies between
+      <b>${num(ri.low, 0)}%</b> and <b>${num(ri.high, 0)}%</b> (bootstrap over your tournaments, re-entries included).
+      ${ri.high < 0 ? "The whole interval is below zero: despite the swings, these tournaments have cost you money so far; only how much is uncertain."
+        : ri.low > 0 ? "The whole interval is above zero: you have been winning, beyond what the swings explain."
+        : "The interval includes zero: at this sample the ROI cannot tell a winning player from a losing one."}` : ""}</p>
+    ${table(["Buy-in", "Tournaments", "Spend", "Share of spend", "Profit $", "ROI"], m.tiers.map(t => `<tr><td>${esc(t.tier)}</td>
+      <td>${t.tournaments}</td><td>${money(t.cost)}</td><td>${num(t.share_of_spend_pct, 0)}%</td><td>${sgn(t.profit, 2)}</td><td>${sgn(t.roi_pct, 0, "%")}</td></tr>`))}
+    <p class="m">Re-entries: ${m.reentries.tournaments} tournaments with a re-entry cost ${money(m.reentries.extra_cost)} extra;
+      those tournaments ended ${sgn(m.reentries.profit, 2, " $")}.</p>`;
+  app.innerHTML = h;
+}
+
 // ---- Import -----------------------------------------------------------------
 let poller = null;
 const resultBox = r => `<div class="box"><b>${r.source === "auto" ? "Imported automatically" : "Done"}</b>
@@ -695,6 +759,7 @@ async function route() {
     else if (h === "#/tournaments") await viewTournaments();
     else if ((m = h.match(/^#\/t\/(\d+)$/))) await viewTournament(m[1]);
     else if ((m = h.match(/^#\/hand\/(\w+)$/))) await viewHand(m[1]);
+    else if (h === "#/analysis") await viewAnalysis();
     else if (h === "#/import") await viewImport();
     else if (h === "#/luck") viewLuck();
     else app.innerHTML = "<p>Page not found.</p>";

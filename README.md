@@ -109,6 +109,10 @@ HTML are rendered from the same data, so the numbers are identical.
 
 ### Dashboard
 
+The **Analysis** view looks at the whole history and writes tips from clear rules: leaks measured against a
+baseline (e.g. calling from the big blind compared with folding there), strengths, and how much the ROI can still be
+noise. Findings that do not stand out from chance are not shown.
+
 In the app the dashboard can be limited to the last 24 hours, days, weeks or months. Besides the results it shows a luck
 badge (how far all-in luck is from zero in "typical swings"), the best and worst starting hand and position (only with 30+
 hands) and date-based charts of profit and luck.
