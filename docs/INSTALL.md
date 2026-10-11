@@ -11,10 +11,10 @@ Free desktop app for GGPoker tournament players. Your data never leaves your com
      **Ustawienia → Prywatność i ochrona → Otwórz mimo to**.
    - Windows: **Więcej informacji → Uruchom mimo to**.
 3. **Zrób jeden folder na eksporty**, np. `Dokumenty/PokerCraft`.
-4. **W PokerCraft pobieraj tam historie rąk i podsumowania turniejów.** Zipy też mogą być.
+4. **W PokerCraft pobieraj do tego folderu historie rąk i podsumowania turniejów.** Zipy też mogą być.
 5. **W aplikacji wejdź w Import**, wklej ścieżkę do folderu, zaznacz **„Watch this folder”** i kliknij **Import**.
-6. **Gotowe.** Po każdej sesji wrzucasz nowe pliki do tego folderu, a aplikacja sama je wciąga, gdy jest włączona.
-7. **Patrzysz:** Dashboard (jak poszła sesja), Analysis (co poprawić), replayer (ręce do obejrzenia).
+6. **Gotowe.** Po każdej sesji wrzucaj nowe pliki do tego folderu, a aplikacja sama je wciągnie, gdy jest włączona.
+7. **Obczajasz:** Dashboard (jak poszła sesja), Analysis (co poprawić), replayer (ręce do obejrzenia).
 
 ## Getting started (EN)
 
