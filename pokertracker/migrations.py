@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 3
+LATEST = 4
 
 
 def repair_positions(db):
@@ -80,14 +80,27 @@ def _v3_entries_found_and_shown_cards(db):
     db.execute("UPDATE hand_players SET hole_cards = NULL WHERE LENGTH(hole_cards) = 2")
 
 
-MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards}
+def _v4_ticket_apart_from_cash(db):
+    """prize_won held the ticket's face value when prize_is_ticket; now it is always cash, the ticket in prize_ticket.
+
+    Multi-day facts (stage, advanced_to) and the knockout cash of a day-1 advance are only in the summary files, so they
+    appear when the summaries are read again ("Re-read every file").
+    """
+    db.execute("UPDATE tournaments SET prize_ticket = prize_won, prize_won = 0 WHERE prize_is_ticket")
+    db.execute("UPDATE tournaments SET prize_ticket = 0 WHERE prize_ticket IS NULL")
+
+
+MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards,
+              4: _v4_ticket_apart_from_cash}
 
 
 # Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of
 # them, so on an old database they are added before any step runs (e.g. step 2 recomputes entries, which also sets
 # entries_found from step 3).
 COLUMNS = (("hands", "button_seat", "INTEGER"), ("tournaments", "starting_stack", "NUMERIC"),
-           ("tournaments", "entries_found", "INTEGER"))
+           ("tournaments", "entries_found", "INTEGER"), ("tournaments", "prize_ticket", "NUMERIC"),
+           ("tournaments", "stage", "INTEGER"), ("tournaments", "advanced_to", "TEXT"),
+           ("tournaments", "advanced_chips", "NUMERIC"), ("tournaments", "first_day_id", "BIGINT"))
 
 
 def add_missing_columns(db):

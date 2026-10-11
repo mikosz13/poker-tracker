@@ -43,8 +43,10 @@ def _ts(x):
 
 def tournaments_list(db, site=SITE):
     rows = db.query(
-        "SELECT t.tournament_id, t.name, t.format, t.buyin_total, t.players, t.finish_place, t.prize_won, "
-        "t.prize_is_ticket, t.reentries, t.has_summary, t.started_at, "
+        "SELECT t.tournament_id, t.name, t.format, t.buyin_total, t.players, "
+        "COALESCE(r.finish_place, t.finish_place) AS finish_place, t.prize_won, t.prize_is_ticket, t.prize_ticket, "
+        "t.reentries, t.has_summary, t.started_at, COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, "
+        "t.first_day_id, r.last_stage, r.in_the_money, "
         "(SELECT MIN(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS first_hand, "
         "(SELECT MAX(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS last_hand, "
         "(SELECT COUNT(*) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS hands, "

@@ -71,7 +71,8 @@ def refresh_classification(db, site, tournament_id):
     minutes, pairs = level_minutes([(h["level"], h["played_at"]) for h in hands])
     first = db.query("SELECT entry_level FROM entries WHERE site = ? AND tournament_id = ? AND entry_no = 1",
                      (site, tournament_id))
-    first_level = int(first[0]["entry_level"]) if first else None
+    # a later day (Day 2) starts with the chips carried over: there is no late registration to tell
+    first_level = int(first[0]["entry_level"]) if first and (t.get("stage") or 1) == 1 else None
     tags = classify(t["name"], t["format"], t["buyin_total"], t["players"], minutes, first_level, t["reentries"])
 
     db.execute("DELETE FROM tournament_structure WHERE site = ? AND tournament_id = ?", (site, tournament_id))

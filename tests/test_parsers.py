@@ -74,7 +74,8 @@ class SummaryParserTests(unittest.TestCase):
 
     def test_satellite_ticket(self):
         t = parse_summary(SUMMARY_SATELLITE)
-        self.assertEqual((t.format, t.buyin_total, t.prize_won, t.prize_is_ticket), ("satellite", 5.0, 50.0, True))
+        self.assertEqual((t.format, t.buyin_total, t.prize_won, t.prize_ticket, t.prize_is_ticket),
+                         ("satellite", 5.0, 0.0, 50.0, True))           # the seat is a ticket, not cash
         self.assertIn("Satellite", t.name)
 
     def test_unknown_format_raises(self):
