@@ -1,7 +1,7 @@
 import argparse
 
 from .db import Database
-from .importer import import_path
+from .importer import import_path, skip_text
 from .report import build_report
 from .dashboard import dashboard_data, render_html as dashboard_html
 from .tournament_report import render_html, render_text, tournament_data
@@ -45,8 +45,8 @@ def main(argv=None):
                     print("  not imported (out of scope): " + ", ".join(
                         f"{n} {reason}" + (" files" if reason == "cash game" else "")
                         for reason, n in s.ignored_counts().items()))
-                for msg in s.skipped:
-                    print(f"  skipped {msg}")
+                for skipped in s.skipped:
+                    print(f"  skipped {skip_text(skipped)}")
         elif args.cmd == "report":
             print(build_report(db))
         elif args.cmd == "dashboard":

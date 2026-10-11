@@ -236,6 +236,17 @@ async function api(path, opts) {
   return j;
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
+// a tournament tag ("stake:micro", "target:$500 ...") as a readable label; an unknown tag shows as it is
+function tagLabel(tag) {
+  const [kind, ...rest] = String(tag).split(":"), value = rest.join(":");
+  if (kind === "target") return t("tag.target", {x: esc(value)});
+  const key = "tag." + (value ? kind + "." + value : kind), label = t(key);
+  return label === key ? esc(tag) : label;
+}
+// the strongest showdown hand from its category and ranks ("strit do asa", "A-high straight")
+const handName = h => h.category == null ? esc(h.hand) : t("hand.cat." + h.category, {top: t("rank.top." + h.ranks[0]),
+  topn: t("rank.topn." + h.ranks[0]), a: t("rank.of." + h.ranks[0]), b: t("rank.of." + h.ranks[1]),
+  an: t("rank.pl." + h.ranks[0]), bn: t("rank.pl." + h.ranks[1])});
 const luckLink = () => `<a href="#/luck">${t("common.howLuck")}</a>`;
 
 // ---- Dashboard -------------------------------------------------------------
@@ -298,7 +309,7 @@ async function viewDashboard(period) {
   if (d.positions.length) h += `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", "bb/100"], d.positions.map(p =>
     `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${num(p.vpip_pct, 0)}%</td><td>${num(p.pfr_pct, 0)}%</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   const other = d.tags.filter(x => !x.tag.startsWith("entry:")).map(x =>
-    `<tr><td>${esc(x.tag)}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+    `<tr><td>${tagLabel(x.tag)}</td><td>${x.n}</td><td>${x.itm}</td><td>${pct(x.itm_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
   if (other.length) h += `<h2>${t("dash.otherCategories")}</h2>${table([t("col.tag"), "n", "ITM", "ITM %", "ROI"], other)}`;
   app.innerHTML = h;
   bindPeriods();
@@ -557,7 +568,7 @@ async function viewTournament(id) {
   if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.place}/${r.players}</b></div><div>${t("tour.prize")}<b>${money(r.prize)}${r.ticket ? " " + t("tour.ticket") : ""}</b></div>
     <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
   else h += `<p class="m">${t("tour.noSummary")}</p>`;
-  h += `<p>${d.tags.map(x => `<span class="tag">${esc(x)}</span>`).join("")}</p>`;
+  h += `<p>${d.tags.map(x => `<span class="tag">${tagLabel(x)}</span>`).join("")}</p>`;
   h += d.entries.map(e => `<p class="m">${t("tour.entry", {no: e.entry_no, level: e.level, bb: num(e.stack_bb, 0)})}</p>`).join("");
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
   if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; return; }
@@ -572,7 +583,7 @@ async function viewTournament(id) {
   const moments = (title, list) => list.length ? `<h2>${title}</h2>` + table([t("col.cards"), t("col.pos"), t("col.board"), "BB", ""], list.map(m =>
     `<tr class="click" onclick="location.hash='#/hand/${m.hand_id}'"><td>${cards(m.hole_cards)}</td><td>${esc(m.position)}</td><td>${cards(m.board)}</td><td>${sgn(m.net_bb)}</td><td>▶</td></tr>`)) : "";
   h += moments(t("tour.biggestWins"), d.biggest_wins) + moments(t("tour.biggestLosses"), d.biggest_losses);
-  if (d.strongest_showdown) h += `<h2>${t("tour.strongest")}</h2><p>${t("tour.strongestLine", {hand: `<a href="#/hand/${d.strongest_showdown.hand_id}">${esc(d.strongest_showdown.hand)}</a>`,
+  if (d.strongest_showdown) h += `<h2>${t("tour.strongest")}</h2><p>${t("tour.strongestLine", {hand: `<a href="#/hand/${d.strongest_showdown.hand_id}">${handName(d.strongest_showdown)}</a>`,
     cards: cards(d.strongest_showdown.hole_cards), board: cards(d.strongest_showdown.board)})}</p>`;
   if (a.count) h += `<h2>${t("tour.allins")}</h2><p>${t("dash.allinsLine", {allins: t("common.allins", {n: a.count}), net: sgn(a.net_bb), ev: sgn(a.ev_bb), luck: sgn(a.luck_bb)})}
     ${t("tour.won", {won: a.won, exp: num(a.expected_won)})} ${luckLink()}</p>` +
@@ -834,7 +845,8 @@ const resultBox = r => `<div class="box"><b>${t(r.source === "auto" ? "imp.auto"
     new: r.hands_new, dup: r.hands_duplicate, allins: r.allins, tournaments: r.tournaments})}
   ${Object.keys(r.ignored || {}).length ? `<p class="m">${t("imp.ignored", {list:
     Object.entries(r.ignored).map(([why, n]) => REASONS[why] ? t("imp.reason." + REASONS[why], {n}) : `${n} ${esc(why)}`).join(", ")})}</p>` : ""}
-  <p><a href="#/">${t("imp.openDashboard")}</a></p>${r.skipped.length ? `<p class="m">${t("imp.skipped")} ${r.skipped.map(esc).join("<br>")}</p>` : ""}</div>`;
+  <p><a href="#/">${t("imp.openDashboard")}</a></p>${r.skipped.length ? `<p class="m">${t("imp.skipped")} ${r.skipped.map(x => typeof x === "string" ? esc(x)          // saved by an older version
+    : `${esc(x.file)}: ${t("imp.skip." + x.code, {detail: esc(x.detail)})}`).join("<br>")}</p>` : ""}</div>`;
 async function viewImport() {
   const mine = routeSeq, st = await api("/api/settings");
   if (mine !== routeSeq) return;
