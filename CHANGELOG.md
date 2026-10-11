@@ -10,7 +10,13 @@
   - Best and worst starting hand and position are ranked by the result with all-in luck removed (EV).
   - Dashboard: late registration and positions are folded under "More"; by buy-in and by category moved to
     Analysis → Money (with a link); "Tickets" shows the period, with a link to the whole history in Money.
-- Tables say "Count" (Polish "Turnieje") instead of "n", with a tooltip on what is counted (for categories: a tournament counts
+- The count column says "Count" in English (it said "Tournaments"); Polish keeps "Turnieje".
+
+## 0.7.0 (2026-10-11)
+- **Upgrade:** the database goes from schema 3 to 5 on first start (a backup is made next to it first). Then run
+  Import once with "Re-read every file": multi-day tournaments get their knockout cash and re-entries, and freerolls
+  leave the database.
+- Tables say "Tournaments" instead of "n", with a tooltip on what is counted (for categories: a tournament counts
   under each of its labels, so the numbers add up to more than the total).
 - Places in the field apart for entries from the start and late registrations: with a late registration, players
   who busted before Hero sat down count in the field, so the share looks better than it is. "Where you finish" shows
