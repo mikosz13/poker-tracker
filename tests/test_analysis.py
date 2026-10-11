@@ -191,9 +191,73 @@ class AnalysisDataTests(unittest.TestCase):
         d = A.analysis_data(db)
         self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds"})
         self.assertEqual((d["overview"]["hands"], d["overview"]["tournaments"]), (3, 2))
-        self.assertEqual(d["money"]["reentries"], {"tournaments": 1, "extra_cost": 10.0, "profit": 0.0})
+        re, first = d["money"]["re_entries"], d["money"]["first_entries"]
+        # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return
+        self.assertEqual((re["tournaments"], re["cost"], re["returned"]), (1, 10.0, 20.0))
+        # first entries: $10 + $5, and neither lasted to a cash prize (bounty re-entered, satellite paid a ticket)
+        self.assertEqual((first["tournaments"], first["cost"], first["returned"]), (2, 15.0, 0.0))
         self.assertEqual(d["leaks"], [])
         self.assertEqual(d["money"]["roi_interval"]["level"], 95)
+
+
+
+def tournament(db, tid, buyin, prize=0.0, reentries=0, fmt="bounty", ticket=False):
+    db.execute("INSERT INTO tournaments (site, tournament_id, name, format, buyin_total, players, finish_place, prize_won, "
+               "prize_is_ticket, reentries, has_summary, started_at) VALUES ('GGPoker', ?, 'T', ?, ?, 100, 50, ?, ?, ?, TRUE, "
+               "'2026-01-01 10:00:00')", (tid, fmt, buyin, prize, ticket, reentries))
+
+
+class MoneyTests(unittest.TestCase):
+    def test_bootstrap_roi_and_p_value(self):
+        same = A.bootstrap_roi([(10.0, 5.0)] * 12)                     # every tournament -50 %
+        self.assertEqual((same["roi_pct"], same["low"], same["high"]), (-50.0, -50.0, -50.0))
+        self.assertEqual(same["p"], 1 / A.BOOTSTRAP_SAMPLES)           # never above zero: smallest p it can show
+        even = A.bootstrap_roi([(1.0, 2.0)] * 10 + [(1.0, 0.0)] * 10)  # half doubled, half lost: ROI 0
+        self.assertEqual(even["roi_pct"], 0.0)
+        self.assertGreater(even["p"], 0.5)
+
+    def setUp(self):
+        self.db = Database("sqlite:///:memory:")
+        self.addCleanup(self.db.close)
+        self.db.init_schema()
+
+    def test_groups_verdicts_shares_and_facts(self):
+        for i in range(12):                                            # $50: 12 tournaments, all lost
+            tournament(self.db, 1000 + i, 50.0)
+        for i in range(12):                                            # $10: half win $20, half lose: ROI 0
+            tournament(self.db, 2000 + i, 10.0, prize=20.0 if i % 2 else 0.0)
+        for i in range(3):                                             # satellites: too few to judge, tickets apart
+            tournament(self.db, 3000 + i, 4.0, prize=50.0 if i == 0 else 0.0, fmt="satellite", ticket=i == 0)
+        self.db.commit()
+        m = A.money(self.db)
+        tiers = {g["label"]: g for g in m["tiers"]}
+        self.assertEqual(tiers["$30+"]["verdict"], "losing beyond chance")
+        self.assertEqual(tiers["$5-15"]["verdict"], "too little data to tell")
+        self.assertEqual(tiers["$5-15"]["roi_pct"], 0.0)
+        self.assertEqual(tiers["under $5"]["verdict"], "too few tournaments")
+        sat = next(g for g in m["formats"] if g["label"] == "satellite")
+        self.assertEqual((sat["verdict"], sat["tickets"], sat["returned"]), ("too few tournaments", 50.0, 0.0))
+        self.assertAlmostEqual(sum(g["share_of_spend_pct"] for g in m["tiers"]), 100.0, delta=0.2)
+        self.assertAlmostEqual(sum(g["share_of_result_pct"] for g in m["tiers"]), 100.0, delta=0.2)
+        self.assertEqual(m["facts"][0], "$30+ loses beyond chance and accounts for 82 % of your spend, so it has the "
+                                        "biggest effect on your overall result.")
+        self.assertFalse([f for f in m["facts"] if "should" in f or "Play" in f])    # facts, not advice
+
+    def test_reentries_against_first_entries(self):
+        tournament(self.db, 1, 10.0, prize=100.0, reentries=2)          # the re-entry won: $20 spent, $100 back
+        tournament(self.db, 2, 10.0, prize=30.0)                        # the first entry lasted and won $30
+        tournament(self.db, 3, 10.0)                                    # the first entry busted, no re-entry
+        for no, bb in ((1, 50), (2, 25), (3, 15)):
+            self.db.execute("INSERT INTO entries (site, tournament_id, entry_no, entry_level, entered_at, start_stack, "
+                            "start_stack_bb, starts_fresh) VALUES ('GGPoker', 1, ?, 1, '2026-01-01 10:00:00', 1, ?, TRUE)",
+                            (no, bb))
+        self.db.commit()
+        m = A.money(self.db)
+        first, re = m["first_entries"], m["re_entries"]
+        self.assertEqual((first["cost"], first["returned"]), (30.0, 30.0))
+        self.assertEqual((re["cost"], re["returned"], re["roi_pct"]), (20.0, 100.0, 400.0))
+        self.assertEqual((first["avg_start_bb"], re["avg_start_bb"]), (50.0, 20.0))
+        self.assertAlmostEqual(first["share_of_spend_pct"] + re["share_of_spend_pct"], 100.0)
 
 
 if __name__ == "__main__":

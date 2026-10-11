@@ -304,43 +304,116 @@ def classify(tests):
 
 # ---- money -------------------------------------------------------------------------------------------------------
 
-def roi_interval(trs, samples=BOOTSTRAP_SAMPLES, seed=BOOTSTRAP_SEED):
-    """95 % interval of the ROI by bootstrap over tournaments (percentiles 2.5 and 97.5 of ROI = sum(profit) /
-    sum(cost) in resamples of whole tournaments; cost includes re-entries). Seeded, so it is reproducible."""
-    n = len(trs)
-    if n < 2:
-        return None
-    cost = np.array([_f(t["total_cost"]) for t in trs])
-    profit = np.array([_f(t["profit"]) for t in trs])
-    if cost.sum() <= 0:
+MIN_TOURNAMENTS = 10     # money groups with fewer tournaments are not judged
+TIERS = ((0, 5, "under $5"), (5, 15, "$5-15"), (15, 30, "$15-30"), (30, 10 ** 9, "$30+"))
+
+
+def bootstrap_roi(pairs, samples=BOOTSTRAP_SAMPLES, seed=BOOTSTRAP_SEED):
+    """ROI of (cost, cash returned) pairs, one per tournament, with a 95 % percentile bootstrap interval and a
+    two-sided bootstrap p-value for "ROI differs from zero" (twice the smaller share of resampled ROIs on one side of
+    zero). Seeded, so it is reproducible."""
+    n = len(pairs)
+    cost = np.array([c for c, _ in pairs], dtype=float)
+    ret = np.array([r for _, r in pairs], dtype=float)
+    if n < 2 or cost.sum() <= 0:
         return None
     rng = np.random.default_rng(seed)
     idx = rng.integers(0, n, size=(samples, n))
-    c, p = cost[idx].sum(axis=1), profit[idx].sum(axis=1)
-    roi = 100 * p[c > 0] / c[c > 0]
+    c, r = cost[idx].sum(axis=1), ret[idx].sum(axis=1)
+    keep = c > 0
+    roi = 100 * (r[keep] - c[keep]) / c[keep]
     lo, hi = np.percentile(roi, [2.5, 97.5])
-    return {"low": round(float(lo), 1), "high": round(float(hi), 1), "level": 95, "samples": samples}
+    p = min(1.0, max(2 * min(float((roi <= 0).mean()), float((roi >= 0).mean())), 1 / samples))
+    return {"roi_pct": round(100 * (ret.sum() - cost.sum()) / cost.sum(), 1), "low": round(float(lo), 1),
+            "high": round(float(hi), 1), "level": 95, "samples": samples, "p": p, "n": n}
+
+
+def roi_interval(trs, samples=BOOTSTRAP_SAMPLES, seed=BOOTSTRAP_SEED):
+    """95 % bootstrap interval of the ROI over tournaments (cost includes re-entries)."""
+    b = bootstrap_roi([(_f(t["total_cost"]), _f(t["total_cost"]) + _f(t["profit"])) for t in trs], samples, seed)
+    return None if b is None else {k: b[k] for k in ("low", "high", "level", "samples")}
+
+
+def _money_group(label, pairs, kind):
+    cost = sum(c for c, _ in pairs)
+    ret = sum(r for _, r in pairs)
+    g = {"label": label, "kind": kind, "tournaments": len(pairs), "cost": round(cost, 2), "returned": round(ret, 2),
+         "profit": round(ret - cost, 2), "roi_pct": round(100 * (ret - cost) / cost, 1) if cost else None,
+         "interval": None, "verdict": "too few tournaments", "confidence": None}
+    if len(pairs) >= MIN_TOURNAMENTS:
+        g["boot"] = bootstrap_roi(pairs)
+    return g
 
 
 def money(db, site=SITE):
-    trs = db.query("SELECT tournament_id, buyin_total, total_cost, profit, reentries FROM tournament_results "
-                   "WHERE site = ?", (site,))
+    """Money over the whole history, judged like the leaks: every group with enough tournaments is one test (its
+    bootstrap p-value), the family is corrected with Benjamini-Hochberg, and only results beyond chance get a verdict.
+
+    Re-entries: a re-entry is decided after the first entry busted, so without it the tournament would have returned
+    nothing; the whole prize of a tournament with re-entries is the return of its re-entries. First entries return the
+    prize only in tournaments without a re-entry (the first entry lasted to the end)."""
+    trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, profit, reentries, format "
+                   "FROM tournament_results WHERE site = ?", (site,))
     cost = sum(_f(t["total_cost"]) for t in trs)
     profit = sum(_f(t["profit"]) for t in trs)
-    tiers = []
-    for lo, hi, label in ((0, 5, "under $5"), (5, 15, "$5-15"), (15, 30, "$15-30"), (30, 10 ** 9, "$30+")):
-        g = [t for t in trs if lo <= _f(t["buyin_total"]) < hi]
-        if g:
-            c, p = sum(_f(t["total_cost"]) for t in g), sum(_f(t["profit"]) for t in g)
-            tiers.append({"tier": label, "tournaments": len(g), "cost": round(c, 2), "profit": round(p, 2),
-                          "roi_pct": round(100 * p / c, 0) if c else None,
-                          "share_of_spend_pct": round(100 * c / cost, 0) if cost else None})
-    re = [t for t in trs if int(t["reentries"] or 0) > 0]
-    extra = sum(_f(t["buyin_total"]) * int(t["reentries"] or 0) for t in re)
+    pair = lambda t: (_f(t["total_cost"]), _f(t["cash_won"]))
+    tiers = [_money_group(label, [pair(t) for t in trs if lo <= _f(t["buyin_total"]) < hi], "tier")
+             for lo, hi, label in TIERS if any(lo <= _f(t["buyin_total"]) < hi for t in trs)]
+    formats = []
+    for fmt in sorted({t["format"] or "unknown" for t in trs}):
+        g = [t for t in trs if (t["format"] or "unknown") == fmt]
+        m = _money_group(fmt, [pair(t) for t in g], "format")
+        m["tickets"] = round(sum(_f(t["ticket_value"]) for t in g), 2)       # satellites: seats are not cash
+        formats.append(m)
+    first = _money_group("first entries", [(_f(t["buyin_total"]), 0.0 if int(t["reentries"] or 0) else _f(t["cash_won"]))
+                                           for t in trs], "entries")
+    re_entries = _money_group("re-entries", [(_f(t["buyin_total"]) * int(t["reentries"]), _f(t["cash_won"]))
+                                             for t in trs if int(t["reentries"] or 0) > 0], "entries")
+
+    family = [g for g in tiers + formats + [first, re_entries] if g.get("boot")]
+    for g, q in zip(family, benjamini_hochberg([g["boot"]["p"] for g in family])):
+        b = g.pop("boot")
+        g["interval"] = {"low": b["low"], "high": b["high"], "level": 95}
+        g["q"] = round(q, 4)
+        g["confidence"] = confidence_from_q(q) if (b["high"] < 0 or b["low"] > 0) else None
+        g["verdict"] = (("losing" if b["high"] < 0 else "winning") + " beyond chance") if g["confidence"] \
+            else "too little data to tell"
+    for g in tiers + formats + [first, re_entries]:
+        g.pop("boot", None)
+        g["share_of_spend_pct"] = round(100 * g["cost"] / cost, 1) if cost else None
+        g["share_of_result_pct"] = round(100 * g["profit"] / profit, 1) if profit else None
+
+    stacks = {r["kind"]: {"avg_bb": round(_f(r["bb"]), 1), "entries": int(r["n"])} for r in db.query(
+        "SELECT CASE WHEN entry_no = 1 THEN 'first' ELSE 're' END AS kind, AVG(start_stack_bb) AS bb, COUNT(*) AS n "
+        "FROM entries WHERE site = ? GROUP BY 1", (site,))}
+    first["avg_start_bb"], re_entries["avg_start_bb"] = (stacks.get(k, {}).get("avg_bb") for k in ("first", "re"))
     return {"tournaments": len(trs), "cost": round(cost, 2), "profit": round(profit, 2),
-            "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs), "tiers": tiers,
-            "reentries": {"tournaments": len(re), "extra_cost": round(extra, 2),
-                          "profit": round(sum(_f(t["profit"]) for t in re), 2)}}
+            "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs),
+            "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
+            "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries)}
+
+
+def money_facts(tiers, formats, first, re_entries):
+    """Facts, not advice, and only about groups judged beyond chance."""
+    facts = []
+    sig = sorted([g for g in tiers if g["confidence"]], key=lambda g: -g["share_of_spend_pct"])
+    for i, g in enumerate(sig):
+        word = "loses" if g["profit"] < 0 else "wins"
+        tail = ", so it has the biggest effect on your overall result." if i == 0 else "."
+        facts.append(f"{g['label']} {word} beyond chance and accounts for {g['share_of_spend_pct']:.0f} % of your spend"
+                     + tail)
+    for g in formats:
+        if g["confidence"]:
+            facts.append(f"{g['label'].capitalize()} tournaments {'lose' if g['profit'] < 0 else 'win'} beyond chance "
+                         f"({g['tournaments']} tournaments, {g['share_of_spend_pct']:.0f} % of your spend).")
+    if (first["confidence"] or re_entries["confidence"]) and first["roi_pct"] is not None:
+        if re_entries["roi_pct"] is None:                              # no re-entries in the history
+            facts.append(f"First entries return {first['roi_pct']:+.0f} %; you have made no re-entries.")
+        else:
+            facts.append(f"First entries return {first['roi_pct']:+.0f} % and re-entries {re_entries['roi_pct']:+.0f} % "
+                         f"(re-entries start with {re_entries.get('avg_start_bb') or 0:.0f} BB on average, first "
+                         f"entries with {first.get('avg_start_bb') or 0:.0f} BB).")
+    return facts
 
 
 def overview(hands, db, site=SITE):
