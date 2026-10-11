@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .analysis import analysis_data
+from .session import session_insights
 from .dashboard import PERIODS, dashboard_data
 from .db import Database
 from .importer import changed_files, import_files, list_files
@@ -62,25 +63,39 @@ def tournaments_list(db, site=SITE):
     return rows
 
 
-def last_session(db, site=SITE):
-    """Tournaments of the most recent session: played within SESSION_GAP_HOURS of each other."""
-    ts = [t for t in tournaments_list(db, site) if t["last_hand"]]
+def group_session(tournaments, gap_hours=SESSION_GAP_HOURS):
+    """The most recent session from tournaments with first_hand / last_hand times.
+
+    Going back from the tournament that ended last, a tournament belongs to the session when it ended no more than
+    gap_hours before the earliest start in the session so far (tournaments running at the same time overlap, so their
+    gap is negative and they always belong). The first longer break ends the session.
+    """
+    ts = sorted((t for t in tournaments if t["first_hand"] and t["last_hand"]), key=lambda t: str(t["last_hand"]),
+                reverse=True)
     if not ts:
-        return None
-    ts.sort(key=lambda t: str(t["last_hand"]), reverse=True)
-    session = [ts[0]]
+        return []
+    session, start = [ts[0]], _ts(ts[0]["first_hand"])
     for t in ts[1:]:
-        gap = _ts(session[-1]["first_hand"]) - _ts(t["last_hand"])
-        if gap.total_seconds() > SESSION_GAP_HOURS * 3600:
+        if (start - _ts(t["last_hand"])).total_seconds() > gap_hours * 3600:
             break
         session.append(t)
+        start = min(start, _ts(t["first_hand"]))
+    return session
+
+
+def last_session(db, site=SITE):
+    """Tournaments of the most recent session (see group_session), with what happened in it."""
+    session = group_session(tournaments_list(db, site))
+    if not session:
+        return None
     known = [t for t in session if t["profit"] is not None]
     return {"tournaments": session, "count": len(session),
             "hands": sum(int(t["hands"]) for t in session),
             "profit": sum(float(t["profit"]) for t in known) if known else None,
             "with_result": len(known),
             "luck_bb": sum(float(t["luck_bb"] or 0) for t in session),
-            "from": str(session[-1]["first_hand"])[:16], "to": str(session[0]["last_hand"])[:16]}
+            "from": str(min(t["first_hand"] for t in session))[:16], "to": str(session[0]["last_hand"])[:16],
+            "insights": session_insights(db, session, site)}
 
 
 def tournament_detail(db, tournament_id, site=SITE):
