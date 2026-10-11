@@ -252,24 +252,30 @@ function itmTiles(itm, n, b) {
     ${b && b.n ? `<div title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
 }
 // top 10 % / 15 % of the field: facts (place / players), with a 95 % bootstrap interval over tournaments
-function topTiles(pl) {
+function topTiles(split) {
+  const pl = split && split.all;
   if (!pl || !pl.n) return "";
   return [["top10", "top.title10"], ["top15", "top.title15"]].map(([k, title]) => {
-    const x = pl[k], iv = x.interval;
+    const x = pl[k], iv = x.interval, part = s => s && s.n ? pct(s[k].pct) : "–";
     return `<div title="${esc(t("places.tip"))}">${t(title)}<b>${pct(x.pct)}</b><span class="m">${iv
-      ? t("top.sub", {count: x.count, n: pl.n, lo: num(iv.low, 0), hi: num(iv.high, 0)}) : t("top.subShort", {count: x.count, n: pl.n})}</span></div>`;
+      ? t("top.sub", {count: x.count, n: pl.n, lo: num(iv.low, 0), hi: num(iv.high, 0)}) : t("top.subShort", {count: x.count, n: pl.n})}<br>
+      ${t("top.split", {s: part(split.start), l: part(split.late)})}</span></div>`;
   }).join("");
 }
 // where Hero finishes, as a share of the field, against an average player's share of each band
-function placeChart(pl) {
-  if (!pl || !pl.n) return "";
-  const max = Math.max(60, ...pl.bands.map(b => b.pct || 0));
-  return `<h2 title="${esc(t("places.tip"))}">${t("places.title")}</h2><p class="m">${t("places.intro", {tournaments: t("common.tournaments", {n: pl.n})})}</p>
-    <div class="box">${pl.bands.map(b => `<div class="band"><span class="band-l">${t("band." + b.key)}</span>
+function placeChart(split) {
+  if (!split || !split.all || !split.all.n) return "";
+  const max = Math.max(60, ...["start", "late"].flatMap(k => split[k].bands.map(b => b.pct || 0)));
+  // the average player's line only where the comparison is fair: entries from the start
+  const bands = (pl, fair) => !pl.n ? `<p class="m">${t("places.none")}</p>` : pl.bands.map(b => `<div class="band"><span class="band-l">${t("band." + b.key)}</span>
       <span class="band-bar"><span class="band-fill" style="width:${100 * (b.pct || 0) / max}%"></span>
-        <span class="band-exp" style="left:${100 * b.expected / max}%" title="${esc(t("places.expected", {x: b.expected}))}"></span></span>
-      <span class="band-v"><b>${pct(b.pct)}</b> <span class="m">(${b.count})</span></span></div>`).join("")}
-      <p class="m" style="margin:6px 0 0"><span class="band-key"></span> ${t("places.expected", {x: "10 / 15 / 25 / 50"})}</p></div>`;
+        ${fair ? `<span class="band-exp" style="left:${100 * b.expected / max}%" title="${esc(t("places.expected", {x: b.expected}))}"></span>` : ""}</span>
+      <span class="band-v"><b>${pct(b.pct)}</b> <span class="m">(${b.count})</span></span></div>`).join("");
+  return `<h2 title="${esc(t("places.tip"))}">${t("places.title")}</h2><p class="m">${t("places.introSplit")}</p>
+    <div class="trio"><div class="box"><h3>${t("places.start")} · ${t("common.tournaments", {n: split.start.n})}</h3>${bands(split.start, true)}
+      <p class="m" style="margin:6px 0 0"><span class="band-key"></span> ${t("places.expected", {x: "10 / 15 / 25 / 50"})}</p></div>
+    <div class="box"><h3>${t("places.late")} · ${t("common.tournaments", {n: split.late.n})}</h3>${bands(split.late, false)}
+      <p class="m" style="margin:6px 0 0">${t("places.lateNote")}</p></div></div>`;
 }
 // a satellite ticket: counted at face value on both sides
 const TICKET_ICON = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 8a2 2 0 0 0 2-2h14a2 2 0 0 0 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 0-2 2H5a2 2 0 0 0-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg>';
@@ -895,7 +901,7 @@ async function viewAnalysis(tab) {
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
           ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 1, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
       <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
-      ${o.places && o.places.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
+      ${o.places && o.places.all && o.places.all.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
       <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}
       <h2>${t("money.byFormat")}</h2>${table([...head, t("col.tickets")], rows(m.formats, g => `<td>${g.tickets ? money(g.tickets) : "–"}</td>`))}

@@ -2,7 +2,7 @@ import unittest
 
 from pokertracker.db import Database
 from pokertracker.importer import import_texts
-from pokertracker.places import place_stats, share_interval
+from pokertracker.places import place_split, place_stats, share_interval
 from tests.fixtures import SUMMARY_BOUNTY, SUMMARY_SATELLITE
 from tests.test_stages import STAGE1_ADVANCED, STAGE1_BUST
 from tests.test_tickets import BIG_EVENT
@@ -36,6 +36,15 @@ class PlaceTests(unittest.TestCase):
                          [("top10", 2, 10), ("10-25", 1, 15), ("25-50", 1, 25), ("50-100", 0, 50)])
         iv = p["top10"]["interval"]
         self.assertTrue(0 <= iv["low"] <= 50.0 <= iv["high"] <= 100)
+
+    def test_late_registrations_apart(self):
+        tags = {900001: "start", 900002: "start", 900102: "late", 900010: "late"}
+        self.db.execute("DELETE FROM tournament_tags WHERE tag LIKE 'entry:%'")
+        self.db.executemany("INSERT INTO tournament_tags (site, tournament_id, tag) VALUES ('GGPoker', ?, ?)",
+                            [(tid, f"entry:{kind}") for tid, kind in tags.items()])
+        p = place_split(self.db)
+        self.assertEqual((p["all"]["n"], p["start"]["n"], p["late"]["n"]), (4, 2, 2))
+        self.assertEqual((p["start"]["top10"]["count"], p["late"]["top10"]["count"], p["late"]["top15"]["count"]), (2, 0, 1))
 
     def test_share_interval(self):
         self.assertIsNone(share_interval([1]))

@@ -16,7 +16,7 @@ import numpy as np
 
 from .dashboard import hand_class
 from .i18n import num, t
-from .places import place_stats
+from .places import place_split
 from .tournament_report import SITE
 
 HIDE_BELOW = 30          # fewer hands than this: the spot is not tested
@@ -338,7 +338,8 @@ def money(db, site=SITE, lang="en"):
     nothing; the whole prize of a tournament with re-entries is the return of its re-entries. First entries return the
     prize only in tournaments without a re-entry (the first entry lasted to the end)."""
     trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, won_total, profit, "
-                   "cash_profit, reentries, format FROM tournament_results WHERE site = ?", (site,))
+                   "cash_profit, reentries, format FROM tournament_results WHERE site = ? ORDER BY tournament_id",
+                   (site,))                                # one fixed order: the seeded resampling picks the same rows
     cost = sum(_f(r["total_cost"]) for r in trs)
     profit = sum(_f(r["profit"]) for r in trs)                 # tickets at face value
     cash_profit = sum(_f(r["cash_profit"]) for r in trs)
@@ -421,7 +422,7 @@ def overview(hands, db, site=SITE):
             "itm": int(t["itm"] or 0), "itm_n": int(t["itm_n"] or 0), "itm_pct": pct(t["itm"], t["itm_n"]),
             "bounty_cashed": int(t["cashed_b"] or 0), "bounty_n": int(t["n_b"] or 0),
             "bounty_cashed_pct": pct(t["cashed_b"], t["n_b"]),
-            "places": place_stats(db, site),
+            "places": place_split(db, site),
             "vpip_pct": round(100 * sum(h["vpip"] for h in hands) / n, 1) if n else None,
             "pfr_pct": round(100 * sum(h["pfr"] for h in hands) / n, 1) if n else None,
             "bb_per_100": round(100 * sum(h["net_bb"] for h in hands) / n, 1) if n else None,

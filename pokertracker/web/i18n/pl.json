@@ -609,7 +609,7 @@
  "top.title15": "Top 15% pola",
  "top.sub": "{count} z {n} · 95%: {lo}–{hi}%",
  "top.subShort": "{count} z {n}",
- "places.tip": "Twoje miejsce podzielone przez liczbę graczy, z podsumowań. Bez żadnych założeń o strukturze wypłat.",
+ "places.tip": "Twoje miejsce podzielone przez liczbę graczy, z podsumowań. Bez żadnych założeń o strukturze wypłat. Przy late reg w polu są też gracze, którzy odpadli przed Twoim wejściem, więc wynik wygląda lepiej niż wobec graczy, z którymi faktycznie się grało.",
  "places.title": "Gdzie kończysz",
  "places.intro": "Twoje końcowe miejsce jako część pola ({tournaments} z miejscem). Kreska pokazuje, gdzie trafia gracz o przeciętnych umiejętnościach: do każdego przedziału proporcjonalnie do jego szerokości.",
  "places.expected": "przeciętnie {x}%",
@@ -619,5 +619,11 @@
  "band.50-100": "50–100%",
  "places.money": "Miejsca w polu",
  "lp.itmTitle": "ITM, gotówka i miejsca",
- "lp.itm": "<b>ITM</b> (in the money) pokazujemy tylko dla turniejów bez bounty i dla satelit (bilet się liczy). W turnieju bounty podsumowanie podaje tylko łączną kwotę, a historie rąk nie zawierają wypłat bounty, więc nagrody za miejsce nie da się oddzielić od knockoutów: tam aplikacja pokazuje <b>Z gotówką (miejsce lub bounty)</b>. <b>Top 10% / 15% pola</b> to zwykłe fakty: Twoje końcowe miejsce podzielone przez liczbę graczy, z przedziałem 95% po turniejach. Nigdzie nie zakładamy struktury wypłat."
+ "lp.itm": "<b>ITM</b> (in the money) pokazujemy tylko dla turniejów bez bounty i dla satelit (bilet się liczy). W turnieju bounty podsumowanie podaje tylko łączną kwotę, a historie rąk nie zawierają wypłat bounty, więc nagrody za miejsce nie da się oddzielić od knockoutów: tam aplikacja pokazuje <b>Z gotówką (miejsce lub bounty)</b>. <b>Top 10% / 15% pola</b> to zwykłe fakty: Twoje końcowe miejsce podzielone przez liczbę graczy, z przedziałem 95% po turniejach. Nigdzie nie zakładamy struktury wypłat.",
+ "top.split": "od startu {s} · late reg {l}",
+ "places.start": "Wejścia od startu",
+ "places.late": "Late reg",
+ "places.introSplit": "Twoje końcowe miejsce jako część pola. Kreska pokazuje, gdzie trafia gracz o przeciętnych umiejętnościach (do każdego przedziału proporcjonalnie do jego szerokości); tylko przy wejściach od startu.",
+ "places.lateNote": "Tu bez porównania z przeciętnym graczem: w polu są gracze, którzy odpadli przed Twoim wejściem, więc te miejsca wyglądają lepiej, niż są.",
+ "places.none": "Nie ma jeszcze takich turniejów z miejscem."
 }

@@ -596,7 +596,7 @@
  "top.title15": "Top 15% of the field",
  "top.sub": "{count} of {n} · 95%: {lo}–{hi}%",
  "top.subShort": "{count} of {n}",
- "places.tip": "Your place divided by the number of players, from the summaries. No payout structure is assumed.",
+ "places.tip": "Your place divided by the number of players, from the summaries. No payout structure is assumed. With a late registration, players who busted before you sat down count in the field, so the share looks better than against the players you actually met.",
  "places.title": "Where you finish",
  "places.intro": "Your final place as a share of the field ({tournaments} with a place). The line marks where a player of average skill lands: in each band in proportion to its width.",
  "places.expected": "average {x}%",
@@ -606,5 +606,11 @@
  "band.50-100": "50–100%",
  "places.money": "Places in the field",
  "lp.itmTitle": "ITM, cashes and places",
- "lp.itm": "<b>ITM</b> (in the money) is shown only for tournaments without bounties and for satellites (a ticket counts). In a bounty tournament the summary gives only the total you received and the hand histories hold no bounty payouts, so money for your place cannot be told apart from knockouts: there the app shows <b>Cashed (place or bounty)</b>. <b>Top 10 % / 15 % of the field</b> are plain facts: your final place divided by the number of players, with a 95 % interval over tournaments. No payout structure is assumed anywhere."
+ "lp.itm": "<b>ITM</b> (in the money) is shown only for tournaments without bounties and for satellites (a ticket counts). In a bounty tournament the summary gives only the total you received and the hand histories hold no bounty payouts, so money for your place cannot be told apart from knockouts: there the app shows <b>Cashed (place or bounty)</b>. <b>Top 10 % / 15 % of the field</b> are plain facts: your final place divided by the number of players, with a 95 % interval over tournaments. No payout structure is assumed anywhere.",
+ "top.split": "from the start {s} · late reg {l}",
+ "places.start": "Entries from the start",
+ "places.late": "Late registration",
+ "places.introSplit": "Your final place as a share of the field. The line marks where a player of average skill lands (in each band in proportion to its width); it is shown only for entries from the start.",
+ "places.lateNote": "No comparison with an average player here: players who busted before you sat down count in the field, so these places look better than they are.",
+ "places.none": "No tournaments of this kind with a place yet."
 }
