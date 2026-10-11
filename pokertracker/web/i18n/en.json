@@ -4,6 +4,8 @@
  "nav.analysis": "Analysis",
  "nav.import": "Import",
  "nav.luck": "How luck works",
+ "theme.light": "Light theme",
+ "theme.dark": "Dark theme",
  "common.tournamentsTitle": "Tournaments",
  "common.hands": "Hands",
  "common.profit": "Profit",

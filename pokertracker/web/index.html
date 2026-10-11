@@ -6,7 +6,10 @@
 <title>Poker Tracker</title>
 <style>
 :root{--bg:#fff;--fg:#14161a;--muted:#6b7280;--card:#f3f4f6;--line:#e5e7eb;--blue:#2f6fed;--orange:#e67e22;--pos:#0a7d2c;--neg:#c0392b;--red:#c0392b;--felt:#1f6f4a;--rail:#5a3d2b;--s-s:#14161a;--s-h:#c62828;--s-d:#1f62c9;--s-c:#1b7f37}
-@media (prefers-color-scheme:dark){:root{--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}}
+/* the system theme, unless a theme was picked with the switch (data-theme on <html>) */
+:root{color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){color-scheme:dark;--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}}
+:root[data-theme=dark]{color-scheme:dark;--bg:#121417;--fg:#e8eaed;--muted:#9aa0a6;--card:#1d2026;--line:#2c3038;--pos:#4cd37b;--neg:#ff7b6b;--red:#ff6b6b;--felt:#1b5c3e;--rail:#2f241d;--s-s:#e8eaed;--s-h:#ff6b6b;--s-d:#5aa2ff;--s-c:#4cd37b}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
 header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:2}
@@ -120,6 +123,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs{margin-left:auto;display:flex;flex:none;align-items:center}.langs button{padding:4px 8px;font-size:.8rem;border-radius:0}
 .langs button:first-child{border-radius:8px 0 0 8px}.langs button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .langs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.langs.themes{margin-left:6px}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -136,6 +140,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 <header><nav id="nav">
   <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
+  <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
 </nav></header>
 <main id="app"></main>
 <script>
@@ -163,6 +168,7 @@ async function setLang(l, save) {
   LANG = l;
   document.documentElement.lang = l;
   document.querySelectorAll("[data-i18n]").forEach(e => { e.textContent = t(e.dataset.i18n); });
+  document.querySelectorAll("[data-i18n-title]").forEach(e => { e.title = t(e.dataset.i18nTitle); });
   document.querySelectorAll("#langs button").forEach(b => b.classList.toggle("on", b.dataset.l === l));
   if (save) try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
                                              body: JSON.stringify({lang: l})}); } catch (e) { /* still applied now */ }
@@ -173,6 +179,21 @@ document.getElementById("langs").onclick = async e => {
   await setLang(b.dataset.l, true);
   if (replay && document.getElementById("stage")) { const k = step; stopPlay(); renderHand(); replay.go(k); }
   else route(true);
+};
+
+// ---- Theme: the system's until one is picked; the server puts the saved choice on <html> so the page does not flash
+const systemDark = matchMedia("(prefers-color-scheme: dark)");
+const markTheme = () => document.querySelectorAll("#themes button").forEach(b => b.classList.toggle("on",
+  b.dataset.t === (document.documentElement.dataset.theme || (systemDark.matches ? "dark" : "light"))));
+systemDark.addEventListener("change", markTheme);
+markTheme();
+document.getElementById("themes").onclick = async e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  document.documentElement.dataset.theme = b.dataset.t;
+  markTheme();
+  try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                   body: JSON.stringify({theme: b.dataset.t})}); } catch (err) { /* still applied now */ }
 };
 
 // Numbers: a decimal comma and non-breaking thousands in Polish (1,5 BB; 2 445,05 $), a true minus sign

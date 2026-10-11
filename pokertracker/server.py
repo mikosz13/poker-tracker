@@ -20,6 +20,7 @@ from .tournament_report import tournament_data
 SITE = "GGPoker"
 WEB = Path(__file__).resolve().parent / "web"
 SESSION_GAP_HOURS = 3        # tournaments closer together than this belong to the same session
+THEMES = ("light", "dark")   # without a saved theme the page follows the system
 WATCH_SECONDS = 20           # how often a watched folder is checked for new exports
 
 
@@ -226,6 +227,10 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             path = self.path.split("?", 1)[0]
             if path in ("/", "/index.html"):
                 page = (WEB / "index.html").read_text(encoding="utf-8").replace("__TOKEN__", token)
+                with Database(url) as db:
+                    theme = get_setting(db, "theme")
+                if theme in THEMES:                               # the saved theme from the first paint
+                    page = page.replace('<html lang="en">', f'<html lang="en" data-theme="{theme}">', 1)
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
             if path.startswith("/i18n/") and path[6:-5] in LANGS and path.endswith(".json"):
                 return self._send(200, (I18N / path[6:]).read_bytes())
@@ -254,7 +259,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
                                             "watch": get_setting(db, "watch") == "1",
                                             "four_color": get_setting(db, "four_color") != "0",
-                                            "lang": get_setting(db, "lang")})
+                                            "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
                 if path == "/api/status":
                     return self._send(200, status_payload(db))
             self._send(404, {"error": "not found"})
@@ -277,10 +282,12 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
-            if self.path == "/api/display":                       # deck colours, dashboard period, language
+            if self.path == "/api/display":                       # deck colours, period, language, theme
                 with Database(url) as db:
                     if body.get("lang") in LANGS:
                         set_setting(db, "lang", body["lang"])
+                    if body.get("theme") in THEMES:
+                        set_setting(db, "theme", body["theme"])
                     if "four_color" in body:
                         set_setting(db, "four_color", "1" if body["four_color"] else "0")
                     if body.get("dashboard_period") in PERIODS:
@@ -288,7 +295,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     db.commit()
                     return self._send(200, {"four_color": get_setting(db, "four_color") != "0",
                                             "dashboard_period": get_setting(db, "dashboard_period") or "max",
-                                            "lang": get_setting(db, "lang")})
+                                            "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
             self._send(404, {"error": "not found"})
 
     class Server(ThreadingHTTPServer):

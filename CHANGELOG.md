@@ -8,6 +8,8 @@
   jargon (positions, actions, VPIP, all-in…) stays English, as agreed in docs/glossary-pl.md. The CLI HTML reports stay
   English. Tests check that both languages have the same keys and placeholders and that the page has no hard-coded
   text.
+- Light and dark theme: a switch next to the language one. Without a choice the app follows the system theme; a
+  chosen theme is remembered and applied from the first paint.
 - Layout: long table headers wrap instead of widening the table, the dashboard's three boxes go to two columns in a
   narrow window, and the replayer's all-in equity and luck sit on two lines so they no longer run under a bet.
 - Dashboard: the last session's tournament list scrolls inside its box (about 8 rows, the column header stays visible)

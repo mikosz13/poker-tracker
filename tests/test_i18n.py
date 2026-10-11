@@ -58,7 +58,7 @@ class PluralTests(unittest.TestCase):
         self.assertEqual([I.t("pl", "common.handsN", n=n) for n in counts],
                          ["1 ręka", "2 ręce", "5 rąk", "12 rąk", "22 ręce", "25 rąk"])
         self.assertEqual([I.t("pl", "sum.busts", n=n) for n in counts],
-                         ["1 wylot", "2 wyloty", "5 wylotów", "12 wylotów", "22 wyloty", "25 wylotów"])
+                         ["1 odpadnięcie", "2 odpadnięcia", "5 odpadnięć", "12 odpadnięć", "22 odpadnięcia", "25 odpadnięć"])
 
     def test_english(self):
         self.assertEqual([I.t("en", "common.handsN", n=n) for n in (1, 2, 1234)], ["1 hand", "2 hands", "1,234 hands"])
@@ -114,10 +114,10 @@ class PythonTextTests(unittest.TestCase):
         rows = [x for x in tournaments_list(self.db) if x["tournament_id"] == 900001]
         text = session_insights(self.db, rows, lang="pl")["summary"]
         self.assertTrue(text.startswith("1 turniej, 1 ITM, +0,00 $."), text)
-        self.assertIn("1 wylot.", text)
+        self.assertIn("1 odpadnięcie.", text)
 
 
-class ServerLanguageTests(unittest.TestCase):
+class ServerDisplayTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -148,6 +148,15 @@ class ServerLanguageTests(unittest.TestCase):
             self.assertEqual(json.loads(r.read())["lang"], "pl")
         self.assertEqual(json.loads(self.get("/api/settings")[1])["lang"], "pl")
         self.assertEqual(self.get("/api/analysis?lang=pl")[0], 200)
+
+    def test_saved_theme_is_on_the_page_from_the_start(self):
+        self.assertNotIn(b"data-theme=", self.get("/")[1].split(b"<head>")[0])    # unset: the system theme
+        req = urllib.request.Request(self.url + "api/display", data=b'{"theme": "dark"}', method="POST",
+                                     headers={"Content-Type": "application/json", "X-Token": self.server.token})
+        with urllib.request.urlopen(req) as r:
+            self.assertEqual(json.loads(r.read())["theme"], "dark")
+        self.assertIn(b'<html lang="en" data-theme="dark">', self.get("/")[1])
+        self.assertEqual(json.loads(self.get("/api/settings")[1])["theme"], "dark")
 
 
 # ---- no hard-coded texts in the page ------------------------------------------------------------------------------
@@ -259,7 +268,7 @@ class NoHardCodedTextTests(unittest.TestCase):
             if lit in ALLOWED_STRINGS:
                 continue
             if "`" in lit or "<" in lit or "\0" in lit or " " in lit.strip() or re.fullmatch(r"[A-Z][a-z]{2,}[.!?…]?", lit):
-                if lit.startswith(("#", ".")) and "<" not in lit:            # CSS selectors
+                if lit.startswith(("#", ".", "(")) and "<" not in lit:       # CSS selectors and media queries
                     continue
                 found += [(w, lit[:60]) for w in visible_words(lit)]
         self.assertEqual(found, [])
