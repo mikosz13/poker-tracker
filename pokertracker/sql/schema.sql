@@ -147,6 +147,14 @@ CREATE TABLE IF NOT EXISTS excluded_tournaments (
     PRIMARY KEY (site, tournament_id)
 );
 
+-- Which export files held which tournament, so a tournament taken off the ignore list is read again from its files.
+CREATE TABLE IF NOT EXISTS tournament_files (
+    site           TEXT NOT NULL,
+    tournament_id  BIGINT NOT NULL,
+    path           TEXT NOT NULL,
+    PRIMARY KEY (site, tournament_id, path)
+);
+
 -- Version of this schema the database is at; older databases are upgraded by pokertracker/migrations.py.
 CREATE TABLE IF NOT EXISTS schema_version (
     version  INTEGER NOT NULL

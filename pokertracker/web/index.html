@@ -123,7 +123,10 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs{margin-left:auto;display:flex;flex:none;align-items:center}.langs button{padding:4px 8px;font-size:.8rem;border-radius:0}
 .langs button:first-child{border-radius:8px 0 0 8px}.langs button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .langs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-.langs.themes{margin-left:6px}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
+.langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
+#notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
+#notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
+.picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2){text-align:left}tr.off td{opacity:.5}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
@@ -141,7 +144,8 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
   <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
   <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
-</nav></header>
+  <a href="#/settings" class="gear" data-i18n-title="nav.settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
+</nav><div id="notice"></div></header>
 <main id="app"></main>
 <script>
 const TOKEN = "__TOKEN__";
@@ -563,7 +567,8 @@ function stackChart(d) {
 async function viewTournament(id) {
   const mine = routeSeq, d = await api(`/api/tournament/${id}`);
   if (mine !== routeSeq) return;
-  let h = `<p><a href="#/tournaments">${t("tour.back")}</a></p><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
+  let h = `<p style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a href="#/tournaments">${t("tour.back")}</a>
+    <button id="ign">${t("ign.button")}</button></p><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
   if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.place}/${r.players}</b></div><div>${t("tour.prize")}<b>${money(r.prize)}${r.ticket ? " " + t("tour.ticket") : ""}</b></div>
     <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b></div></div>`;
@@ -571,7 +576,7 @@ async function viewTournament(id) {
   h += `<p>${d.tags.map(x => `<span class="tag">${tagLabel(x)}</span>`).join("")}</p>`;
   h += d.entries.map(e => `<p class="m">${t("tour.entry", {no: e.entry_no, level: e.level, bb: num(e.stack_bb, 0)})}</p>`).join("");
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
-  if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; return; }
+  if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; bindIgnore(d.tournament_id); return; }
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${num(d.vpip_pct, 0)} / ${num(d.pfr_pct, 0)}</b></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
@@ -593,7 +598,17 @@ async function viewTournament(id) {
     `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${esc(String(x.played_at).slice(11, 16))}</td><td>${x.level}</td><td>${esc(x.position)}</td>
      <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
   app.innerHTML = h;
+  bindIgnore(d.tournament_id);
   stackChart(d);
+}
+function bindIgnore(id) {
+  document.getElementById("ign").onclick = () => {
+    document.getElementById("ign-ask").innerHTML = `<p class="warn">${t("ign.confirm")}
+      <span style="display:inline-flex;gap:6px;margin-left:6px"><button id="ign-yes" class="primary">${t("ign.button")}</button>
+      <button id="ign-no">${t("common.cancel")}</button></span></p>`;
+    document.getElementById("ign-no").onclick = () => { document.getElementById("ign-ask").innerHTML = ""; };
+    document.getElementById("ign-yes").onclick = async () => { await post("/api/ignore", {ids: [id]}); location.hash = "#/tournaments"; };
+  };
 }
 
 // ---- Replayer -----------------------------------------------------------------
@@ -839,7 +854,7 @@ async function viewAnalysis(tab) {
 // ---- Import -----------------------------------------------------------------
 let poller = null;
 const REASONS = {"Sit & Go": "sng", "PLO/Omaha": "omaha", "other game": "other", "not in $": "currency", "cash game": "cash",
-                 "freeroll": "freeroll", "unrecognised summary": "unrecognised"};
+                 "freeroll": "freeroll", "unrecognised summary": "unrecognised", "ignored": "ignored"};
 const fileList = files => `<ul style="margin:4px 0 0 18px;padding:0">${files.map(f => `<li>${esc(f)}</li>`).join("")}</ul>`;
 const resultBox = r => `<div class="box"><b>${t(r.source === "auto" ? "imp.auto" : "imp.done")}</b>
   <span class="m">${dateTime(String(r.finished_at || "").replace("T", " "))}</span><br>
@@ -851,6 +866,31 @@ const resultBox = r => `<div class="box"><b>${t(r.source === "auto" ? "imp.auto"
   ${(r.to_check || []).length ? `<div class="warn" style="margin-top:8px">${t("imp.formatWarning", {n: r.to_check.length})}${fileList(r.to_check)}</div>` : ""}
   <p><a href="#/">${t("imp.openDashboard")}</a></p>${r.skipped.length ? `<p class="m">${t("imp.skipped")} ${r.skipped.map(x => typeof x === "string" ? esc(x)          // saved by an older version
     : `${esc(x.file)}: ${t("imp.skip." + x.code, {detail: esc(x.detail)})}`).join("<br>")}</p>` : ""}</div>`;
+const post = (path, body) => api(path, {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                        body: JSON.stringify(body)});
+const reasonText = r => t(REASONS[r] ? "reason." + REASONS[r] : "reason.other");
+// tournaments with a checkbox each: ticked ones are imported or kept; ones a rule leaves out are greyed and disabled
+function pickRows(list) {
+  return list.map(r => {
+    const note = r.reason ? reasonText(r.reason) : r.to_check ? t("reason.toCheck") : r.in_database ? t("imp.already") : "";
+    return `<tr class="${r.reason ? "off" : ""}"><td><input type="checkbox" class="pick" data-id="${r.tournament_id}" ${r.reason ? "disabled" : "checked"}></td>
+      <td>${r.date ? shortDate(r.date) : "–"}</td><td style="text-align:left;white-space:normal">${esc(r.name || "#" + r.tournament_id)}</td>
+      <td>${r.buyin == null ? "–" : money(r.buyin)}</td>
+      <td>${r.hands || (r.hands_stored ? `<span class="m">${t("imp.inDb", {n: r.hands_stored})}</span>` : 0)}</td>
+      <td>${t(r.summary ? "common.yes" : "common.no")}</td><td class="vcell m">${note}</td></tr>`;
+  });
+}
+const pickHead = () => ["", t("col.date"), t("col.tournament"), t("col.buyin"), t("col.hands"), t("col.summary"), t("col.note")];
+function bindPicks(box, button, label) {
+  const picks = [...box.querySelectorAll("input.pick:not([disabled])")];
+  const count = () => { button.textContent = label(picks.filter(c => c.checked).length); };
+  picks.forEach(c => { c.onchange = count; });
+  count();
+  return {all: () => { picks.forEach(c => { c.checked = true; }); count(); },
+          unticked: () => picks.filter(c => !c.checked).map(c => +c.dataset.id)};
+}
+
+let previewAsked = false;                               // a preview shows only for the import started on this screen
 async function viewImport() {
   const mine = routeSeq, st = await api("/api/settings");
   if (mine !== routeSeq) return;
@@ -862,16 +902,37 @@ async function viewImport() {
        <label><input type="checkbox" id="rescan"> ${t("imp.rescan")}</label></p>
     <div id="out"></div><p class="m">${t("imp.database", {db: esc(st.database)})}</p>`;
   const out = document.getElementById("out"), btn = document.getElementById("go");
+  const folder = () => document.getElementById("folder").value, rescan = () => document.getElementById("rescan").checked;
+  const picker = p => {
+    if (!p.tournaments.length) { out.innerHTML = `<div class="box">${t("imp.previewNone")}</div>`; return; }
+    out.innerHTML = `<div class="box"><b>${t("imp.previewTitle", {tournaments: t("common.tournaments", {n: p.tournaments.length})})}</b>
+      ${p.fuse ? `<p class="warn">${t("imp.formatWarning", {n: p.tournaments.filter(r => r.to_check).length})}</p>` : ""}
+      ${table(pickHead(), pickRows(p.tournaments), "scrollbox picks")}
+      <p class="m">${t("imp.untickNote")}</p>
+      <div class="filters"><button id="pick-all">${t("imp.selectAll")}</button><button id="pick-go" class="primary"></button>
+        <button id="pick-cancel">${t("common.cancel")}</button></div></div>`;
+    const picks = bindPicks(out, document.getElementById("pick-go"), n => t("imp.importSelected", {n}));
+    document.getElementById("pick-all").onclick = picks.all;
+    document.getElementById("pick-cancel").onclick = () => { previewAsked = false; out.innerHTML = ""; };
+    document.getElementById("pick-go").onclick = async () => {
+      const off = new Set(picks.unticked());
+      const ignore = p.tournaments.filter(r => off.has(r.tournament_id)).map(r => ({id: r.tournament_id, name: r.name, files: r.files}));
+      previewAsked = false;
+      try { await post("/api/import", {path: folder(), rescan: rescan(), ignore}); poll(); }
+      catch (err) { out.innerHTML = `<p class="warn">${esc(err.message)}</p>`; }
+    };
+  };
   const show = s => {
     if (s.running) {
       btn.disabled = true;
-      out.innerHTML = `<div class="box"><b>${t(s.source === "auto" ? "imp.runningAuto" : "imp.running")}</b>
+      out.innerHTML = `<div class="box"><b>${t(s.mode === "preview" ? "imp.previewing" : s.source === "auto" ? "imp.runningAuto" : "imp.running")}</b>
         <progress max="${s.total || 1}" value="${s.done}" style="width:100%"></progress>
-        <p class="m">${t("imp.progress", {done: s.done, total: s.total})}${s.current ? " · " + esc(s.current) : ""}. ${t("imp.slow")}</p></div>`;
+        <p class="m">${t("imp.progress", {done: s.done, total: s.total})}${s.current ? " · " + esc(s.current) : ""}.${s.mode === "preview" ? "" : " " + t("imp.slow")}</p></div>`;
       return;
     }
     btn.disabled = false;
     if (s.error) out.innerHTML = `<p class="warn">${t("imp.failed", {e: esc(s.error)})}</p>`;
+    else if (s.mode === "preview" && s.preview && previewAsked) picker(s.preview);
     else if (s.result || s.last_import) out.innerHTML = resultBox(s.result || s.last_import);
   };
   const poll = async () => {
@@ -880,16 +941,67 @@ async function viewImport() {
     clearTimeout(poller);
     if (s.running && location.hash === "#/import") poller = setTimeout(poll, 700);
   };
-  btn.onclick = async () => {
-    try {
-      await api("/api/import", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
-        body: JSON.stringify({path: document.getElementById("folder").value, rescan: document.getElementById("rescan").checked})});
-      poll();
-    } catch (err) { out.innerHTML = `<p class="warn">${esc(err.message)}</p>`; }
+  btn.onclick = async () => {                             // first a preview: nothing is written until "Import selected"
+    try { previewAsked = true; await post("/api/import/preview", {path: folder(), rescan: rescan()}); poll(); }
+    catch (err) { out.innerHTML = `<p class="warn">${esc(err.message)}</p>`; }
   };
-  document.getElementById("watch").onchange = e => api("/api/watch", {method: "POST",
-    headers: {"Content-Type": "application/json", "X-Token": TOKEN}, body: JSON.stringify({enabled: e.target.checked})});
+  document.getElementById("watch").onchange = e => post("/api/watch", {enabled: e.target.checked});
   poll();
+}
+
+// ---- After an automatic import: a notice on every screen, and a review of what came in -------------------------
+const notice = document.getElementById("notice");
+const markSeen = async at => { notice.innerHTML = ""; try { await post("/api/display", {import_seen: at}); } catch (e) { /* shown again later */ } };
+async function checkNotice() {
+  try {
+    const s = await api("/api/status"), li = s.last_import;
+    const show = li && li.source === "auto" && li.tournaments && li.finished_at !== s.import_seen && location.hash !== "#/review";
+    notice.innerHTML = show ? `<div class="notice">${t("notice.auto", {tournaments: t("common.tournaments", {n: li.tournaments})})}
+      <a href="#/review">${t("notice.review")}</a><button id="notice-x" title="${esc(t("notice.dismiss"))}">×</button></div>` : "";
+    if (show) document.getElementById("notice-x").onclick = () => markSeen(li.finished_at);
+  } catch (e) { /* the notice can wait */ }
+}
+setInterval(checkNotice, 15000);
+
+async function viewReview(msg) {
+  const mine = routeSeq, r = await api("/api/review");
+  if (mine !== routeSeq) return;
+  if (r.finished_at) markSeen(r.finished_at);
+  let h = `<h1>${t("rev.title")}</h1>${msg ? `<p class="box">${msg}</p>` : ""}`;
+  if (!r.tournaments.length) { app.innerHTML = h + (msg ? "" : `<p class="m">${t("rev.none")}</p>`); return; }
+  const rows = r.tournaments.map(x => ({tournament_id: x.tournament_id, date: x.date, name: x.name, buyin: x.buyin_total,
+                                        hands: x.hands, summary: x.has_summary}));
+  app.innerHTML = h + `<p class="m">${dateTime(String(r.finished_at || "").replace("T", " "))} · ${t("rev.intro")}</p>
+    ${table(pickHead(), pickRows(rows), "scrollbox picks")}
+    <div class="filters" style="margin-top:10px"><button id="pick-all">${t("imp.selectAll")}</button><button id="rev-save" class="primary">${t("rev.save")}</button></div>`;
+  const picks = bindPicks(app, document.createElement("span"), () => "");
+  document.getElementById("pick-all").onclick = picks.all;
+  document.getElementById("rev-save").onclick = async () => {
+    const ids = picks.unticked();
+    if (ids.length) await post("/api/ignore", {ids});
+    viewReview(ids.length ? t("rev.saved", {n: ids.length}) : "");
+  };
+}
+
+// ---- Settings: the ignore list ---------------------------------------------------------------------------------
+async function viewSettings(msg) {
+  const mine = routeSeq, x = await api("/api/excluded");
+  if (mine !== routeSeq) return;
+  const ign = x.ignored.map(r => `<tr><td>${dateTime(String(r.excluded_at || "").replace("T", " "))}</td>
+    <td style="text-align:left;white-space:normal">${esc(r.name || "#" + r.tournament_id)}</td>
+    <td><button data-restore="${r.tournament_id}">${t("set.restore")}</button></td></tr>`);
+  const rules = x.rules.map(r => `<tr><td style="white-space:normal">${esc(r.name || "#" + r.tournament_id)}</td><td>${reasonText(r.reason)}</td></tr>`);
+  app.innerHTML = `<h1>${t("nav.settings")}</h1>${msg ? `<p class="box">${msg}</p>` : ""}
+    <h2>${t("set.ignored")}</h2><p class="m">${t("set.ignoredIntro")}</p>
+    ${ign.length ? table([t("col.ignoredAt"), t("col.tournament"), ""], ign, "names") : `<p class="m">${t("set.none")}</p>`}
+    <h2>${t("set.rules")}</h2><p class="m">${t("set.rulesIntro")}</p>
+    ${rules.length ? table([t("col.tournament"), t("col.reason")], rules) : `<p class="m">${t("set.rulesNone")}</p>`}`;
+  app.querySelectorAll("[data-restore]").forEach(b => {
+    b.onclick = async () => {
+      const r = await post("/api/restore", {id: +b.dataset.restore});
+      viewSettings(t(r.files_found ? "set.restored" : "set.restoredNoFiles"));
+    };
+  });
 }
 
 // ---- How luck works ------------------------------------------------------------
@@ -935,9 +1047,12 @@ async function route(keepScroll) {
     else if (h === "#/analysis" || h.startsWith("#/analysis?")) await viewAnalysis(new URLSearchParams(h.split("?")[1] || "").get("tab"));
     else if (h === "#/import") await viewImport();
     else if (h === "#/luck") viewLuck();
+    else if (h === "#/review") await viewReview();
+    else if (h === "#/settings") await viewSettings();
     else app.innerHTML = `<p>${t("common.notFound")}</p>`;
   } catch (err) { app.innerHTML = `<p class="warn">${t("common.error", {e: esc(err.message)})}</p>`; }
   window.scrollTo(0, keepScroll === true ? y : 0);
+  checkNotice();
 }
 window.addEventListener("hashchange", () => route());
 // the saved language, or the system language the first time

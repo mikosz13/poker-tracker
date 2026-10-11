@@ -190,6 +190,7 @@ ALLOWED_WORDS = {"VPIP", "PFR", "ROI", "ITM", "ALL-IN", "All-in", "all-in", "Her
 ALLOWED_STRINGS = {"Very lucky", "Lucky", "Average", "Bad run", "Worst run",                  # luck level ids
                    "Sit & Go", "PLO/Omaha", "other game", "not in $", "cash game", "unrecognised summary",   # reason ids
                    "raises to",                                                         # replayer actions stay English
+                   "scrollbox picks",                                                   # CSS classes
                    "Content-Type", "X-Token", "POST", "Hero"}
 
 
