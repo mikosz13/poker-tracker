@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Freerolls and promotions are never imported: a summary whose buy-in adds up to $0 (e.g. the Bounty Hunters
+  Series Cash Drop) leaves the whole tournament out, together with any of its hands imported before; its hands stay out
+  in later imports too. A ticket entry is never a freeroll: GGPoker writes it with the full buy-in. A summary that
+  cannot be read leaves its tournament out the same way, with a safety fuse: when more than 3 summaries in one import
+  (or more than 20 % of them) cannot be read, nothing is removed and the import warns that GGPoker may have changed its
+  file format. Tournaments known only from hand histories stay. The import report (CLI and Import screen) names the
+  files of each reason. `pokertracker scope-review <folder>` shows, without changing anything, what the rules would
+  remove from a database, with the amounts on each summary, and which tournaments were probably entered with a ticket.
 - Translated the rest of the app: tournament tags as readable labels ("Micro stakes (up to $5.50)",
   "Players: 1,000+", "Satellite to …"), the strongest showdown hand by name in Polish ("strit do asa", "full: asy na
   króle"), and the import's messages about skipped files (the import now reports a code per file; the CLI keeps

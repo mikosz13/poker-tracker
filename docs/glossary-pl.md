@@ -147,7 +147,23 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 - Money → **Finanse** (najpierw „Kasa”, zmienione 11.10.2026)
 - busted → **odpadnięcie** (najpierw „wylot”, zmienione 11.10.2026)
 
-## 8. Odmiana przez liczby (w aplikacji)
+## 8. Bilety i zakres importu (decyzje 11.10.2026)
+
+| EN | PL |
+|---|---|
+| Won ticket $500 | Wygrany bilet $500 |
+| ticket entry | wejście biletem |
+| incl. cash | w tym gotówka |
+| Tickets (kafelek) | Bilety |
+| Satellite won: ticket to X ($500) | Wygrana satelita: bilet na X ($500) |
+| freeroll / promotion | freeroll lub promocja |
+| unreadable summary | nierozpoznany format podsumowania |
+| to check | do sprawdzenia |
+
+Bilety liczymy do ROI po wartości nominalnej, po obu stronach: satelita = koszt buy-in, wygrana = wartość biletu;
+turniej docelowy = koszt pełny buy-in, nawet przy wejściu biletem.
+
+## 9. Odmiana przez liczby (w aplikacji)
 
 Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama
 reguła w `pokertracker/i18n.py`; testy dla 1, 2, 5, 12, 22, 25).
