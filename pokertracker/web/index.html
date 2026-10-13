@@ -92,6 +92,8 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .pf td small{display:block;color:var(--muted);font-size:.72rem;font-weight:400}.pf td.few,.pf td.few span{color:var(--muted)!important}
 .pf tr.hl td{background:color-mix(in srgb,var(--blue) 8%,transparent)}.pf tr.tot td{border-top:2px solid var(--line);font-weight:600}
 .def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.sd-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;margin-top:6px}.sd-legend span{display:inline-flex;gap:6px;align-items:center;cursor:help}
+.sd-legend i{width:16px;height:3px;border-radius:2px;display:inline-block}.sd-legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)!important}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
@@ -559,15 +561,17 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
   const L = 58, R = 14, B = 26, iw = W - L - R;
   const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
-  let t0 = Math.min(...ts), t1 = Math.max(...ts);
-  if (t1 === t0) t1 = t0 + 3600e3;
+  // x by time, or by position in the series (opts.byIndex: p.n, e.g. the hand number) with the date in the tooltip
+  const xs = opts.byIndex ? pts.map(p => p.n) : ts;
+  let t0 = Math.min(...xs), t1 = Math.max(...xs);
+  if (t1 === t0) t1 = t0 + (opts.byIndex ? 1 : 3600e3);
   const vals = series.flatMap(s => pts.map(p => p[s.key]));
   const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
   const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
   const x = t => L + (t - t0) / (t1 - t0) * iw;
   // annotation labels go in rows above the plot so that labels close in time do not overlap
   const rowEnds = [], placed = (opts.markers || []).filter(m => !m.dot).map(m => {
-    const mx = x(ts[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
+    const mx = x(xs[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
     const a = end ? mx - w - 4 : mx + 4, b = a + w;
     let row = rowEnds.findIndex(e => a > e + 8);
     if (row < 0) row = rowEnds.length < 3 ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
@@ -584,21 +588,21 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   let prevLab = "";
   for (let k = 0; k <= nx; k++) {
     const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
-    const lab = spanH <= 36 ? timeLabel(d) : dayLabel(d);
+    const lab = opts.byIndex ? num(Math.round(t), 0) : spanH <= 36 ? timeLabel(d) : dayLabel(d);
     if (lab === prevLab) continue;                       // a few days on a wide axis: one label per day
     prevLab = lab;
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
   }
   // annotations: a dashed line and a label at the point they belong to; "dot" ones mark a single point (e.g. a bust)
-  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(ts[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
+  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(xs[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
       text-anchor="middle" style="fill:var(--neg);font-size:14px;font-weight:700">✕</text>`).join("") + placed.map(m => {
     const ly = 12 + m.row * 15;
     return `<line x1="${m.mx}" x2="${m.mx}" y1="${ly - 4}" y2="${T + ih}" style="stroke:var(--orange);stroke-dasharray:4 3"/>
       <text x="${m.mx + (m.end ? -4 : 4)}" y="${ly + 4}" text-anchor="${m.end ? "end" : "start"}"
         style="fill:var(--orange);font-size:11px;font-weight:700">${m.title ? `<title>${esc(m.title)}</title>` : ""}${esc(m.label)}</text>`;
   }).join("");
-  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
-    points="${pts.map((p, i) => `${x(ts[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
+  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round${s.dash ? ";stroke-dasharray:6 4" : ""}"
+    points="${pts.map((p, i) => `${x(xs[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
   box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${marks}${lines}
     <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
       ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
@@ -607,8 +611,8 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   const show = e => {
     const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
     let i = 0;
-    ts.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(ts[i]) - mx)) i = k; });
-    const px = x(ts[i]);
+    xs.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(xs[i]) - mx)) i = k; });
+    const px = x(xs[i]);
     hov.style.display = "";
     hov.querySelector("line").setAttribute("x1", px); hov.querySelector("line").setAttribute("x2", px);
     hov.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", px); c.setAttribute("cy", y(pts[i][series[k].key])); });
@@ -622,7 +626,7 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   };
   const nearest = e => {
     const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
-    return ts.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(ts[best]) - mx) ? k : best, 0);
+    return xs.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(xs[best]) - mx) ? k : best, 0);
   };
   if (opts.onPick) svg.addEventListener("click", e => opts.onPick(pts[nearest(e)]));
   svg.addEventListener("pointermove", show);
@@ -731,7 +735,7 @@ async function viewTournament(id) {
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
   if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; bindIgnore(d.tournament_id); return; }
   const s = d.stack, a = d.allins;
-  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b><span class="m">${t("common.n", {n: d.decided})}</span></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
+  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div title="${esc(t("common.n", {n: num(d.decided, 0)}))}">VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
   h += `<h2 style="display:flex;align-items:center;gap:10px">${t("tour.stackTitle")}<span class="seg" id="stack-unit" style="margin:0">${
     [["bb", "stack.unitBb"], ["chips", "stack.unitChips"]].map(([u, k]) => `<button data-u="${u}" class="${u === stackUnit ? "on" : ""}">${t(k)}</button>`).join("")}</span></h2>
@@ -967,10 +971,27 @@ function trendNote(tr) {
   }
   return `<p class="m">${t("trend.note", {state})}</p>`;
 }
+// the tile shows the rate only; how many chances it rests on is in the tooltip
 function rateTile(label, key, r, tr) {
   const s = tr.stats[key];
-  return `<div class="${r.few ? "few" : ""}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
-    <span class="m">${t("common.n", {n: num(r.n, 0)})}${s ? " · " + t("trend.recent", {x: pct(s.recent)}) : ""}</span></div>`;
+  return `<div class="${r.few ? "few" : ""}" title="${esc(t("common.n", {n: num(r.n, 0)}))}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
+    ${s ? `<span class="m">${t("trend.recent", {x: pct(s.recent)})}</span>` : ""}</div>`;
+}
+// cumulative BB over hand number: total, with and without showdown, and the total by all-in EV (dashed)
+const SD_LINES = [["total", "sd.total", "sd.tipTotal", "var(--fg)"], ["sd", "sd.sd", "sd.tipSd", "var(--blue)"],
+  ["nsd", "sd.nsd", "sd.tipNsd", "var(--neg)"], ["ev", "sd.ev", "sd.tipEv", "var(--muted)", true]];
+function showdownBox(sd) {
+  if (!sd || sd.hands < 30) return `<p class="m">${t("sd.few")}</p>`;
+  return `<div class="box" style="margin:14px 0"><h3 style="margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${t("sd.title")}</h3>
+    <div class="tchart" id="c-sd"></div>
+    <div class="sd-legend">${SD_LINES.map(([k, label, tip, color, dash]) => `<span title="${esc(t(tip))}"><i class="${dash ? "dash" : ""}" style="background:${color}"></i>${t(label)}: <b>${sgn(sd.final[k], 0, " BB")}</b></span>`).join("")}</div>
+    <p class="m" style="margin:6px 0 0">${t("sd.note", {hands: t("common.handsN", {n: sd.hands}), showdowns: num(sd.showdowns, 0)})}</p></div>`;
+}
+function showdownChart(sd) {
+  if (!sd || sd.hands < 30 || !document.getElementById("c-sd")) return;
+  addChart("c-sd", sd.points, SD_LINES.map(([key, , , color, dash]) => ({key, color, dash})), v => bbUnit(v, 0),
+    p => t("sd.point", {n: num(p.n, 0), total: sgn(p.total, 0), sd: sgn(p.sd, 0), nsd: sgn(p.nsd, 0), ev: sgn(p.ev, 0)}),
+    {byIndex: true});
 }
 function preflopTable(rows, total, first, firstLabel, depth) {
   const head = [firstLabel, t("col.hands"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.rfi"), "rfi"),
@@ -1012,6 +1033,7 @@ async function viewAnalysis(tab) {
       <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
       ${trendNote(tr)}${pendingNote(m.pending)}
+      ${showdownBox(a.showdown)}
       <div class="trio">${luckBox(o.luck_badge)}</div>
       ${placeChart(o.places)}`;
   }
@@ -1064,6 +1086,8 @@ async function viewAnalysis(tab) {
       ${detailTable("money.byCategory", t("col.tag"), m.by_tag, x => tagLabel(x.key), "col.countTagTip")}`;
   }
   app.innerHTML = h;
+  charts = [];
+  if (tab === "overview") showdownChart(a.showdown);
 }
 
 // ---- Import -----------------------------------------------------------------
@@ -1232,6 +1256,8 @@ function viewLuck() {
   <p>${t("lp.levels")}</p>
   <p>${t("lp.bb")}</p>
   <p>${t("lp.moment")}</p></div>
+  <h2>${t("lp.sdTitle")}</h2>
+  <p>${t("lp.sd")}</p>
   <h2>${t("lp.itmTitle")}</h2>
   <p>${t("lp.itm")}</p>
   <h2>${t("lp.exampleTitle")}</h2>

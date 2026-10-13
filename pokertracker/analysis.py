@@ -94,9 +94,13 @@ def load_hands(db, site=SITE, tournament_ids=None):
                       "JOIN hands h ON h.site = a.site AND h.hand_id = a.hand_id "
                       f"WHERE a.site = ? AND a.street = 'preflop'{where} ORDER BY a.hand_id, a.action_order", (site, *args)):
         acts[a["hand_id"]].append(a)
+    # Hero at showdown: a showdown happened and Hero did not fold on any street (a called all-in always shows cards)
+    folded = {r["hand_id"] for r in db.query(
+        "SELECT DISTINCT a.hand_id FROM actions a JOIN hands h ON h.site = a.site AND h.hand_id = a.hand_id "
+        f"WHERE a.site = ? AND a.nick = 'Hero' AND a.action_type = 'folds'{where}", (site, *args))}
     hands = []
     for r in db.query("SELECT hh.hand_id, hh.tournament_id, hh.played_at, hh.position, hh.stack_bb, hh.net_bb, "
-                      "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, ae.ev_net FROM hero_hands hh "
+                      "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, ae.ev_net, h.showdown FROM hero_hands hh "
                       "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
                       "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
                       "LEFT JOIN allin_ev ae ON ae.site = hh.site AND ae.hand_id = hh.hand_id AND ae.is_hero "
@@ -111,7 +115,8 @@ def load_hands(db, site=SITE, tournament_ids=None):
                       "adj_bb": _f(r["ev_net"]) / bb if r["ev_net"] is not None else net,
                       "posted_bb": posted / bb, "decided": int(r["decided"]), "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),
                       "cards": r["hole_cards"] or "", "spot": first, "after_3bet": after,
-                      "pf": preflop.hand_stats(a, r["position"], _f(r["stack"]))})
+                      "pf": preflop.hand_stats(a, r["position"], _f(r["stack"])),
+                      "showdown": bool(r["showdown"]) and r["hand_id"] not in folded})
     return hands
 
 
@@ -455,6 +460,31 @@ def overview(hands, db, site=SITE):
                                               (site,)))}
 
 
+SHOWDOWN_POINTS = 300    # the chart's points at most; the last hand is always one of them
+
+
+def showdown_lines(hands, points=SHOWDOWN_POINTS):
+    """Cumulative result in BB over the hands, split into hands Hero took to showdown and the rest (steals, uncalled
+    shoves, pots given up, blinds and antes folded), plus the total with the all-in EV in place of the result.
+    Total = with showdown + without showdown, exactly. Points: [hand number, date, total, showdown, no showdown, EV]."""
+    total = sd = nsd = ev = 0.0
+    step = max(1, math.ceil(len(hands) / (points - 1)))           # the first and the last hand are always points
+    out, count = [], 0
+    for k, h in enumerate(hands, 1):
+        total += h["net_bb"]
+        ev += h["adj_bb"]
+        if h["showdown"]:
+            sd += h["net_bb"]
+            count += 1
+        else:
+            nsd += h["net_bb"]
+        if k == 1 or k % step == 0 or k == len(hands):
+            out.append({"n": k, "at": h["at"], "total": round(total, 1), "sd": round(sd, 1), "nsd": round(nsd, 1),
+                        "ev": round(ev, 1)})
+    return {"hands": len(hands), "showdowns": count, "points": out,
+            "final": {"total": round(total, 1), "sd": round(sd, 1), "nsd": round(nsd, 1), "ev": round(ev, 1)}}
+
+
 def all_in_strength(db, site=SITE, lang="en"):
     """Not a test: the all-in EV is an expectation over every runout, so it is shown as a fact."""
     a = db.query("SELECT COUNT(*) AS n, SUM(ev_bb) AS ev FROM hero_allins WHERE site = ?", (site,))[0]
@@ -475,6 +505,7 @@ def analysis_data(db, site=SITE, lang="en"):
         strengths.insert(0, a)
     return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths,
             # Analysis v2: PT4-style rates over their opportunities, by position and stack depth, and the trend
+            "showdown": showdown_lines(hands),
             "preflop": {"total": preflop.summarise(hands), "positions": preflop.by_position(hands),
                         "depths": preflop.by_depth(hands, DEPTHS), "trend": preflop.trend(hands),
                         "min_opp": preflop.MIN_OPP},

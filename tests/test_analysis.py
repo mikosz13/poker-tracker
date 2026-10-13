@@ -22,6 +22,10 @@ def gg_hand(n, hero, actions):
     lines += [f"{nick['SB']}: posts small blind 100", f"{nick['BB']}: posts big blind 200", "*** HOLE CARDS ***",
               "Dealt to Hero [Ah Kd]"]
     for a in actions:
+        if ": " not in a:                    # a street, "Uncalled bet ...", "UTG collected ...": the first word may be a seat
+            first, _, rest = a.partition(" ")
+            lines.append(f"{nick.get(first, first)} {rest}" if first in nick else a)
+            continue
         who, text = a.split(": ", 1)
         lines.append(f"{nick.get(who, who)}: {text}")
     lines += ["*** SUMMARY ***", "Total pot 0 | Rake 0 | Jackpot 0 | Bingo 0 | Fortune 0 | Tax 0"]
@@ -189,7 +193,7 @@ class AnalysisDataTests(unittest.TestCase):
         db.init_schema()
         import_texts(db, [("h", HISTORY), ("b", SUMMARY_BOUNTY), ("s", SUMMARY_SATELLITE)])
         d = A.analysis_data(db)
-        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop"})
+        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown"})
         self.assertEqual((d["overview"]["hands"], d["overview"]["tournaments"]), (3, 2))
         re, first = d["money"]["re_entries"], d["money"]["first_entries"]
         # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return
