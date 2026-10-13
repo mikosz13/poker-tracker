@@ -14,6 +14,7 @@ from collections import defaultdict
 
 import numpy as np
 
+from . import preflop
 from .dashboard import hand_class, pending_results
 from .i18n import num, t
 from .places import place_split
@@ -109,7 +110,8 @@ def load_hands(db, site=SITE, tournament_ids=None):
                       "position": r["position"], "stack_bb": _f(r["stack_bb"]), "net_bb": net,
                       "adj_bb": _f(r["ev_net"]) / bb if r["ev_net"] is not None else net,
                       "posted_bb": posted / bb, "decided": int(r["decided"]), "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),
-                      "cards": r["hole_cards"] or "", "spot": first, "after_3bet": after})
+                      "cards": r["hole_cards"] or "", "spot": first, "after_3bet": after,
+                      "pf": preflop.hand_stats(a, r["position"])})
     return hands
 
 
@@ -470,6 +472,10 @@ def analysis_data(db, site=SITE, lang="en"):
     if (a := all_in_strength(db, site, lang)) is not None:
         strengths.insert(0, a)
     return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths,
+            # Analysis v2: PT4-style rates over their opportunities, by position and stack depth, and the trend
+            "preflop": {"total": preflop.summarise(hands), "positions": preflop.by_position(hands),
+                        "depths": preflop.by_depth(hands, DEPTHS), "trend": preflop.trend(hands),
+                        "min_opp": preflop.MIN_OPP},
             "money": money(db, site, lang), "tested": len(tests),
             "thresholds": {"hide_below": HIDE_BELOW, "small_below": SMALL_BELOW,
                            "q_likely": Q_LIKELY, "q_possible": Q_POSSIBLE}}
