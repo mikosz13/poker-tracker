@@ -67,12 +67,12 @@ def tournament_data(db, tournament_id, site=SITE):
     res = db.query("SELECT * FROM tournament_results WHERE site = ? AND tournament_id = ?", (site, tournament_id))
     rows = db.query(
         "SELECT hh.hand_id, hh.level, hh.played_at, hh.big_blind, hh.position, hh.stack_bb, hh.net_won, hh.net_bb, "
-        "hh.decided, hh.vpip, hh.pfr, hp.hole_cards, h.board, h.showdown, h.total_pot FROM hero_hands hh "
+        "hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, h.board, h.showdown, h.total_pot FROM hero_hands hh "
         "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
         "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
         "WHERE hh.site = ? AND hh.tournament_id = ? ORDER BY hh.played_at, hh.hand_id", (site, tournament_id))
     for r in rows:
-        for k in ("big_blind", "stack_bb", "net_won", "net_bb", "total_pot"):
+        for k in ("big_blind", "stack", "stack_bb", "net_won", "net_bb", "total_pot"):
             r[k] = _f(r[k])
         r["pot_bb"] = (r["total_pot"] or 0) / r["big_blind"]
     folded = {r["hand_id"] for r in db.query(
@@ -98,7 +98,9 @@ def tournament_data(db, tournament_id, site=SITE):
                           "advanced_to": r["advanced_to"], "days": r["days"],
                           "advanced_chips": _f(r["advanced_chips"]),
                           "ticket": _f(r["ticket_value"]) > 0, "cost": _f(r["total_cost"]), "profit": _f(r["profit"]),
-                          "roi_pct": _f(r["roi_pct"]), "started_at": str(r["started_at"])[:16]}
+                          "roi_pct": _f(r["roi_pct"]), "started_at": str(r["started_at"])[:16],
+                          # a day without its summary: place unknown, cash typed in (provisional) or missing
+                          "summary_missing": bool(r["summary_missing"]), "provisional": bool(r["provisional"])}
     if not rows:
         return data
 
@@ -121,7 +123,11 @@ def tournament_data(db, tournament_id, site=SITE):
                      "points": [{"at": str(r["played_at"])[:19], "hand_id": r["hand_id"], "level": r["level"],
                                  "position": r["position"], "cards": r["hole_cards"] or "", "net_bb": round(r["net_bb"], 1),
                                  "before_bb": round(r["stack_bb"], 1),
-                                 "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1)} for r in rows]}
+                                 "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1),
+                                 # the same in chips: a deep run can grow in chips while falling in big blinds
+                                 "big_blind": r["big_blind"], "before": round(r["stack"]),
+                                 "after": round(max(0.0, r["stack"] + r["net_won"]))}
+                                for r in rows]}
 
     pos = defaultdict(lambda: {"hands": 0, "decided": 0, "net_bb": 0.0, "vpip": 0, "pfr": 0})
     for r in rows:
@@ -177,8 +183,11 @@ def render_text(d) -> str:
     res = d.get("result")
     if res:
         prize = f"${res['prize']:,.2f}" + (" (ticket)" if res["ticket"] else "")
-        out.append(f"  {res['started_at'][:10]} | place {res['place']}/{res['players']} | won {prize} on cost "
+        out.append(f"  {res['started_at'][:10]} | place {res['place'] or '?'}/{res['players'] or '?'} | won {prize} on cost "
                    f"${res['cost']:,.2f} | ROI {res['roi_pct']:+,.0f}% (cash)")
+        if res["summary_missing"]:
+            out.append("  a day's summary is missing: " + ("the prize typed in counts until it comes"
+                                                          if res["provisional"] else "its prize is not counted"))
     else:
         out.append("  no summary imported (no result / ROI)")
     if d["tags"]:
@@ -267,7 +276,7 @@ def render_html(d) -> str:
     res = d.get("result")
     if res:
         prize = f"${res['prize']:,.2f}" + (" ticket" if res["ticket"] else "")
-        parts.append(f"<div class=k><div>Place<b>{res['place']}/{res['players']}</b></div><div>Prize<b>{prize}</b></div>"
+        parts.append(f"<div class=k><div>Place<b>{res['place'] or '?'}/{res['players'] or '?'}</b></div><div>Prize<b>{prize}</b></div>"
                      f"<div>ROI (cash)<b>{res['roi_pct']:+,.0f}%</b></div></div>")
         parts.append(f"<p class=m>{e(res['started_at'])} | cost ${res['cost']:,.2f}</p>")
     if d["tags"]:

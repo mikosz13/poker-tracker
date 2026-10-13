@@ -1,6 +1,33 @@
 # Changelog
 
 ## Unreleased
+- Analysis v2, stage 1:
+  - Overview: ROI with its 95 % interval bar, ITM / cashed, VPIP, PFR and 3-bet with n, all-in EV, the luck badge
+    and "Where you finish". A trend arrow compares the last 30 days with the rest of the history, only with 500+
+    hands and 100+ opportunities on each side and a change beyond noise (|z| ≥ 2.5), at most one at a time.
+  - New tab Preflop: per position VPIP, PFR, RFI, 3-bet, fold to 3-bet and bb/100 by EV, with a total row.
+  - New tab Stack depth: the same per stack band plus open shove, each band out of its own RFI chances.
+  - Every rate is counted over its opportunities as PokerTracker 4 does (RFI without limpers, 3-bet with squeezes,
+    fold to 3-bet after Hero's own non-all-in open), shows n, is greyed under 30 opportunities and has its
+    definition in a tooltip; tests on GGPoker hands.
+  - A single all-in raise is a 3-bet chance only when Hero can raise over it (an all-in for less than Hero has is an
+    isolation chance; one Hero can only call is not): on Mik's data 3-bet 14.6 % (n = 4,728) instead of 14.1 % (4,878).
+- Tournament stack chart: a BB / Chips switch (remembered). In chips a deep run shows how the stack grew even while it
+  fell in big blinds (Mik's Day 2: 977k → peak 9.3M → bust from 5.6M, which is 279 → 11 BB). The tooltip shows both,
+  with the big blind; the line under the chart follows the unit.
+- Dashboard periods: Last session · 24 h · 7 days · 14 days · 30 days, and under "More" 3 months, 6 months, All
+  history and a custom range (from–to, whole days, remembered). The heading shows the dates the period covers and links
+  to the tournament list with the same period; the list takes its bounds from the app, so both count the same
+  tournaments. An empty period says when you last played and offers the last session. "3 days" is gone; a period
+  remembered by 0.7 ("1 week", "2 weeks", "4 weeks") becomes 7, 14 or 30 days.
+- A Day 2 without a summary (PokerCraft offered Mik's Day 2 hands but no Day 2 summary): the day is recognised from the
+  name in its hands ("[Day 2]") and joins its flights as one event. The event counts the cost of every flight and the
+  cash known so far; the place is unknown and the Day 2 prize is not counted, and that is flagged on the tournament,
+  in the list (*) and next to ROI. The Day 2 no longer counts as an entry from the start (it starts with chips
+  carried over), and its flights no longer say "Day 2 not played" after 7 days. Database schema 7.
+- `pokertracker provisional <tournament id> <amount>`: the cash won on a day whose summary is missing, counted and
+  flagged as provisional until the summary is imported, which replaces it (an exception to "nothing typed in", for a
+  summary GGPoker does not offer; no form in the app).
 - Multi-day events: every day-1 flight that went through joins its Day 2 (and later days) as one tournament under its
   last day: the cost of all flights (buy-in × entries), the knockout cash of every flight plus the later days' prize,
   and one final place. Flights are matched by name without the day marker and "GTD" (GGPoker renamed "$1M GTD" to

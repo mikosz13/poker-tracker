@@ -40,6 +40,12 @@ You finished the tournament in 120th place.
 You received a total of $45.10.
 """
 
+# Mik's real case (October 2026): PokerCraft offered the Day 2 hands but no Day 2 summary. The hands of HISTORY
+# become that Day 2.
+DAY2_HANDS = (HISTORY.replace("Tournament #900001, Bounty Hunters $10 Hold'em",
+                              "Tournament #900103, $5 Ocean KO Opener, $1M GTD [Day 2] Hold'em")
+              .replace("2026/01/0", "2026/10/1"))
+
 
 def flight(tid, name, started, reentries, ko):
     """A day-1 flight that went through to Day 2, in the format of STAGE1_ADVANCED."""
@@ -140,6 +146,43 @@ class StageImportTests(unittest.TestCase):
         text = summary_sentence(rows, {"luck": {"count": 0}, "busts": []}, "pl")
         self.assertIn("Awans do Day 2 w $5 Ocean KO Opener, $1M GTD [Stage 1].", text)
         self.assertIn("0 z gotówką", text)
+
+    def test_day2_without_summary_joins_its_flights_from_the_hands(self):
+        from pokertracker.server import tournaments_list
+        import_texts(self.db, [("s1.txt", STAGE1_ADVANCED), ("d2.txt", DAY2_HANDS)], equity=False)
+        self.assertEqual(self.db.scalar("SELECT event_id FROM tournaments WHERE tournament_id = 900101"), 900103)
+        r = result(self.db, 900103)
+        self.assertEqual((float(r["total_cost"]), round(float(r["cash_won"]), 2), r["days"], r["finish_place"],
+                          r["place_pct"], r["summary_missing"], r["provisional"]),
+                         (10.0, 7.02, 2, None, None, 1, 0))         # the Day 2 prize is unknown: not counted, flagged
+        self.assertIsNone(result(self.db, 900101))
+        tags = [x["tag"] for x in self.db.query("SELECT tag FROM tournament_tags WHERE tournament_id = 900103")]
+        self.assertFalse([x for x in tags if x.startswith("entry:")])   # no late reg vs start for chips carried over
+        flight1 = next(x for x in tournaments_list(self.db) if x["tournament_id"] == 900101)
+        self.assertEqual(flight1["day_status"], "event")             # not "Day 2 not played" after 7 days
+
+    def test_a_provisional_prize_counts_until_the_summary_comes(self):
+        from pokertracker.importer import set_provisional_prize
+        import_texts(self.db, [("s1.txt", STAGE1_ADVANCED), ("d2.txt", DAY2_HANDS)], equity=False)
+        self.assertIn("$250.00 counted", set_provisional_prize(self.db, 900103, 250))
+        r = result(self.db, 900103)
+        self.assertEqual((round(float(r["cash_won"]), 2), round(float(r["profit"]), 2), r["cashed"], r["provisional"]),
+                         (257.02, 247.02, 1, 1))
+        self.assertIn("has its summary", set_provisional_prize(self.db, 900101, 5))   # only where a summary is missing
+        import_texts(self.db, [("d2s.txt", DAY2)], equity=False)    # the summary replaces the amount typed in
+        r = result(self.db, 900103)
+        self.assertEqual((round(float(r["cash_won"]), 2), r["summary_missing"], r["provisional"], r["finish_place"]),
+                         (52.12, 0, 0, 120))
+        self.assertIsNone(self.db.scalar("SELECT provisional_prize FROM tournaments WHERE tournament_id = 900103"))
+
+    def test_migration_links_a_day2_stored_without_its_stage(self):
+        import_texts(self.db, [("s1.txt", STAGE1_ADVANCED), ("d2.txt", DAY2_HANDS)], equity=False)
+        self.db.execute("UPDATE tournaments SET stage = NULL, event_id = NULL")       # as schema 6 stored them
+        self.db.execute("UPDATE schema_version SET version = 6")
+        migrate(self.db, fresh=False)
+        self.assertEqual([self.db.scalar(f"SELECT stage FROM tournaments WHERE tournament_id = {i}") for i in (900101, 900103)],
+                         [None, 2])                                   # day 1 keeps its summary's stage (NULL here)
+        self.assertEqual(self.db.scalar("SELECT event_id FROM tournaments WHERE tournament_id = 900101"), 900103)
 
     def test_migration_moves_ticket_value_out_of_cash(self):
         self.db.execute("INSERT INTO tournaments (site, tournament_id, name, buyin_total, prize_won, prize_is_ticket, "

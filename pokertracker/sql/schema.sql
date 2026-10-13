@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
     advanced_chips  NUMERIC,                 -- chips carried to the next day
     first_day_id    BIGINT,                  -- unused since schema 6 (see event_id)
     event_id        BIGINT,                  -- multi-day event: its last day (flights that went through, Day 2, ...)
+    provisional_prize NUMERIC,               -- cash typed in by the player while a day's summary is missing
     reentries       INTEGER,
     has_summary     BOOLEAN NOT NULL DEFAULT FALSE,
     starting_stack  NUMERIC,                 -- most common first-hand stack for this name + buy-in; NULL = unknown

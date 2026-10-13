@@ -89,6 +89,9 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.pf td small{display:block;color:var(--muted);font-size:.72rem;font-weight:400}.pf td.few,.pf td.few span{color:var(--muted)!important}
+.pf tr.hl td{background:color-mix(in srgb,var(--blue) 8%,transparent)}.pf tr.tot td{border-top:2px solid var(--line);font-weight:600}
+.def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
@@ -135,6 +138,9 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .band-key{position:relative;display:inline-block;height:12px;vertical-align:middle;top:0}.band-v{text-align:right}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.seg[hidden]{display:none}
+.p-custom{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:8px;font-size:.88rem}
+.p-custom input{font:inherit;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
 .tchart svg{display:block;width:100%}.tchart .tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--fg);
   border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:.8rem;box-shadow:0 3px 10px rgba(0,0,0,.2);
@@ -222,6 +228,13 @@ function money(x, d = 2) {
 }
 const pct = x => x == null ? "–" : num(x, 1) + "%";
 const bbUnit = (x, d = 1) => num(x, d) + NB + "BB";
+// chips on an axis or in a line: "9,3 mln" / "977 tys." / "850"
+const chipsShort = x => {
+  if (Math.abs(x) < 1e4) return num(x, 0);
+  if (Math.abs(x) < 1e6) return t("chips.k", {x: num(x / 1e3, 0)});
+  const m = Math.abs(x) >= 1e7 ? Math.round(x / 1e6) : Math.round(x / 1e5) / 10;          // "5 mln", "9,3 mln"
+  return t("chips.m", {x: num(m, Number.isInteger(m) ? 0 : 1)});
+};
 // Dates: "2026-10-11 21:45" in English, "11.10.2026 21:45" in Polish; always a 24 h clock
 const pad = n => String(n).padStart(2, "0");
 function dateTime(s) {
@@ -315,6 +328,9 @@ function advanced(x, short) {
   const full = t("adv.label", {day: dayName(x.advanced_to), n: Number(x.advanced_chips || 0)});
   return short ? `<span title="${esc(full)}">${DAY_ICON}${dayName(x.advanced_to)}</span>` : `<span style="font-size:1rem">${DAY_ICON}${full}</span>`;
 }
+// results with a day's summary missing (PokerCraft does not always offer one): flagged wherever ROI is shown
+const pendingNote = p => p && p.count ? `<p class="warn">${t("money.pending", {n: p.count})}</p>` : "";
+const pendingMark = x => Number(x.summary_missing) ? ` <span class="m" title="${esc(t(Number(x.provisional) ? "list.provisional" : "list.dayMissing"))}">*</span>` : "";
 // a tournament tag ("stake:micro", "target:$500 ...") as a readable label; an unknown tag shows as it is
 function tagLabel(tag) {
   const [kind, ...rest] = String(tag).split(":"), value = rest.join(":");
@@ -329,10 +345,31 @@ const handName = h => h.category == null ? esc(h.hand) : t("hand.cat." + h.categ
 const luckLink = () => `<a href="#/luck">${t("common.howLuck")}</a>`;
 
 // ---- Dashboard -------------------------------------------------------------
-const PERIODS = ["24h", "3d", "1w", "2w", "4w", "3m", "6m", "max"];       // labels: period.<key>, period.<key>.last
+// labels: period.<key>, period.<key>.last; the rarer ones sit under "More"
+const PERIOD_MAIN = ["session", "24h", "7d", "14d", "30d"], PERIOD_MORE = ["3m", "6m", "max", "custom"];
+const PERIODS = [...PERIOD_MAIN, ...PERIOD_MORE];
+const periodQuery = (period, from, to) => period ? `?period=${encodeURIComponent(period)}`
+  + (period === "custom" && from && to ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : "") : "";
+// "06.10 – 13.10", with the time when the period is shorter than two days (24 h, a session)
+function periodRange(d) {
+  const from = d.since || d.first_at;
+  if (!from) return "";
+  const short = d.period === "session" || d.period === "24h";
+  const fmt = x => short ? dateTime(String(x).slice(0, 16)) : dateTime(String(x).slice(0, 10));
+  return `${fmt(from)} – ${d.until ? fmt(d.until) : t("period.now")}`;
+}
+function periodControl(d) {
+  const more = PERIOD_MORE.includes(d.period), c = d.custom || {};
+  return `<div class="seg" id="periods">${PERIOD_MAIN.map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}
+      <button id="p-more" class="${more ? "on" : ""}" aria-expanded="${more}">${more ? t("period." + d.period) : t("period.more")} ▾</button></div>
+    <div class="seg" id="p-panel"${more ? "" : " hidden"}>${PERIOD_MORE.filter(k => k !== "custom").map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}
+      <span class="p-custom"><label>${t("period.from")} <input type="date" id="p-from" value="${esc(c.from || "")}"></label>
+      <label>${t("period.to")} <input type="date" id="p-to" value="${esc(c.to || "")}"></label>
+      <button id="p-apply" class="${d.period === "custom" ? "on" : ""}">${t("period.apply")}</button></span></div>`;
+}
 
-async function viewDashboard(period) {
-  const mine = routeSeq, q = period ? `?period=${encodeURIComponent(period)}` : "";
+async function viewDashboard(period, from, to) {
+  const mine = routeSeq, q = periodQuery(period, from, to);
   const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
   if (mine !== routeSeq) return;                         // the user went elsewhere while this was loading
   const banner = st.running ? `<p class="warn">${t("dash.importing", {done: st.done, total: st.total})}</p>` : "";
@@ -358,12 +395,13 @@ async function viewDashboard(period) {
       ${table([t("col.tournament"), t("col.place"), t("col.profitUsd"), t("col.luckBb")], s.tournaments.map(x => `<tr class="click" onclick="location.hash='#/t/${x.tournament_id}'">
         <td>${esc(x.name)} <span class="m">${money(x.buyin_total)}</span></td><td>${x.finish_place ?? "–"}/${x.players ?? "–"}</td>
         <td>${x.profit == null ? `<span class="m">${t("common.noSummary")}</span>` : sgn(x.profit, 2)}</td><td>${sgn(x.luck_bb)}</td></tr>`), "scrollbox")}
-      <p style="margin:8px 0 0"><a href="#/tournaments?period=${encodeURIComponent(d.period)}">${t("sess.allTournaments")}</a></p></div>`;
+      <p style="margin:8px 0 0"><a href="#/tournaments?period=session">${t("sess.allTournaments")}</a></p></div>`;
   }
-  h += `<h2>${t(`period.${d.period}.last`)}</h2>
-    <div class="seg" id="periods">${PERIODS.map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}</div>`;
+  h += `<h2>${t(`period.${d.period}.last`)} <span class="m" style="font-weight:400;font-size:.85rem">${periodRange(d)}${d.tournaments
+    ? ` · <a href="#/tournaments${periodQuery(d.period, (d.custom || {}).from, (d.custom || {}).to)}">${t("period.list")}</a>` : ""}</span></h2>${periodControl(d)}`;
   if (!d.tournaments && !d.hands) {
-    app.innerHTML = h + `<p class="m">${t("dash.nothingPlayed")}</p>`;
+    app.innerHTML = h + `<p class="m">${d.last_played ? t("period.empty", {date: dateTime(d.last_played)}) : t("dash.nothingPlayed")}</p>`
+      + (d.period !== "session" && s ? `<p><button data-p="session" id="p-session">${t("period.showSession")}</button></p>` : "");
     bindPeriods();
     return;
   }
@@ -372,7 +410,7 @@ async function viewDashboard(period) {
   h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b>${inclCash(sgn(d.cash_profit, 0, " $"))}</div>
     <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div>${itmTiles(d.itm, d.itm_n, d.bounty_cashed)}${topTiles(d.places)}
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
-    <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
+    <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>${pendingNote(d.pending)}`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
   h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
   if (d.tickets_won && d.tickets_won.count) h += ticketsBox(d.tickets_won, true);
@@ -477,12 +515,25 @@ function reviewHands(si) {
 }
 
 function bindPeriods() {
-  document.getElementById("periods").onclick = async e => {
-    const b = e.target.closest("button");
-    if (!b) return;
+  const pick = async (period, from, to) => {
     try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
-                                     body: JSON.stringify({dashboard_period: b.dataset.p})}); } catch (err) { /* still shown */ }
-    viewDashboard(b.dataset.p);
+                                     body: JSON.stringify({dashboard_period: period, ...(from ? {dashboard_from: from, dashboard_to: to} : {})})});
+    } catch (err) { /* still shown */ }
+    viewDashboard(period, from, to);
+  };
+  const panel = document.getElementById("p-panel");
+  for (const id of ["periods", "p-panel", "p-session"]) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", e => { const b = e.target.closest("button[data-p]"); if (b) pick(b.dataset.p); });
+  }
+  document.getElementById("p-more").onclick = e => {
+    panel.hidden = !panel.hidden;
+    e.currentTarget.setAttribute("aria-expanded", String(!panel.hidden));
+  };
+  document.getElementById("p-apply").onclick = () => {
+    const from = document.getElementById("p-from").value, to = document.getElementById("p-to").value;
+    if (from && to) pick("custom", from, to);
+    else (from ? document.getElementById("p-to") : document.getElementById("p-from")).focus();
   };
 }
 
@@ -581,9 +632,11 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
 
 
 // ---- Tournaments ------------------------------------------------------------
-let filters = {buyin: "", format: "", entry: "", period: "max"};
-const SPANS_H = {"24h": 24, "3d": 72, "1w": 168, "2w": 336, "4w": 672, "3m": 91 * 24, "6m": 182 * 24};
-const inPeriod = (date, period) => !SPANS_H[period] || Date.parse(String(date).replace(" ", "T")) >= Date.now() - SPANS_H[period] * 3600e3;
+let filters = {buyin: "", format: "", entry: "", period: "max", from: "", to: ""};
+// the period's bounds come from the server, so the list and the dashboard agree (sessions, custom days, time zone)
+let bounds = {since: null, until: null};
+const inPeriod = date => (!bounds.since || String(date) >= bounds.since.slice(0, 16)) && (!bounds.until || String(date) <= bounds.until.slice(0, 16));
+async function loadBounds() { bounds = await api("/api/period" + periodQuery(filters.period, filters.from, filters.to)); }
 // "Oct 10" / "10.10", with the year only when it is not this year: keeps the date column narrow
 const shortDate = s => {
   const d = new Date(String(s).slice(0, 10) + "T12:00");
@@ -593,12 +646,12 @@ const shortDate = s => {
   return d.toLocaleDateString("en-US", {month: "short", day: "numeric", ...(other ? {year: "numeric"} : {})});
 };
 async function viewTournaments() {
-  const mine = routeSeq, all = await api("/api/tournaments");
+  const mine = routeSeq, [all] = await Promise.all([api("/api/tournaments"), loadBounds()]);
   if (mine !== routeSeq) return;
   const opts = (vals, cur, label, show) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option value="${esc(v)}" ${String(v) === cur ? "selected" : ""}>${show(v)}</option>`).join("");
   const draw = () => {
-    const rows = all.filter(x => inPeriod(x.date, filters.period) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
+    const rows = all.filter(x => inPeriod(x.date) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
       && (!filters.format || x.format === filters.format)
       && (!filters.entry || x.tags.includes("entry:" + filters.entry)));
     const done = rows.filter(x => x.profit != null);
@@ -611,33 +664,49 @@ async function viewTournaments() {
         <td>${Number(x.prize_ticket) > 0 ? `<span title="${esc(t("tk.won", {value: money(x.prize_ticket)}))}">${TICKET_ICON}${t("tk.wonShort", {value: money(x.prize_ticket)})}</span>`
           : x.advanced_to ? advanced(x, true) : `${x.finish_place ?? "–"}<span class="wide">/${x.players ?? "–"}</span>`}</td>
         <td>${x.day_status === "event" ? `<span class="m">${t("ev.counted", {link: `<a href="#/t/${x.event_id}" onclick="event.stopPropagation()">#${x.event_id}</a>`})}</span>` : x.profit == null ? `<span class="m" title="${esc(t("list.noSummaryImported"))}"><span class="wide">${t("common.noSummary")}</span><span class="narrow">–</span></span>`
-          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>`}</td>
+          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>${pendingMark(x)}`}</td>
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
-    <select id="fp">${PERIODS.map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join("")}</select>
+    <select id="fp">${PERIODS.filter(k => k !== "custom" || (filters.period === "custom" && filters.from)).map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${
+      k === "max" ? t("filter.anyTime") : k === "custom" ? `${t("period.custom")}: ${dateTime(filters.from)} – ${dateTime(filters.to)}` : t(`period.${k}.last`)}</option>`).join("")}</select>
     <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
     <select id="ff">${opts(all.map(x => x.format), filters.format, t("filter.allFormats"), v => t("format." + v))}</select>
     <select id="fe"><option value="">${t("filter.anyEntry")}</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>${t("filter.fromStart")}</option>
       <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select></div><div id="list"></div>`;
   for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
-    document.getElementById(id).onchange = e => { filters[key] = e.target.value; draw(); };
+    document.getElementById(id).onchange = async e => {
+      filters[key] = e.target.value;
+      if (key === "period") await loadBounds();
+      draw();
+    };
   draw();
 }
 
 // ---- Tournament detail -------------------------------------------------------
+// the stack in big blinds or in chips (a deep run can grow in chips while it falls in big blinds); remembered per viewer
+let stackUnit = "bb";
+try { stackUnit = localStorage.getItem("stackUnit") === "chips" ? "chips" : "bb"; } catch (e) { /* storage blocked */ }
+function stackLine(d) {
+  const pts = d.stack.points, s = d.stack;
+  if (stackUnit === "bb")
+    return t("tour.stackLine", {start: bbUnit(s.start_bb, 0), end: bbUnit(s.end_bb, 0), peak: bbUnit(s.peak_bb, 0), n: s.peak_after_hands});
+  const path = [pts[0].before, ...pts.map(p => p.after)], k = path.reduce((b, v, i) => v > path[b] ? i : b, 0);
+  return t("tour.stackLine", {start: chipsShort(path[0]), end: chipsShort(path[path.length - 1]), peak: chipsShort(path[k]), n: k});
+}
 function stackChart(d) {
-  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i]));
+  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i])), chips = stackUnit === "chips";
   const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
     i: idx[e.first_hand_id],
-    label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${bbUnit(e.stack_bb, 0)}`,
+    label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${chips ? chipsShort(e.stack) : bbUnit(e.stack_bb, 0)}`,
     title: t("stack.entryTitle", {no: e.entry_no, level: e.level, chips: num(e.stack, 0), bb: num(e.stack_bb, 1)})
       + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? t("stack.full") : "")}));
   pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
   charts = [];
-  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => bbUnit(v, 0),
+  addChart("c-stack", pts, [{key: chips ? "after" : "after_bb", color: "var(--blue)"}], v => chips ? chipsShort(v) : bbUnit(v, 0),
     p => t("stack.tip", {level: p.level, pos: esc(p.position || ""), cards: p.cards ? cards(p.cards) : "", net: sgn(p.net_bb),
-                         before: num(p.before_bb, 0), after: num(p.after_bb, 0)}),
+                         before: num(p.before_bb, 0), after: num(p.after_bb, 0), beforeChips: num(p.before, 0),
+                         afterChips: num(p.after, 0), bb: num(p.big_blind, 0)}),
     {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
 }
 
@@ -647,11 +716,12 @@ async function viewTournament(id) {
   let h = `<p style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a href="#/tournaments">${t("tour.back")}</a>
     <button id="ign">${t("ign.button")}</button></p><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
-  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place}/${r.players}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
+  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place ?? "–"}/${r.players ?? "–"}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
     <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b>${r.ticket_value > 0 && r.roi_cash_pct != null ? `<span class="m">${t("money.inclCash", {x: sgn(r.roi_cash_pct, 0, "%")})}</span>` : ""}</div></div>`;
   else if (d.event) h += `<p class="warn">${DAY_ICON}${t("ev.note", {day: dayName(d.advanced_to),
     link: `<a href="#/t/${d.event.tournament_id}">${esc(d.event.name)}</a>`})}</p>`;
   else h += `<p class="m">${t("tour.noSummary")}</p>`;
+  if (r && r.summary_missing) h += `<p class="warn">${DAY_ICON}${r.provisional ? t("ev.provisional", {value: money(r.prize)}) : t("ev.missing")}</p>`;
   if (d.satellite_win) h += `<p>${TICKET_ICON}${t("tk.satNote", {target: esc(d.satellite_win.target), value: money(d.satellite_win.value)})}${d.satellite_win.used_in
     ? ` <span class="m">· ${t("tk.used")} <a href="#/t/${d.satellite_win.used_in.tournament_id}">${esc(d.satellite_win.used_in.name)}</a></span>` : ""}</p>`;
   if (d.ticket_entry) h += `<p class="m">${TICKET_ICON}${t("tk.entryNote", {value: money(d.ticket_entry.value),
@@ -663,8 +733,9 @@ async function viewTournament(id) {
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b><span class="m">${t("common.n", {n: d.decided})}</span></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
-  h += `<h2>${t("tour.stackTitle")}</h2><div class="tchart" id="c-stack"></div><p class="m">${t("tour.stackLine",
-    {start: num(s.start_bb, 0), end: num(s.end_bb, 0), peak: num(s.peak_bb, 0), n: s.peak_after_hands})}</p>`;
+  h += `<h2 style="display:flex;align-items:center;gap:10px">${t("tour.stackTitle")}<span class="seg" id="stack-unit" style="margin:0">${
+    [["bb", "stack.unitBb"], ["chips", "stack.unitChips"]].map(([u, k]) => `<button data-u="${u}" class="${u === stackUnit ? "on" : ""}">${t(k)}</button>`).join("")}</span></h2>
+    <div class="tchart" id="c-stack"></div><p class="m" id="stack-line">${stackLine(d)}</p>`;
   h += `<h2>${t("tour.positions")}</h2>${table([t("col.position"), t("col.hands"), "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   if (!d.best_position) h += `<p class="m">${t("tour.tooFew")}</p>`;
   else h += `<p class="m">${t("tour.best", {pos: esc(d.best_position.position)})}${d.worst_position ? t("tour.worst", {pos: esc(d.worst_position.position)}) : ""}${t("tour.rankNote")}</p>`;
@@ -683,6 +754,16 @@ async function viewTournament(id) {
   app.innerHTML = h;
   bindIgnore(d.tournament_id);
   stackChart(d);
+  const unitSwitch = document.getElementById("stack-unit");
+  if (unitSwitch) unitSwitch.onclick = e => {
+    const b = e.target.closest("button[data-u]");
+    if (!b || b.dataset.u === stackUnit) return;
+    stackUnit = b.dataset.u;
+    try { localStorage.setItem("stackUnit", stackUnit); } catch (err) { /* storage blocked: kept for this visit */ }
+    document.querySelectorAll("#stack-unit button").forEach(x => x.classList.toggle("on", x === b));
+    document.getElementById("stack-line").innerHTML = stackLine(d);
+    stackChart(d);
+  };
 }
 function bindIgnore(id) {
   document.getElementById("ign").onclick = () => {
@@ -862,7 +943,46 @@ const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.le
   hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
     <td>${x.cards ? cards(x.cards) : "–"}</td><td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
-const ANALYSIS_TABS = ["overview", "leaks", "money"];                  // labels: an.tab.<key>
+const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money"];   // labels: an.tab.<key>
+
+// Analysis v2: a rate over its opportunities, "31,1%" with n under it; greyed below the minimum; definitions in tooltips
+const defHead = (label, key) => `<span class="def" title="${esc(t("def." + key))}">${label}</span>`;
+function rateCell(r, key, title) {
+  if (!r || !r.n) return `<td class="m">–</td>`;
+  const tip = r.few ? t("common.few", {min: t("common.opps", {n: 30})}) : title || t("def." + key);
+  return `<td class="${r.few ? "few" : ""}" title="${esc(tip)}">${pct(r.pct)}<small>${t("common.n", {n: num(r.n, 0)})}</small></td>`;
+}
+const STAT_LABEL = {vpip: "VPIP", pfr: "PFR", threebet: "3-bet"};
+function trendArrow(tr, key) {
+  if (!tr.arrow || tr.arrow.key !== key) return "";
+  return ` <span class="${tr.arrow.up ? "pos" : "neg"}" title="${esc(t(tr.arrow.up ? "trend.up" : "trend.down"))}">${tr.arrow.up ? "▲" : "▼"}</span>`;
+}
+function trendNote(tr) {
+  const stats = Object.entries(tr.stats);
+  let state;
+  if (!stats.length) state = t("trend.few", {recent: num(tr.recent_hands, 0), older: num(tr.older_hands, 0)});
+  else {
+    const [k, s] = tr.arrow ? [tr.arrow.key, tr.stats[tr.arrow.key]] : stats.reduce((a, b) => Math.abs(b[1].z) > Math.abs(a[1].z) ? b : a);
+    state = t(tr.arrow ? "trend.shown" : "trend.none", {stat: STAT_LABEL[k], recent: pct(s.recent), older: pct(s.older)});
+  }
+  return `<p class="m">${t("trend.note", {state})}</p>`;
+}
+function rateTile(label, key, r, tr) {
+  const s = tr.stats[key];
+  return `<div class="${r.few ? "few" : ""}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
+    <span class="m">${t("common.n", {n: num(r.n, 0)})}${s ? " · " + t("trend.recent", {x: pct(s.recent)}) : ""}</span></div>`;
+}
+function preflopTable(rows, total, first, firstLabel, depth) {
+  const head = [firstLabel, t("col.hands"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.rfi"), "rfi"),
+    ...(depth ? [defHead(t("col.openShove"), "shove")] : []), defHead(t("col.threebet"), "threebet"),
+    ...(depth ? [] : [defHead(t("col.fold3"), "fold3")]), defHead(t("col.ev100"), "ev100")];
+  const row = (r, label, cls = "") => `<tr class="${cls}"><td>${label}</td><td class="${r.few ? "few" : ""}">${num(r.hands, 0)}</td>
+    ${rateCell(r.vpip, "vpip")}${rateCell(r.pfr, "pfr")}${rateCell(r.rfi, "rfi")}
+    ${depth ? rateCell(r.shove, "shove", t("def.shoveCell", {band: esc(label), count: r.shove.count, n: r.shove.n})) : ""}${rateCell(r.threebet, "threebet")}
+    ${depth ? "" : rateCell(r.fold3, "fold3")}<td class="${r.few ? "few" : ""}">${sgn(r.ev100, 1)}</td></tr>`;
+  return table(head, [...rows.map(r => row(r, esc(r[first]), depth && r.high <= 15 ? "hl" : "")),
+                      ...(total ? [row(total, `<b>${t("an.total")}</b>`, "tot")] : [])], "pf");
+}
 
 // a 95 % interval as a small bar with the zero line; red when wholly below zero, green when above
 function ciBar(iv) {
@@ -884,15 +1004,21 @@ async function viewAnalysis(tab) {
   let h = `<h1>${t("nav.analysis")}</h1><p class="m">${t("an.intro", {tournaments: t("common.tournaments", {n: o.tournaments}), hands: t("common.handsN", {n: o.hands})})}</p>
     <div class="seg">${ANALYSIS_TABS.map(k => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t("an.tab." + k)}</button></a>`).join("")}</div>`;
 
+  const pf = a.preflop, tr = pf.trend, T = pf.total;
   if (tab === "overview") {
-    h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${pct(o.vpip_pct)} / ${pct(o.pfr_pct)}</b><span class="m">${t("common.n", {n: o.decided})}</span></div>
-      <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">${t("an.evAdjusted", {x: sgn(o.bb_per_100_ev, 1)})}</span></div>
-      <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? t("an.ci", {lo: num(ri.low, 0), hi: num(ri.high, 0)}) : ""}</span></div>
-      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}<div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
+    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b>${ri ? ciBar(ri) : ""}</div>
+      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}
+      ${rateTile("VPIP", "vpip", T.vpip, tr)}${rateTile("PFR", "pfr", T.pfr, tr)}${rateTile("3-bet", "threebet", T.threebet, tr)}
+      <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
-      ${placeChart(o.places)}
-      <p class="m">${t("an.v2")}</p>`;
+      ${trendNote(tr)}${pendingNote(m.pending)}
+      <div class="trio">${luckBox(o.luck_badge)}</div>
+      ${placeChart(o.places)}`;
   }
+  if (tab === "preflop")
+    h += `<p class="m">${t("pf.intro", {min: pf.min_opp})}</p>${preflopTable(pf.positions, T, "position", t("col.position"))}<p class="m">${t("pf.note")}</p>`;
+  if (tab === "depth")
+    h += `<p class="m">${t("dp.intro")}</p>${preflopTable(pf.depths, null, "depth", t("col.stack"), true)}<p class="m">${t("dp.note")}</p>`;
 
   if (tab === "leaks") {
     h += `<p class="m">${t("an.leaksIntro", {tested: a.tested})}</p><h2>${t("an.leaks")}</h2>`;
@@ -920,7 +1046,7 @@ async function viewAnalysis(tab) {
     h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 0, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
           ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 0, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
-      <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
+      ${pendingNote(m.pending)}<p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
       ${o.places && o.places.all && o.places.all.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
       <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}
@@ -1129,8 +1255,8 @@ async function route(keepScroll) {
     let m;
     if (h === "#/" || h === "#") await viewDashboard();
     else if (h === "#/tournaments" || h.startsWith("#/tournaments?")) {
-      const period = new URLSearchParams(h.split("?")[1] || "").get("period");
-      if (period) filters.period = period;
+      const q = new URLSearchParams(h.split("?")[1] || "");
+      if (q.get("period")) Object.assign(filters, {period: q.get("period"), from: q.get("from") || "", to: q.get("to") || ""});
       await viewTournaments();
     }
     else if ((m = h.match(/^#\/t\/(\d+)$/))) await viewTournament(m[1]);

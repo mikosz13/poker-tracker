@@ -27,14 +27,14 @@ def share_interval(flags, samples=SAMPLES, seed=SEED):
     return {"low": round(float(lo), 1), "high": round(float(hi), 1), "level": 95}
 
 
-def place_stats(db, site=SITE, since=None, entry=None):
+def place_stats(db, site=SITE, since=None, entry=None, until=None):
     """entry: None for every tournament, "start" or "late" for one kind of first entry (from the entry tag)."""
-    when = " AND r.started_at >= ?" if since else ""
+    when = (" AND r.started_at >= ?" if since else "") + (" AND r.started_at <= ?" if until else "")
     kind = (" AND EXISTS (SELECT 1 FROM tournament_tags g WHERE g.site = r.site AND g.tournament_id = r.tournament_id "
             "AND g.tag = ?)") if entry else ""
     pcts = [float(r["place_pct"]) for r in db.query(
         f"SELECT r.place_pct FROM tournament_results r WHERE r.site = ? AND r.place_pct IS NOT NULL{when}{kind} "
-        "ORDER BY r.tournament_id", (site, *((since,) if since else ()), *((f"entry:{entry}",) if entry else ())))]
+        "ORDER BY r.tournament_id", (site, *(x for x in (since, until) if x), *((f"entry:{entry}",) if entry else ())))]
     n = len(pcts)
     out = {"n": n}
     for key, limit in (("top10", 10), ("top15", 15)):
@@ -47,7 +47,7 @@ def place_stats(db, site=SITE, since=None, entry=None):
     return out
 
 
-def place_split(db, site=SITE, since=None):
+def place_split(db, site=SITE, since=None, until=None):
     """Every tournament, and apart: entries from the start (fair against an average player) and late registrations."""
-    return {"all": place_stats(db, site, since), "start": place_stats(db, site, since, "start"),
-            "late": place_stats(db, site, since, "late")}
+    return {"all": place_stats(db, site, since, None, until), "start": place_stats(db, site, since, "start", until),
+            "late": place_stats(db, site, since, "late", until)}

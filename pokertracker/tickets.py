@@ -16,8 +16,8 @@ def _words(name):
     return {w for w in re.findall(r"\$?[\w]+", (name or "").lower()) if w not in GENERIC}
 
 
-def tickets_won(db, site=SITE, since=None):
-    """Every ticket won (since a time, if given), newest first: satellite, target, value, and the tournament it was
+def tickets_won(db, site=SITE, since=None, until=None):
+    """Every ticket won (between since and until, if given), newest first: satellite, target, value, and the tournament it was
     probably used in (looked for over the whole history)."""
     sats = db.query("SELECT tournament_id, name, started_at, ticket_value FROM tournament_results WHERE site = ? "
                     "AND ticket_value > 0 ORDER BY started_at", (site,))
@@ -38,11 +38,13 @@ def tickets_won(db, site=SITE, since=None):
                                 "date": str(use["started_at"])[:16]} if use else None})
     if since:
         out = [x for x in out if x["date"] >= str(since)[:16]]
+    if until:
+        out = [x for x in out if x["date"] <= str(until)[:16]]
     return out[::-1]
 
 
-def tickets_summary(db, site=SITE, since=None):
-    items = tickets_won(db, site, since)
+def tickets_summary(db, site=SITE, since=None, until=None):
+    items = tickets_won(db, site, since, until)
     return {"count": len(items), "value": round(sum(x["value"] for x in items), 2),
             "unused_value": round(sum(x["value"] for x in items if not x["used_in"]), 2), "items": items}
 

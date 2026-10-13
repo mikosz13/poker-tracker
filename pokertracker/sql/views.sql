@@ -47,34 +47,41 @@ WHERE hp.is_hero;
 -- Tickets count at face value on both sides: a satellite returns the ticket's value, the tournament entered with it
 -- costs its full buy-in, so the result over both equals the cash that moved. profit and roi_pct include tickets;
 -- cash_profit and roi_cash_pct are the cash part.
+-- A later day can come without a summary (PokerCraft does not always offer one): the event still counts, with the
+-- cash the player typed in for that day (provisional_prize) or none. summary_missing and provisional flag it.
 CREATE VIEW tournament_results AS
 WITH ev AS (   -- a multi-day event (flights that went through, Day 2, ...) summed under its last day
     SELECT site, event_id,
            SUM(CASE WHEN COALESCE(stage, 1) > 1 THEN 0 ELSE buyin_total * (1 + COALESCE(reentries, 0)) END) AS cost,
-           SUM(prize_won) AS cash, SUM(COALESCE(prize_ticket, 0)) AS ticket, SUM(COALESCE(reentries, 0)) AS reentries,
+           SUM(CASE WHEN has_summary THEN prize_won ELSE COALESCE(provisional_prize, 0) END) AS cash,
+           SUM(COALESCE(prize_ticket, 0)) AS ticket, SUM(COALESCE(reentries, 0)) AS reentries,
            MIN(started_at) AS started_at, COUNT(*) AS days,
            MAX(CASE WHEN COALESCE(stage, 1) = 1 THEN buyin_total END) AS buyin_total,
-           MAX(CASE WHEN COALESCE(stage, 1) = 1 THEN format END) AS first_format
+           MAX(CASE WHEN COALESCE(stage, 1) = 1 THEN format END) AS first_format,
+           MAX(CASE WHEN has_summary THEN 0 ELSE 1 END) AS summary_missing,
+           MAX(CASE WHEN NOT has_summary AND provisional_prize IS NOT NULL THEN 1 ELSE 0 END) AS provisional
     FROM tournaments
-    WHERE has_summary AND event_id IS NOT NULL
+    WHERE (has_summary OR COALESCE(stage, 1) > 1) AND event_id IS NOT NULL
     GROUP BY site, event_id
 ), c AS (
     SELECT t.site, t.tournament_id, t.name, COALESCE(e.first_format, t.format, 'unknown') AS format,
            COALESCE(e.started_at, t.started_at) AS started_at, t.players,
            COALESCE(e.reentries, t.reentries) AS reentries, COALESCE(e.buyin_total, t.buyin_total) AS buyin_total,
-           t.prize_won, t.finish_place,
+           CASE WHEN t.has_summary THEN t.prize_won ELSE t.provisional_prize END AS prize_won, t.finish_place,
            COALESCE(e.cost, CASE WHEN COALESCE(t.stage, 1) > 1 THEN 0
                                  ELSE t.buyin_total * (1 + COALESCE(t.reentries, 0)) END) AS total_cost,
            COALESCE(e.cash, t.prize_won) AS cash_won,
            COALESCE(e.ticket, COALESCE(t.prize_ticket, 0)) AS ticket_value,
            COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, COALESCE(e.days, 1) AS days,
-           CASE WHEN t.advanced_to IS NULL AND t.prize_won + COALESCE(t.prize_ticket, 0) > 0 THEN 1 ELSE 0 END AS cashed,
+           CASE WHEN t.advanced_to IS NULL AND COALESCE(CASE WHEN t.has_summary THEN t.prize_won ELSE t.provisional_prize END, 0)
+                     + COALESCE(t.prize_ticket, 0) > 0 THEN 1 ELSE 0 END AS cashed,
+           COALESCE(e.summary_missing, 0) AS summary_missing, COALESCE(e.provisional, 0) AS provisional,
            -- the place as a share of the field; none while Hero is still through to a later day
            CASE WHEN t.advanced_to IS NOT NULL THEN NULL
                 ELSE 100.0 * t.finish_place / NULLIF(t.players, 0) END AS place_pct
     FROM tournaments t
     LEFT JOIN ev e ON e.site = t.site AND e.event_id = t.tournament_id
-    WHERE t.has_summary AND t.prize_won IS NOT NULL
+    WHERE ((t.has_summary AND t.prize_won IS NOT NULL) OR e.days > 1)    -- a later day without summary: with its flights
       AND (t.event_id IS NULL OR t.event_id = t.tournament_id)
 )
 -- cashed: any cash or ticket. In a bounty tournament that can be knockouts alone (the summary gives only the total

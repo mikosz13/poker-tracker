@@ -11,7 +11,7 @@ from .classify import refresh_classification
 from .hands import HERO, entries_from_rows, out_of_scope, parse_hands, starting_stack
 from .migrations import remove_tournaments
 from .scope import FREEROLL, UNRECOGNISED, USER, buyin_paid
-from .summary import STARTED, OutOfScope, Tournament, UnrecognisedSummary, parse_summary
+from .summary import STARTED, OutOfScope, Tournament, UnrecognisedSummary, parse_summary, stage_of
 
 SITE = "GGPoker"
 # Safety fuse: this many unreadable summaries in one import (or more than this share of its summaries) look like a
@@ -183,10 +183,11 @@ def _store_hands(db, hands, equity=True):
     for h in hands:
         seen.setdefault(h.tournament_id, h)
     db.executemany(
-        "INSERT INTO tournaments (site, tournament_id, name, format, buyin_total) VALUES (?, ?, ?, ?, ?) "
+        # the stage comes from the name until a summary says it (a Day 2 summary is sometimes never offered)
+        "INSERT INTO tournaments (site, tournament_id, name, format, buyin_total, stage) VALUES (?, ?, ?, ?, ?, ?) "
         "ON CONFLICT (site, tournament_id) DO NOTHING",
         [(SITE, tid, h.tournament_name, "satellite" if "satellite" in h.tournament_name.lower() else None,
-          h.buyin_total) for tid, h in seen.items()])
+          h.buyin_total, stage_of(h.tournament_name)) for tid, h in seen.items()])
     db.executemany(
         "INSERT INTO hands (site, hand_id, tournament_id, level, small_blind, big_blind, ante, played_at, "
         "table_name, max_seats, button_seat, board, total_pot, rake, showdown) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) "
@@ -258,7 +259,8 @@ def _store_summary(db, t: Tournament):
         "started_at = excluded.started_at, finish_place = excluded.finish_place, prize_won = excluded.prize_won, "
         "prize_is_ticket = excluded.prize_is_ticket, reentries = excluded.reentries, "
         "has_summary = excluded.has_summary, prize_ticket = excluded.prize_ticket, stage = excluded.stage, "
-        "advanced_to = excluded.advanced_to, advanced_chips = excluded.advanced_chips",
+        "advanced_to = excluded.advanced_to, advanced_chips = excluded.advanced_chips, "
+        "provisional_prize = NULL",                 # the summary replaces what was typed in
         (SITE, t.id, t.name, t.format, t.buyin_total, t.buyin_prize, t.buyin_fee, t.buyin_bounty, t.players,
          t.prize_pool, t.started_at, t.finish_place, t.prize_won, t.prize_is_ticket, t.reentries, True,
          t.prize_ticket, t.stage, t.advanced_to, t.advanced_chips))
@@ -450,8 +452,11 @@ def refresh_stages(db, site=SITE):
     event that Hero went through from and that no later day has taken yet (all the day-1 flights for one Day 2).
     event_id = the event's last day for all its days; NULL for a tournament on its own (also a day-1 advance whose
     Day 2 is not imported)."""
-    days = db.query("SELECT tournament_id, name, stage, started_at, advanced_to FROM tournaments WHERE site = ? "
-                    "AND has_summary ORDER BY started_at, tournament_id", (site,))
+    # a later day without a summary (PokerCraft does not always offer one) takes part through its hands
+    days = db.query("SELECT t.tournament_id, t.name, t.stage, t.advanced_to, COALESCE(t.started_at, (SELECT MIN(h.played_at) "
+                    "FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id)) AS started_at "
+                    "FROM tournaments t WHERE t.site = ? AND (t.has_summary OR COALESCE(t.stage, 1) > 1) "
+                    "ORDER BY 5, 1", (site,))
     group = {}                                   # tournament id -> the later day it went on to
     for d in days:
         if (d["stage"] or 1) == 1:
@@ -474,6 +479,23 @@ def refresh_stages(db, site=SITE):
             event[tid] = last(tid)
     db.executemany("UPDATE tournaments SET event_id = ? WHERE site = ? AND tournament_id = ?",
                    [(event.get(d["tournament_id"]), site, d["tournament_id"]) for d in days])
+
+
+def set_provisional_prize(db, tournament_id, amount, site=SITE):
+    """The cash Hero won on a day whose summary PokerCraft does not offer (Day 2 of a big event, sometimes): it counts
+    in the results, flagged, until the summary is imported and replaces it. Only for a tournament without a summary;
+    amount None removes it. Returns a line saying what was done."""
+    t = db.query("SELECT name, has_summary FROM tournaments WHERE site = ? AND tournament_id = ?", (site, tournament_id))
+    if not t:
+        return f"tournament #{tournament_id} not found"
+    if t[0]["has_summary"]:
+        return f"#{tournament_id} {t[0]['name']} has its summary; nothing to type in"
+    if amount is not None and amount < 0:
+        return "the amount cannot be negative"
+    db.execute("UPDATE tournaments SET provisional_prize = ? WHERE site = ? AND tournament_id = ?",
+               (amount, site, tournament_id))
+    return (f"#{tournament_id} {t[0]['name']}: " + (f"${amount:,.2f} counted until the summary is imported"
+                                                     if amount is not None else "amount removed"))
 
 
 def _refresh(db, hand_tids, all_tids):

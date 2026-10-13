@@ -63,6 +63,28 @@ class PeriodTests(unittest.TestCase):
         self.assertEqual([b["buyin"] for b in d["by_buyin"]], [5.0])
         self.assertEqual((d["positions"], d["bb_points"], d["allins"]["count"]), ([], [], 0))
 
+    def test_new_periods_and_the_old_names(self):
+        from pokertracker.dashboard import normal_period, period_bounds
+        self.assertEqual([normal_period(x) for x in ("1w", "2w", "4w", "3d", "30d", "nonsense")],
+                         ["7d", "14d", "30d", "7d", "30d", "max"])     # a period remembered by 0.7 still works
+        self.assertEqual(period_bounds("14d", self.now), ("2025-12-19 12:00:00", None))
+        self.assertEqual(period_bounds("max", self.now), (None, None))
+
+    def test_custom_range_is_whole_days_in_either_order(self):
+        from pokertracker.dashboard import period_bounds
+        self.assertEqual(period_bounds("custom", start="2026-01-02", end="2026-01-01"),
+                         ("2026-01-01 00:00:00", "2026-01-02 23:59:59"))
+        self.assertEqual(period_bounds("custom", start="2026-01-01", end="bad"), (None, None))   # whole history
+        d = dashboard_data(self.db, period="custom", bounds=period_bounds("custom", start="2026-01-01", end="2026-01-01"))
+        self.assertEqual((d["tournaments"], d["hands"], d["until"]), (1, 3, "2026-01-01 23:59:59"))   # not the 2nd
+
+    def test_session_bounds_come_from_the_caller(self):
+        from pokertracker.dashboard import period_bounds
+        bounds = period_bounds("session", session=("2026-01-01 09:00:00", "2026-01-01 10:20:00"))
+        d = dashboard_data(self.db, period="session", bounds=bounds)
+        self.assertEqual((d["period"], d["tournaments"], d["hands"]), ("session", 1, 3))
+        self.assertEqual(d["last_played"], "2026-01-01 10:20")
+
     def test_longer_period_equals_max_when_everything_is_inside(self):
         week, everything = (dashboard_data(self.db, period=p, now=self.now) for p in ("1w", "max"))
         for key in ("tournaments", "cost", "cash", "hands", "itm", "profit_points", "bb_points"):

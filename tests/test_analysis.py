@@ -189,7 +189,7 @@ class AnalysisDataTests(unittest.TestCase):
         db.init_schema()
         import_texts(db, [("h", HISTORY), ("b", SUMMARY_BOUNTY), ("s", SUMMARY_SATELLITE)])
         d = A.analysis_data(db)
-        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds"})
+        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop"})
         self.assertEqual((d["overview"]["hands"], d["overview"]["tournaments"]), (3, 2))
         re, first = d["money"]["re_entries"], d["money"]["first_entries"]
         # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return

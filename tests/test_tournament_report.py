@@ -100,6 +100,9 @@ class StackPointsTests(unittest.TestCase):
         pts = d["stack"]["points"]
         self.assertEqual([p["hand_id"] for p in pts], ["TM1000000001", "TM1000000002", "TM1000000003"])
         self.assertEqual([p["after_bb"] for p in pts], [96.9, 0.0, 100.6])      # 4,845 / 50, bust, 5,030 / 50
+        # the same in chips, exact (not rebuilt from the rounded stack in BB)
+        self.assertEqual([(p["before"], p["after"], p["big_blind"]) for p in pts],
+                         [(5000, 4845, 50.0), (4845, 0, 50.0), (5000, 5030, 50.0)])
         self.assertEqual(pts[0]["at"], "2026-01-01 10:00:00")
         self.assertEqual([(e["entry_no"], e["first_hand_id"]) for e in d["entries"]],
                          [(1, "TM1000000001"), (2, "TM1000000003")])

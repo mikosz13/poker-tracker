@@ -1,6 +1,7 @@
 """Cross-tournament dashboard: profit curve, luck-adjusted curve, results by category."""
 import html
 import math
+import re
 from datetime import datetime, timedelta
 
 from .places import place_split
@@ -14,16 +15,43 @@ def _f(x):
     return 0.0 if x is None else float(x)
 
 
-PERIODS = {"24h": timedelta(hours=24), "3d": timedelta(days=3), "1w": timedelta(weeks=1), "2w": timedelta(weeks=2),
-           "4w": timedelta(weeks=4), "3m": timedelta(days=91), "6m": timedelta(days=182), "max": None}
+# rolling periods count back from now; "session" is the last session's span, "custom" whole days chosen by the player
+PERIODS = {"session": None, "24h": timedelta(hours=24), "7d": timedelta(days=7), "14d": timedelta(days=14),
+           "30d": timedelta(days=30), "3m": timedelta(days=91), "6m": timedelta(days=182), "max": None, "custom": None}
+LEGACY = {"3d": "7d", "1w": "7d", "2w": "14d", "4w": "30d"}       # stored by 0.7 and older
+DAY = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def normal_period(period):
+    period = LEGACY.get(period, period)
+    return period if period in PERIODS else "max"
 
 
 def period_start(period, now=None):
-    """Start of a dashboard period counted back from now, as 'YYYY-MM-DD HH:MM:SS' (None for max)."""
-    span = PERIODS.get(period)
+    """Start of a rolling period counted back from now, as 'YYYY-MM-DD HH:MM:SS' (None when not rolling)."""
+    span = PERIODS.get(normal_period(period))
     if span is None:
         return None
     return ((now or datetime.now()) - span).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def custom_bounds(start, end):
+    """Whole days from start to end ('YYYY-MM-DD', either order); None when a date is missing or malformed."""
+    if not (start and end and DAY.match(start) and DAY.match(end)):
+        return None
+    start, end = sorted((start, end))
+    return f"{start} 00:00:00", f"{end} 23:59:59"
+
+
+def period_bounds(period, now=None, start=None, end=None, session=None):
+    """(since, until) of a period as 'YYYY-MM-DD HH:MM:SS', None for an open end. session: the last session's
+    (since, until), from the server; custom: the days chosen. A custom range without valid days is the whole history."""
+    period = normal_period(period)
+    if period == "session":
+        return session or (None, None)
+    if period == "custom":
+        return custom_bounds(start, end) or (None, None)
+    return period_start(period, now), None
 
 
 UNRANKED = ("SB", "BB", "BTN/SB")
@@ -91,12 +119,20 @@ def _pct(part, whole):
     return round(100 * part / whole, 1) if whole else None
 
 
-def dashboard_data(db, site=SITE, period="max", now=None):
-    """Everything on the dashboard for one period: tournaments by start time, hands by their time."""
-    since = period_start(period, now)
-    t_when = " AND started_at >= ?" if since else ""
-    h_when = " AND played_at >= ?" if since else ""
-    arg = (since,) if since else ()
+def pending_results(trs):
+    """Results with a day whose summary is missing: provisional (cash typed in) or without that day's prize."""
+    missing = [t for t in trs if int(t["summary_missing"] or 0)]
+    return {"count": len(missing), "provisional": sum(1 for t in missing if int(t["provisional"] or 0))}
+
+
+def dashboard_data(db, site=SITE, period="max", now=None, bounds=None):
+    """Everything on the dashboard for one period: tournaments by start time, hands by their time.
+    bounds: (since, until) for "session" and "custom" (see period_bounds); rolling periods count back from now."""
+    period = normal_period(period)
+    since, until = bounds if bounds else period_bounds(period, now)
+    t_when = (" AND started_at >= ?" if since else "") + (" AND started_at <= ?" if until else "")
+    h_when = t_when.replace("started_at", "played_at")
+    arg = tuple(x for x in (since, until) if x)
 
     trs = db.query(f"SELECT * FROM tournament_results WHERE site = ?{t_when} ORDER BY started_at", (site, *arg))
     cost = sum(_f(t["total_cost"]) for t in trs)
@@ -161,16 +197,20 @@ def dashboard_data(db, site=SITE, period="max", now=None):
     allin_rows = db.query(f"SELECT equity, ev_bb, invested_bb, luck_bb FROM hero_allins WHERE site = ?{h_when}",
                           (site, *arg))
     return {
-        "period": period if period in PERIODS else "max", "since": since,
+        "period": period, "since": since, "until": until,
+        # the dates the period covers in the data, and the last time anything was played (for an empty period)
+        "first_at": str(trs[0]["started_at"])[:16] if trs else None,
+        "last_played": str(db.scalar("SELECT MAX(played_at) FROM hands WHERE site = ?", (site,)) or "")[:16] or None,
         "knockouts": {"sole": int(ko["sole"] or 0), "shared": int(ko["n"]) - int(ko["sole"] or 0),
                       "per_tournament": int(ko["sole"] or 0) / with_hands if with_hands else None},
         "tournaments": len(trs), "cost": cost, "cash": cash, "tickets": tickets, "profit": cash + tickets - cost,
         "roi_pct": 100 * (cash + tickets - cost) / cost if cost else None,
         "cash_profit": cash - cost, "roi_cash_pct": 100 * (cash - cost) / cost if cost else None,
+        "pending": pending_results(trs),
         "itm": itm, "itm_n": len(known), "itm_pct": _pct(itm, len(known)) if known else None, "hands": n_hands,
         "bounty_cashed": {"n": len(bounty), "cashed": cashed_bounty,
                           "pct": _pct(cashed_bounty, len(bounty)) if bounty else None},
-        "places": place_split(db, site, since),
+        "places": place_split(db, site, since, until),
         "decided": int(hero["decided"] or 0),
         "vpip_pct": 100 * _f(hero["vpip"]) / int(hero["decided"]) if int(hero["decided"] or 0) else None,
         "pfr_pct": 100 * _f(hero["pfr"]) / int(hero["decided"]) if int(hero["decided"] or 0) else None,
@@ -204,7 +244,7 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "positions": positions,
         # blinds lose money for almost every player and heads-up (BTN/SB) is a different game: shown, not ranked
         "position_rank": best_and_worst([p for p in positions if p["position"] not in UNRANKED], "bb_per_100_ev"),
-        "tickets_won": tickets_summary(db, site, since),         # this period; the whole history is in Money
+        "tickets_won": tickets_summary(db, site, since, until),  # this period; the whole history is in Money
         "recent": [{"date": str(t["started_at"])[:10], "name": t["name"], "buyin": _f(t["buyin_total"]),
                     "place": t["finish_place"], "players": t["players"], "cash": _f(t["cash_won"]),
                     "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])} for t in reversed(trs[-10:])],

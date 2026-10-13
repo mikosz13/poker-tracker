@@ -20,7 +20,7 @@ flowchart LR
 | `hands.py`, `summary.py` | Regex parsers for GGPoker hand histories and tournament summaries; chip conservation per hand |
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
-| `summary.py` (multi-day) | Prize split into cash and ticket face value; `stage`, `advanced_to`, `first_day_id`: a later day joins its day 1 in `tournament_results` |
+| `summary.py` (multi-day) | Prize split into cash and ticket face value; `stage`, `advanced_to`; `importer.refresh_stages` sets `event_id`: every flight that went through joins its later day in `tournament_results`. A later day without a summary takes its stage from the name in its hands and is flagged (`summary_missing`); `provisional_prize` (CLI `provisional`) counts until the summary replaces it |
 | `places.py` | Final place as a share of the field: top 10% / 15% with a bootstrap interval, and bands for the place chart |
 | `tickets.py` | Tickets won in satellites, and the tournament each was probably used in (information only; the cost stays the full buy-in) |
 | `classify.py` | Tags from data only: format, stake, field size, level speed, late registration |
