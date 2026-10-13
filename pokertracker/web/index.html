@@ -508,9 +508,9 @@ function reviewHands(si) {
     <td style="vertical-align:top">${sgn(x.net_bb)}</td></tr>`;
   const groups = [
     [t("review.busts"), si.busts.map(x => row(x, esc(x.name)))],
-    [t("review.beats"), si.beats.map(x => row(x, esc(x.kind)))],
-    [t("review.lost"), si.pots.lost.map(x => row(x))],
-    [t("review.won"), si.pots.won.map(x => row(x))]].filter(g => g[1].length);
+    [t("review.beats"), si.beats.map(x => row(x, `${esc(x.kind)} · ${esc(x.name || "")}`))],
+    [t("review.lost"), si.pots.lost.map(x => row(x, esc(x.name || "")))],
+    [t("review.won"), si.pots.won.map(x => row(x, esc(x.name || "")))]].filter(g => g[1].length);
   const n = si.busts.length + si.beats.length + si.pots.lost.length + si.pots.won.length;
   return n ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--blue)">${t("review.title", {n})}</summary>
     ${groups.map(([title, rows]) => `<h3 style="font-size:.9rem;margin:10px 0 4px">${title}</h3>${table([t("col.hand"), "BB"], rows)}`).join("")}</details>` : "";
@@ -1027,7 +1027,7 @@ async function viewAnalysis(tab) {
 
   const pf = a.preflop, tr = pf.trend, T = pf.total;
   if (tab === "overview") {
-    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b>${ri ? ciBar(ri) : ""}</div>
+    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b></div>
       ${itmTile(o.itm, o.itm_n)}
       ${rateTile("VPIP", "vpip", T.vpip, tr)}${rateTile("PFR", "pfr", T.pfr, tr)}${rateTile("3-bet", "threebet", T.threebet, tr)}
       <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>

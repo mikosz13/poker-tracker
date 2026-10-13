@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Session review: the biggest pots won and lost (and bad beats / suckouts) name their tournament, like busts.
+- Analysis → Overview: the ROI tile shows the number only (the 95 % bar was squeezed and unclear there; Money keeps
+  the interval next to its verdicts).
 - ITM only: one ITM tile (reached the paid places), counted where the files say it, in tournaments without bounties
   and satellites. "Cashed (place or bounty)" is gone from the dashboard, Analysis, the tables in Money, late reg vs
   start and the session sentence; bounty money still counts in profit and ROI. The tooltip and "How luck works" say

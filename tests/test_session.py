@@ -126,6 +126,7 @@ class SessionInsightTests(unittest.TestCase):
     def test_biggest_pots_and_no_opponent_ids(self):
         i = self.insights(900003)                                       # Hero wins the 3-way all-in with KK
         self.assertEqual([p["hand_id"] for p in i["pots"]["won"]], ["TM1000000010"])
+        self.assertEqual((i["pots"]["won"][0]["tournament_id"], bool(i["pots"]["won"][0]["name"])), (900003, True))
         self.assertEqual(i["busts"], [])
         blob = json.dumps(i)
         for nick in ("aaaa1111", "bbbb2222", "cccc3333"):

@@ -108,22 +108,24 @@ def session_insights(db, tournaments, site=SITE, lang="en"):
         return None
     mine = load_hands(db, site, tids)
     ph, args = _placeholders(tids), (site, *tids)
+    names = {t["tournament_id"]: t["name"] for t in tournaments}
+    where = lambda h: {"tournament_id": h["tournament_id"], "name": names.get(h["tournament_id"])}   # which tournament
 
     # busts: the hand after which an entry's stack was zero
     busts = []
     for h in mine:
         if h["stack_bb"] + h["net_bb"] <= 0.005:
             story = _hand_story(db, h["hand_id"], site)
-            story.update(tournament_id=h["tournament_id"], at=h["at"],
-                         name=next(t["name"] for t in tournaments if t["tournament_id"] == h["tournament_id"]))
+            story.update(at=h["at"], **where(h))
             busts.append(story)
     allins = db.query(f"SELECT hand_id, tournament_id, equity, ev_bb, invested_bb, luck_bb, bad_beat, suckout "
                       f"FROM hero_allins WHERE site = ? AND tournament_id IN ({ph})", args)
     beats = [dict(_hand_story(db, a["hand_id"], site, _f(a["equity"])), kind="bad beat" if a["bad_beat"] else "suckout",
-                  luck_bb=round(_f(a["luck_bb"]), 1)) for a in allins if a["bad_beat"] or a["suckout"]]
+                  luck_bb=round(_f(a["luck_bb"]), 1), **where(a)) for a in allins if a["bad_beat"] or a["suckout"]]
     by_net = sorted(mine, key=lambda h: h["net_bb"])
-    pots = {"lost": [_hand_story(db, h["hand_id"], site) for h in by_net[:REVIEW_POTS] if h["net_bb"] < 0],
-            "won": [_hand_story(db, h["hand_id"], site) for h in reversed(by_net[-REVIEW_POTS:]) if h["net_bb"] > 0]}
+    pots = {"lost": [dict(_hand_story(db, h["hand_id"], site), **where(h)) for h in by_net[:REVIEW_POTS] if h["net_bb"] < 0],
+            "won": [dict(_hand_story(db, h["hand_id"], site), **where(h)) for h in reversed(by_net[-REVIEW_POTS:])
+                    if h["net_bb"] > 0]}
 
     badge = luck_badge(allins)
     starts = [_ts(t["first_hand"]) for t in tournaments if t["first_hand"]]
