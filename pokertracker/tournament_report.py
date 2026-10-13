@@ -67,12 +67,12 @@ def tournament_data(db, tournament_id, site=SITE):
     res = db.query("SELECT * FROM tournament_results WHERE site = ? AND tournament_id = ?", (site, tournament_id))
     rows = db.query(
         "SELECT hh.hand_id, hh.level, hh.played_at, hh.big_blind, hh.position, hh.stack_bb, hh.net_won, hh.net_bb, "
-        "hh.decided, hh.vpip, hh.pfr, hp.hole_cards, h.board, h.showdown, h.total_pot FROM hero_hands hh "
+        "hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, h.board, h.showdown, h.total_pot FROM hero_hands hh "
         "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
         "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
         "WHERE hh.site = ? AND hh.tournament_id = ? ORDER BY hh.played_at, hh.hand_id", (site, tournament_id))
     for r in rows:
-        for k in ("big_blind", "stack_bb", "net_won", "net_bb", "total_pot"):
+        for k in ("big_blind", "stack", "stack_bb", "net_won", "net_bb", "total_pot"):
             r[k] = _f(r[k])
         r["pot_bb"] = (r["total_pot"] or 0) / r["big_blind"]
     folded = {r["hand_id"] for r in db.query(
@@ -123,7 +123,11 @@ def tournament_data(db, tournament_id, site=SITE):
                      "points": [{"at": str(r["played_at"])[:19], "hand_id": r["hand_id"], "level": r["level"],
                                  "position": r["position"], "cards": r["hole_cards"] or "", "net_bb": round(r["net_bb"], 1),
                                  "before_bb": round(r["stack_bb"], 1),
-                                 "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1)} for r in rows]}
+                                 "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1),
+                                 # the same in chips: a deep run can grow in chips while falling in big blinds
+                                 "big_blind": r["big_blind"], "before": round(r["stack"]),
+                                 "after": round(max(0.0, r["stack"] + r["net_won"]))}
+                                for r in rows]}
 
     pos = defaultdict(lambda: {"hands": 0, "decided": 0, "net_bb": 0.0, "vpip": 0, "pfr": 0})
     for r in rows:

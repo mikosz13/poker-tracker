@@ -215,10 +215,14 @@
  "tour.noHands": "No hand history imported for this tournament.",
  "tour.net": "Net",
  "tour.shared": "+{n} shared",
- "tour.stackTitle": "Stack in BB",
+ "tour.stackTitle": "Stack",
+ "stack.unitBb": "BB",
+ "stack.unitChips": "Chips",
+ "chips.m": "{x}M",
+ "chips.k": "{x}k",
  "tour.stackLine": {
-  "one": "{start} → {end} BB, peak {peak} BB after {n} hand · click the chart to replay a hand",
-  "other": "{start} → {end} BB, peak {peak} BB after {n} hands · click the chart to replay a hand"
+  "one": "{start} → {end}, peak {peak} after {n} hand · click the chart to replay a hand",
+  "other": "{start} → {end}, peak {peak} after {n} hands · click the chart to replay a hand"
  },
  "tour.positions": "Positions",
  "tour.tooFew": "Fewer than 8 hands per position, too small to rank.",
@@ -238,7 +242,7 @@
  "stack.reentry": "Re-entry {no}",
  "stack.entryTitle": "Entry {no} at level {level} with {chips} chips ({bb} BB)",
  "stack.full": ", the full starting stack",
- "stack.tip": "Level {level} · {pos} {cards}<br>hand {net} BB · stack {before} → <b>{after} BB</b>",
+ "stack.tip": "Level {level} · {pos} {cards}<br>hand {net} BB · stack {before} → <b>{after} BB</b><br>{beforeChips} → <b>{afterChips}</b> chips · big blind {bb}",
  "replay.back": "← Tournament",
  "replay.title": "Hand {i} of {n}",
  "replay.info": "Level {level} · blinds {sb}/{bb} ante {ante} · table {table} · {at}",

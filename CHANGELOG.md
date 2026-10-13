@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Tournament stack chart: a BB / Chips switch (remembered). In chips a deep run shows how the stack grew even while it
+  fell in big blinds (Mik's Day 2: 977k → peak 9.3M → bust from 5.6M, which is 279 → 11 BB). The tooltip shows both,
+  with the big blind; the line under the chart follows the unit.
 - Dashboard periods: Last session · 24 h · 7 days · 14 days · 30 days, and under "More" 3 months, 6 months, All
   history and a custom range (from–to, whole days, remembered). The heading shows the dates the period covers and links
   to the tournament list with the same period; the list takes its bounds from the app, so both count the same

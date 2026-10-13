@@ -225,6 +225,13 @@ function money(x, d = 2) {
 }
 const pct = x => x == null ? "–" : num(x, 1) + "%";
 const bbUnit = (x, d = 1) => num(x, d) + NB + "BB";
+// chips on an axis or in a line: "9,3 mln" / "977 tys." / "850"
+const chipsShort = x => {
+  if (Math.abs(x) < 1e4) return num(x, 0);
+  if (Math.abs(x) < 1e6) return t("chips.k", {x: num(x / 1e3, 0)});
+  const m = Math.abs(x) >= 1e7 ? Math.round(x / 1e6) : Math.round(x / 1e5) / 10;          // "5 mln", "9,3 mln"
+  return t("chips.m", {x: num(m, Number.isInteger(m) ? 0 : 1)});
+};
 // Dates: "2026-10-11 21:45" in English, "11.10.2026 21:45" in Polish; always a 24 h clock
 const pad = n => String(n).padStart(2, "0");
 function dateTime(s) {
@@ -674,18 +681,29 @@ async function viewTournaments() {
 }
 
 // ---- Tournament detail -------------------------------------------------------
+// the stack in big blinds or in chips (a deep run can grow in chips while it falls in big blinds); remembered per viewer
+let stackUnit = "bb";
+try { stackUnit = localStorage.getItem("stackUnit") === "chips" ? "chips" : "bb"; } catch (e) { /* storage blocked */ }
+function stackLine(d) {
+  const pts = d.stack.points, s = d.stack;
+  if (stackUnit === "bb")
+    return t("tour.stackLine", {start: bbUnit(s.start_bb, 0), end: bbUnit(s.end_bb, 0), peak: bbUnit(s.peak_bb, 0), n: s.peak_after_hands});
+  const path = [pts[0].before, ...pts.map(p => p.after)], k = path.reduce((b, v, i) => v > path[b] ? i : b, 0);
+  return t("tour.stackLine", {start: chipsShort(path[0]), end: chipsShort(path[path.length - 1]), peak: chipsShort(path[k]), n: k});
+}
 function stackChart(d) {
-  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i]));
+  const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i])), chips = stackUnit === "chips";
   const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
     i: idx[e.first_hand_id],
-    label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${bbUnit(e.stack_bb, 0)}`,
+    label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${chips ? chipsShort(e.stack) : bbUnit(e.stack_bb, 0)}`,
     title: t("stack.entryTitle", {no: e.entry_no, level: e.level, chips: num(e.stack, 0), bb: num(e.stack_bb, 1)})
       + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? t("stack.full") : "")}));
   pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
   charts = [];
-  addChart("c-stack", pts, [{key: "after_bb", color: "var(--blue)"}], v => bbUnit(v, 0),
+  addChart("c-stack", pts, [{key: chips ? "after" : "after_bb", color: "var(--blue)"}], v => chips ? chipsShort(v) : bbUnit(v, 0),
     p => t("stack.tip", {level: p.level, pos: esc(p.position || ""), cards: p.cards ? cards(p.cards) : "", net: sgn(p.net_bb),
-                         before: num(p.before_bb, 0), after: num(p.after_bb, 0)}),
+                         before: num(p.before_bb, 0), after: num(p.after_bb, 0), beforeChips: num(p.before, 0),
+                         afterChips: num(p.after, 0), bb: num(p.big_blind, 0)}),
     {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
 }
 
@@ -712,8 +730,9 @@ async function viewTournament(id) {
   const s = d.stack, a = d.allins;
   h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b><span class="m">${t("common.n", {n: d.decided})}</span></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
-  h += `<h2>${t("tour.stackTitle")}</h2><div class="tchart" id="c-stack"></div><p class="m">${t("tour.stackLine",
-    {start: num(s.start_bb, 0), end: num(s.end_bb, 0), peak: num(s.peak_bb, 0), n: s.peak_after_hands})}</p>`;
+  h += `<h2 style="display:flex;align-items:center;gap:10px">${t("tour.stackTitle")}<span class="seg" id="stack-unit" style="margin:0">${
+    [["bb", "stack.unitBb"], ["chips", "stack.unitChips"]].map(([u, k]) => `<button data-u="${u}" class="${u === stackUnit ? "on" : ""}">${t(k)}</button>`).join("")}</span></h2>
+    <div class="tchart" id="c-stack"></div><p class="m" id="stack-line">${stackLine(d)}</p>`;
   h += `<h2>${t("tour.positions")}</h2>${table([t("col.position"), t("col.hands"), "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   if (!d.best_position) h += `<p class="m">${t("tour.tooFew")}</p>`;
   else h += `<p class="m">${t("tour.best", {pos: esc(d.best_position.position)})}${d.worst_position ? t("tour.worst", {pos: esc(d.worst_position.position)}) : ""}${t("tour.rankNote")}</p>`;
@@ -732,6 +751,16 @@ async function viewTournament(id) {
   app.innerHTML = h;
   bindIgnore(d.tournament_id);
   stackChart(d);
+  const unitSwitch = document.getElementById("stack-unit");
+  if (unitSwitch) unitSwitch.onclick = e => {
+    const b = e.target.closest("button[data-u]");
+    if (!b || b.dataset.u === stackUnit) return;
+    stackUnit = b.dataset.u;
+    try { localStorage.setItem("stackUnit", stackUnit); } catch (err) { /* storage blocked: kept for this visit */ }
+    document.querySelectorAll("#stack-unit button").forEach(x => x.classList.toggle("on", x === b));
+    document.getElementById("stack-line").innerHTML = stackLine(d);
+    stackChart(d);
+  };
 }
 function bindIgnore(id) {
   document.getElementById("ign").onclick = () => {
