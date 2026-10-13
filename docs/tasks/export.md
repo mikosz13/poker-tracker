@@ -12,6 +12,14 @@ Queue: after hand search, before Help.
   that checks the file is a Poker Tracker database of a supported schema version (migrates it if older) and keeps
   the current one as a backup before replacing it.
 
+## Provisional amounts (decided 2026-10-13)
+- A prize typed in with `pokertracker provisional` (a day whose summary PokerCraft does not offer) is marked as
+  provisional wherever it leaves the app: a `provisional` column (yes/no) in the tournament CSV, and "(provisional:
+  typed in, waiting for the PokerCraft summary)" in a copied hand or tournament.
+- Importing the PokerCraft summary replaces the provisional amount (one record, the amount from the file); it is never
+  added next to it. Already true in the database and tested (tests/test_stages.py); the export must not reintroduce a
+  second value.
+
 ## Checks
 - Tests: text export of a hand with each street and an all-in; CSV quoting (names with commas and quotes); backup and
   restore round trip, refusing a foreign file.
