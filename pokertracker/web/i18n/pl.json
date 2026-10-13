@@ -678,7 +678,7 @@
  "def.vpip": "VPIP: jak często dobrowolnie wkładasz żetony preflop (call, bet, raise; complete z SB tak, check z BB nie). Mianownik: ręce z decyzją preflop (bez spacerów i all-inów wymuszonych blindem).",
  "def.pfr": "PFR: jak często podbijasz preflop (każdy raise, także limp-raise). Ten sam mianownik co VPIP.",
  "def.rfi": "RFI (raise first in): jak często otwierasz raise, gdy wszyscy przed Tobą spasowali (bez limperów). Okazja: pierwsza decyzja w niezagranej puli, poza BB.",
- "def.threebet": "3-bet: jak często przebijasz, gdy przed Twoją pierwszą decyzją jest dokładnie jeden raise (callerzy mogą być, więc squeeze też się liczy).",
+ "def.threebet": "3-bet: jak często przebijasz, gdy przed Twoją pierwszą decyzją jest dokładnie jeden raise (callerzy mogą być, więc squeeze też się liczy). All-in, którego nie możesz przebić (call oznacza Twój all-in), nie jest okazją; all-in za mniej, niż masz, jest (izolacja).",
  "def.fold3": "Fold to 3-bet: jak często pasujesz, gdy Twój open (nie all-in) zostanie raz przebity.",
  "def.shove": "Open shove: jak często otwierasz all-inem, gdy wszyscy przed Tobą spasowali. Liczone od okazji RFI przy tym stacku.",
  "def.ev100": "bb/100 wg EV: wynik na 100 rąk bez szczęścia w all-inach (w ręce z all-inem liczy się EV, nie wynik).",

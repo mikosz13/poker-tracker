@@ -4,7 +4,9 @@
   RFI            Hero's first decision with everyone before folded (no limpers), not in the big blind; a raise
                  counts, all-in included
   open shove     the RFI opportunities; Hero's raise is all-in
-  3-bet          exactly one raise before Hero's first decision (callers allowed, so a squeeze counts); Hero raises
+  3-bet          exactly one raise before Hero's first decision (callers allowed, so a squeeze counts); Hero raises.
+                 Not a chance when that raise is all-in and Hero cannot raise over it (calling would put Hero all-in:
+                 stack - ante <= the amount raised to); an all-in for less than Hero has stays one (an isolation)
   fold to 3-bet  Hero opened (a raise, not all-in) and exactly one re-raise followed; Hero folds
   bb/100 wg EV   every hand; in a hand with an all-in the all-in EV replaces the result
 
@@ -21,14 +23,18 @@ POSITIONS = ("UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB", "BB", "BTN/SB"
 COUNTS = ("rfi_opp", "rfi", "shove", "tb_opp", "tb", "f3_opp", "f3")
 
 
-def hand_stats(actions, position):
-    """Opportunities and actions of one hand, from its preflop actions in order (dicts nick, action_type, all_in)."""
+def hand_stats(actions, position, stack=None):
+    """Opportunities and actions of one hand, from its preflop actions in order (dicts nick, action_type, amount,
+    all_in). stack: Hero's chips at the start of the hand (None when unknown: an all-in raise is then a 3-bet chance)."""
     out = dict.fromkeys(COUNTS, 0)
     raises = callers = 0
     decided = opened = False
+    ante, last_to, last_all_in = 0.0, 0.0, False
     for a in actions:
         kind = a["action_type"]
         if kind.startswith("posts"):
+            if a["nick"] == "Hero" and kind == "posts_the_ante":
+                ante += float(a.get("amount") or 0)
             continue
         if a["nick"] == "Hero":
             if not decided:                                         # Hero's first decision
@@ -38,7 +44,7 @@ def hand_stats(actions, position):
                     if kind == "raises":
                         out["rfi"], out["shove"] = 1, int(bool(a["all_in"]))
                         opened = not a["all_in"]
-                elif raises == 1:
+                elif raises == 1 and not (last_all_in and stack is not None and stack - ante <= last_to):
                     out["tb_opp"], out["tb"] = 1, int(kind == "raises")
             elif opened:                                            # Hero's next decision after an open
                 if raises == 2:                                     # exactly one re-raise came back
@@ -46,6 +52,7 @@ def hand_stats(actions, position):
                 opened = False
         if kind in ("raises", "bets"):
             raises += 1
+            last_to, last_all_in = float(a.get("amount") or 0), bool(a["all_in"])     # "raises X to Y": Y
         elif kind == "calls" and a["nick"] != "Hero":
             callers += 1
     return out

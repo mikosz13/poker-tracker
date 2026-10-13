@@ -100,7 +100,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
         f"WHERE a.site = ? AND a.nick = 'Hero' AND a.action_type = 'folds'{where}", (site, *args))}
     hands = []
     for r in db.query("SELECT hh.hand_id, hh.tournament_id, hh.played_at, hh.position, hh.stack_bb, hh.net_bb, "
-                      "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, ae.ev_net, h.showdown FROM hero_hands hh "
+                      "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, ae.ev_net, h.showdown FROM hero_hands hh "
                       "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
                       "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
                       "LEFT JOIN allin_ev ae ON ae.site = hh.site AND ae.hand_id = hh.hand_id AND ae.is_hero "
@@ -115,7 +115,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
                       "adj_bb": _f(r["ev_net"]) / bb if r["ev_net"] is not None else net,
                       "posted_bb": posted / bb, "decided": int(r["decided"]), "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),
                       "cards": r["hole_cards"] or "", "spot": first, "after_3bet": after,
-                      "pf": preflop.hand_stats(a, r["position"]),
+                      "pf": preflop.hand_stats(a, r["position"], _f(r["stack"])),
                       "showdown": bool(r["showdown"]) and r["hand_id"] not in folded})
     return hands
 

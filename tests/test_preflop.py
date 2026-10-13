@@ -75,6 +75,36 @@ class HandStatsTests(unittest.TestCase):
         self.assertEqual([d["depth"] for d in depths], ["40+ BB"])          # 10,000 chips at 200: 50 BB
 
 
+class AllInRaiseTests(unittest.TestCase):
+    """A 3-bet chance facing an all-in raise only when Hero can raise over it (decision 2026-10-13)."""
+
+    def stats(self, n, actions, utg_chips=None):
+        from tests.test_analysis import POS_SEAT
+        text = gg_hand(n, "BB", actions)
+        if utg_chips:                                   # a short UTG: all-in for less than Hero has
+            seat = POS_SEAT["UTG"]
+            text = text.replace(f"Seat {seat}: p{seat}aaaa (10,000 in chips)", f"Seat {seat}: p{seat}aaaa ({utg_chips} in chips)")
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", text)], equity=False)
+        pf = load_hands(db)[0]["pf"]
+        return pf["tb_opp"], pf["tb"]
+
+    def test_an_all_in_hero_cannot_raise_over_is_no_chance(self):
+        # Hero has 10,000 and posts a 25 ante: calling 9,975 puts Hero all-in, so a re-raise is impossible
+        self.assertEqual(self.stats(1, ["UTG: raises 9,775 to 9,975 and is all-in", "HJ: folds", "CO: folds",
+                                        "BTN: folds", "SB: folds", "Hero: calls 9,775"]), (0, 0))
+
+    def test_an_all_in_for_less_stays_a_chance_for_an_isolation(self):
+        # UTG is all-in for 4,200; Hero has 10,000 and can re-raise to isolate
+        self.assertEqual(self.stats(2, ["UTG: raises 4,000 to 4,200 and is all-in", "HJ: folds", "CO: folds",
+                                        "BTN: folds", "SB: folds", "Hero: raises 5,575 to 9,775 and is all-in"],
+                                    utg_chips="4,225"), (1, 1))
+        self.assertEqual(self.stats(3, ["UTG: raises 4,000 to 4,200 and is all-in", "HJ: folds", "CO: folds",
+                                        "BTN: folds", "SB: folds", "Hero: calls 4,000"], utg_chips="4,225"), (1, 0))
+
+
 def fake(at, vpip, tb_opp=0, tb=0):
     return {"at": at, "adj_bb": 0.0, "decided": 1, "vpip": vpip, "pfr": 0,
             "pf": dict(dict.fromkeys(preflop.COUNTS, 0), tb_opp=tb_opp, tb=tb)}
