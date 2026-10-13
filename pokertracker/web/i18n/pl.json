@@ -650,5 +650,15 @@
   "many": "z {n} flightami dnia 1",
   "other": "z {n} flightami dnia 1"
  },
- "ev.note": "Ten flight przeszedł do {day}: jego koszt i gotówka z KO liczą się w {link}, jako jeden turniej z jednym miejscem końcowym."
+ "ev.note": "Ten flight przeszedł do {day}: jego koszt i gotówka z KO liczą się w {link}, jako jeden turniej z jednym miejscem końcowym.",
+ "ev.missing": "Brak podsumowania jednego z dni w PokerCraft: miejsce jest nieznane, a nagroda z tego dnia nie jest liczona. Zaimportuj podsumowanie, gdy się pojawi.",
+ "ev.provisional": "Brak podsumowania jednego z dni w PokerCraft: na razie liczymy nagrodę wpisaną ręcznie ({value}), miejsce jest nieznane. Podsumowanie po imporcie ją zastąpi.",
+ "list.provisional": "tymczasowo: nagroda wpisana ręcznie, czeka na podsumowanie",
+ "list.dayMissing": "bez nagrody z dnia, którego podsumowania brak",
+ "money.pending": {
+  "one": "W tym {n} turniej bez podsumowania jednego z dni (wynik tymczasowy).",
+  "few": "W tym {n} turnieje bez podsumowania jednego z dni (wyniki tymczasowe).",
+  "many": "W tym {n} turniejów bez podsumowania jednego z dni (wyniki tymczasowe).",
+  "other": "W tym {n} turnieju bez podsumowania jednego z dni (wyniki tymczasowe)."
+ }
 }

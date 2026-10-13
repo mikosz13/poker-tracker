@@ -14,7 +14,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from .dashboard import hand_class
+from .dashboard import hand_class, pending_results
 from .i18n import num, t
 from .places import place_split
 from .tickets import tickets_summary
@@ -339,7 +339,8 @@ def money(db, site=SITE, lang="en"):
     nothing; the whole prize of a tournament with re-entries is the return of its re-entries. First entries return the
     prize only in tournaments without a re-entry (the first entry lasted to the end)."""
     trs = db.query("SELECT tournament_id, buyin_total, total_cost, cash_won, ticket_value, won_total, profit, "
-                   "cash_profit, reentries, format FROM tournament_results WHERE site = ? ORDER BY tournament_id",
+                   "cash_profit, reentries, format, summary_missing, provisional FROM tournament_results WHERE site = ? "
+                   "ORDER BY tournament_id",
                    (site,))                                # one fixed order: the seeded resampling picks the same rows
     cost = sum(_f(r["total_cost"]) for r in trs)
     profit = sum(_f(r["profit"]) for r in trs)                 # tickets at face value
@@ -381,6 +382,7 @@ def money(db, site=SITE, lang="en"):
     return {"tournaments": len(trs), "cost": round(cost, 2), "profit": round(profit, 2),
             "roi_pct": round(100 * profit / cost, 1) if cost else None, "roi_interval": roi_interval(trs),
             "cash_profit": round(cash_profit, 2), "roi_cash_pct": round(100 * cash_profit / cost, 1) if cost else None,
+            "pending": pending_results(trs),
             "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
             "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang),
             "by_buyin": _rows_by(db, site, "buyin_total", "SELECT buyin_total AS key, COUNT(*) AS n, SUM(total_cost) AS cost, "

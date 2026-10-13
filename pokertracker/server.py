@@ -47,7 +47,7 @@ def tournaments_list(db, site=SITE):
         "SELECT t.tournament_id, t.name, t.format, COALESCE(r.buyin_total, t.buyin_total) AS buyin_total, t.players, "
         "COALESCE(r.finish_place, t.finish_place) AS finish_place, t.prize_won, t.prize_is_ticket, t.prize_ticket, "
         "t.reentries, t.has_summary, t.started_at, COALESCE(t.stage, 1) AS stage, t.advanced_to, t.advanced_chips, "
-        "t.event_id, r.days, r.in_the_money, r.cashed, r.place_pct, "
+        "t.event_id, r.days, r.in_the_money, r.cashed, r.place_pct, r.summary_missing, r.provisional, "
         "(SELECT MIN(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS first_hand, "
         "(SELECT MAX(h.played_at) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS last_hand, "
         "(SELECT COUNT(*) FROM hands h WHERE h.site = t.site AND h.tournament_id = t.tournament_id) AS hands, "

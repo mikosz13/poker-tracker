@@ -27,6 +27,11 @@ def main(argv=None):
     tr = sub.add_parser("tournament", help="post-tournament report (latest tournament if no id is given)")
     tr.add_argument("tournament_id", nargs="?", type=int)
     tr.add_argument("--html", metavar="FILE", help="also write a self-contained HTML report (phone friendly)")
+    pv = sub.add_parser("provisional", help="the cash won on a day whose summary PokerCraft does not offer (counted, "
+                                            "flagged, until the summary is imported)")
+    pv.add_argument("tournament_id", type=int)
+    pv.add_argument("amount", nargs="?", type=float, help="cash won that day in $; leave out with --clear")
+    pv.add_argument("--clear", action="store_true", help="remove the amount typed in")
     args = p.parse_args(argv)
 
     if args.cmd == "app":
@@ -54,6 +59,9 @@ def main(argv=None):
                           "format. Nothing was removed; to check: " + ", ".join(s.to_check))
                 for skipped in s.skipped:
                     print(f"  skipped {skip_text(skipped)}")
+        elif args.cmd == "provisional":
+            from .importer import set_provisional_prize
+            print(set_provisional_prize(db, args.tournament_id, None if args.clear else args.amount))
         elif args.cmd == "report":
             print(build_report(db))
         elif args.cmd == "scope-review":

@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- A Day 2 without a summary (PokerCraft offered Mik's Day 2 hands but no Day 2 summary): the day is recognised from the
+  name in its hands ("[Day 2]") and joins its flights as one event. The event counts the cost of every flight and the
+  cash known so far; the place is unknown and the Day 2 prize is not counted, and that is flagged on the tournament,
+  in the list (*) and next to ROI. The Day 2 no longer counts as an entry from the start (it starts with chips
+  carried over), and its flights no longer say "Day 2 not played" after 7 days. Database schema 7.
+- `pokertracker provisional <tournament id> <amount>`: the cash won on a day whose summary is missing, counted and
+  flagged as provisional until the summary is imported, which replaces it (an exception to "nothing typed in", for a
+  summary GGPoker does not offer; no form in the app).
 - Multi-day events: every day-1 flight that went through joins its Day 2 (and later days) as one tournament under its
   last day: the cost of all flights (buy-in × entries), the knockout cash of every flight plus the later days' prize,
   and one final place. Flights are matched by name without the day marker and "GTD" (GGPoker renamed "$1M GTD" to

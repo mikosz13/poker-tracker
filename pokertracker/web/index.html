@@ -315,6 +315,9 @@ function advanced(x, short) {
   const full = t("adv.label", {day: dayName(x.advanced_to), n: Number(x.advanced_chips || 0)});
   return short ? `<span title="${esc(full)}">${DAY_ICON}${dayName(x.advanced_to)}</span>` : `<span style="font-size:1rem">${DAY_ICON}${full}</span>`;
 }
+// results with a day's summary missing (PokerCraft does not always offer one): flagged wherever ROI is shown
+const pendingNote = p => p && p.count ? `<p class="warn">${t("money.pending", {n: p.count})}</p>` : "";
+const pendingMark = x => Number(x.summary_missing) ? ` <span class="m" title="${esc(t(Number(x.provisional) ? "list.provisional" : "list.dayMissing"))}">*</span>` : "";
 // a tournament tag ("stake:micro", "target:$500 ...") as a readable label; an unknown tag shows as it is
 function tagLabel(tag) {
   const [kind, ...rest] = String(tag).split(":"), value = rest.join(":");
@@ -372,7 +375,7 @@ async function viewDashboard(period) {
   h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b>${inclCash(sgn(d.cash_profit, 0, " $"))}</div>
     <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div>${itmTiles(d.itm, d.itm_n, d.bounty_cashed)}${topTiles(d.places)}
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
-    <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>`;
+    <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>${pendingNote(d.pending)}`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
   h += `<div class="trio">${luckBox(d.luck_badge)}${handsBox(d.starting_hands)}${positionBox(d.positions, d.position_rank)}</div>`;
   if (d.tickets_won && d.tickets_won.count) h += ticketsBox(d.tickets_won, true);
@@ -611,7 +614,7 @@ async function viewTournaments() {
         <td>${Number(x.prize_ticket) > 0 ? `<span title="${esc(t("tk.won", {value: money(x.prize_ticket)}))}">${TICKET_ICON}${t("tk.wonShort", {value: money(x.prize_ticket)})}</span>`
           : x.advanced_to ? advanced(x, true) : `${x.finish_place ?? "–"}<span class="wide">/${x.players ?? "–"}</span>`}</td>
         <td>${x.day_status === "event" ? `<span class="m">${t("ev.counted", {link: `<a href="#/t/${x.event_id}" onclick="event.stopPropagation()">#${x.event_id}</a>`})}</span>` : x.profit == null ? `<span class="m" title="${esc(t("list.noSummaryImported"))}"><span class="wide">${t("common.noSummary")}</span><span class="narrow">–</span></span>`
-          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>`}</td>
+          : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>${pendingMark(x)}`}</td>
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
@@ -647,11 +650,12 @@ async function viewTournament(id) {
   let h = `<p style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a href="#/tournaments">${t("tour.back")}</a>
     <button id="ign">${t("ign.button")}</button></p><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
-  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place}/${r.players}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
+  if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place ?? "–"}/${r.players ?? "–"}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
     <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b>${r.ticket_value > 0 && r.roi_cash_pct != null ? `<span class="m">${t("money.inclCash", {x: sgn(r.roi_cash_pct, 0, "%")})}</span>` : ""}</div></div>`;
   else if (d.event) h += `<p class="warn">${DAY_ICON}${t("ev.note", {day: dayName(d.advanced_to),
     link: `<a href="#/t/${d.event.tournament_id}">${esc(d.event.name)}</a>`})}</p>`;
   else h += `<p class="m">${t("tour.noSummary")}</p>`;
+  if (r && r.summary_missing) h += `<p class="warn">${DAY_ICON}${r.provisional ? t("ev.provisional", {value: money(r.prize)}) : t("ev.missing")}</p>`;
   if (d.satellite_win) h += `<p>${TICKET_ICON}${t("tk.satNote", {target: esc(d.satellite_win.target), value: money(d.satellite_win.value)})}${d.satellite_win.used_in
     ? ` <span class="m">· ${t("tk.used")} <a href="#/t/${d.satellite_win.used_in.tournament_id}">${esc(d.satellite_win.used_in.name)}</a></span>` : ""}</p>`;
   if (d.ticket_entry) h += `<p class="m">${TICKET_ICON}${t("tk.entryNote", {value: money(d.ticket_entry.value),
@@ -920,7 +924,7 @@ async function viewAnalysis(tab) {
     h += `<p>${t("money.roiLine", {roi: sgn(m.roi_pct, 0, "%"), tournaments: t("common.tournaments", {n: m.tournaments}),
           lo: num(ri.low, 0), hi: num(ri.high, 0)})}${m.roi_cash_pct != null && m.roi_cash_pct !== m.roi_pct
           ? ` <span class="m">${t("money.inclCashRoi", {roi: sgn(m.roi_cash_pct, 0, "%"), profit: sgn(m.cash_profit, 2, " $")})}</span>` : ""}</p>
-      <p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
+      ${pendingNote(m.pending)}<p class="m">${t("money.judged", {groups: t("money.groups", {n: m.tested})})}</p>
       ${o.places && o.places.all && o.places.all.n ? `<h2 title="${esc(t("places.tip"))}">${t("places.money")}</h2><div class="k" style="margin-bottom:12px">${topTiles(o.places)}</div>` : ""}
       ${m.facts.length ? `<div class="box"><b>${t("money.facts")}</b><ul style="margin:6px 0 0 18px;padding:0">${m.facts.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>` : ""}
       <h2>${t("dash.byBuyin")}</h2>${table(head, rows(m.tiers))}

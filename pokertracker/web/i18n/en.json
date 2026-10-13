@@ -635,5 +635,13 @@
   "one": "with {n} day-1 flight",
   "other": "with {n} day-1 flights"
  },
- "ev.note": "This flight went through to {day}: its cost and knockout cash count in {link}, one tournament with one final place."
+ "ev.note": "This flight went through to {day}: its cost and knockout cash count in {link}, one tournament with one final place.",
+ "ev.missing": "A day's summary is not in PokerCraft: the place is unknown and that day's prize is not counted. Import the summary when it appears.",
+ "ev.provisional": "A day's summary is not in PokerCraft: the prize typed in ({value}) counts for now and the place is unknown. The summary replaces it once imported.",
+ "list.provisional": "provisional: prize typed in, waiting for the summary",
+ "list.dayMissing": "without the prize of a day whose summary is missing",
+ "money.pending": {
+  "one": "Includes {n} tournament with a day's summary missing (provisional result).",
+  "other": "Includes {n} tournaments with a day's summary missing (provisional results)."
+ }
 }

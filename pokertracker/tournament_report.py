@@ -98,7 +98,9 @@ def tournament_data(db, tournament_id, site=SITE):
                           "advanced_to": r["advanced_to"], "days": r["days"],
                           "advanced_chips": _f(r["advanced_chips"]),
                           "ticket": _f(r["ticket_value"]) > 0, "cost": _f(r["total_cost"]), "profit": _f(r["profit"]),
-                          "roi_pct": _f(r["roi_pct"]), "started_at": str(r["started_at"])[:16]}
+                          "roi_pct": _f(r["roi_pct"]), "started_at": str(r["started_at"])[:16],
+                          # a day without its summary: place unknown, cash typed in (provisional) or missing
+                          "summary_missing": bool(r["summary_missing"]), "provisional": bool(r["provisional"])}
     if not rows:
         return data
 
@@ -177,8 +179,11 @@ def render_text(d) -> str:
     res = d.get("result")
     if res:
         prize = f"${res['prize']:,.2f}" + (" (ticket)" if res["ticket"] else "")
-        out.append(f"  {res['started_at'][:10]} | place {res['place']}/{res['players']} | won {prize} on cost "
+        out.append(f"  {res['started_at'][:10]} | place {res['place'] or '?'}/{res['players'] or '?'} | won {prize} on cost "
                    f"${res['cost']:,.2f} | ROI {res['roi_pct']:+,.0f}% (cash)")
+        if res["summary_missing"]:
+            out.append("  a day's summary is missing: " + ("the prize typed in counts until it comes"
+                                                          if res["provisional"] else "its prize is not counted"))
     else:
         out.append("  no summary imported (no result / ROI)")
     if d["tags"]:
@@ -267,7 +272,7 @@ def render_html(d) -> str:
     res = d.get("result")
     if res:
         prize = f"${res['prize']:,.2f}" + (" ticket" if res["ticket"] else "")
-        parts.append(f"<div class=k><div>Place<b>{res['place']}/{res['players']}</b></div><div>Prize<b>{prize}</b></div>"
+        parts.append(f"<div class=k><div>Place<b>{res['place'] or '?'}/{res['players'] or '?'}</b></div><div>Prize<b>{prize}</b></div>"
                      f"<div>ROI (cash)<b>{res['roi_pct']:+,.0f}%</b></div></div>")
         parts.append(f"<p class=m>{e(res['started_at'])} | cost ${res['cost']:,.2f}</p>")
     if d["tags"]:

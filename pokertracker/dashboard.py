@@ -91,6 +91,12 @@ def _pct(part, whole):
     return round(100 * part / whole, 1) if whole else None
 
 
+def pending_results(trs):
+    """Results with a day whose summary is missing: provisional (cash typed in) or without that day's prize."""
+    missing = [t for t in trs if int(t["summary_missing"] or 0)]
+    return {"count": len(missing), "provisional": sum(1 for t in missing if int(t["provisional"] or 0))}
+
+
 def dashboard_data(db, site=SITE, period="max", now=None):
     """Everything on the dashboard for one period: tournaments by start time, hands by their time."""
     since = period_start(period, now)
@@ -167,6 +173,7 @@ def dashboard_data(db, site=SITE, period="max", now=None):
         "tournaments": len(trs), "cost": cost, "cash": cash, "tickets": tickets, "profit": cash + tickets - cost,
         "roi_pct": 100 * (cash + tickets - cost) / cost if cost else None,
         "cash_profit": cash - cost, "roi_cash_pct": 100 * (cash - cost) / cost if cost else None,
+        "pending": pending_results(trs),
         "itm": itm, "itm_n": len(known), "itm_pct": _pct(itm, len(known)) if known else None, "hands": n_hands,
         "bounty_cashed": {"n": len(bounty), "cashed": cashed_bounty,
                           "pct": _pct(cashed_bounty, len(bounty)) if bounty else None},

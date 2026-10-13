@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 6
+LATEST = 7
 
 
 def repair_positions(db):
@@ -108,8 +108,25 @@ def _v6_multi_day_events(db):
     refresh_stages(db)
 
 
+def _v7_later_days_without_summary(db):
+    """A later day (Day 2) whose summary PokerCraft does not offer was stored from its hands as a day-1 tournament:
+    it takes its stage from the name, joins its flights, and loses the entry tag and starting stack of a day 1."""
+    from .importer import refresh_stages, refresh_starting_stacks    # here, to avoid an import cycle
+    from .classify import refresh_classification
+    from .summary import stage_of
+    later = [(stage_of(r["name"]), r["site"], r["tournament_id"]) for r in db.query(
+        "SELECT site, tournament_id, name FROM tournaments WHERE NOT has_summary AND stage IS NULL")]
+    later = [x for x in later if x[0] > 1]
+    db.executemany("UPDATE tournaments SET stage = ? WHERE site = ? AND tournament_id = ?", later)
+    refresh_stages(db)
+    refresh_starting_stacks(db)
+    for _, site, tid in later:
+        refresh_classification(db, site, tid)
+
+
 MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards,
-              4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name, 6: _v6_multi_day_events}
+              4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name, 6: _v6_multi_day_events,
+              7: _v7_later_days_without_summary}
 
 
 # Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of
@@ -119,7 +136,7 @@ COLUMNS = (("hands", "button_seat", "INTEGER"), ("tournaments", "starting_stack"
            ("tournaments", "entries_found", "INTEGER"), ("tournaments", "prize_ticket", "NUMERIC"),
            ("tournaments", "stage", "INTEGER"), ("tournaments", "advanced_to", "TEXT"),
            ("tournaments", "advanced_chips", "NUMERIC"), ("tournaments", "first_day_id", "BIGINT"),
-           ("tournaments", "event_id", "BIGINT"))
+           ("tournaments", "event_id", "BIGINT"), ("tournaments", "provisional_prize", "NUMERIC"))
 
 
 def add_missing_columns(db):
