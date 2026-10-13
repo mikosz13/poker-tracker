@@ -66,15 +66,15 @@ So the multiple comparisons are already accounted for, and it matters: without t
 (p = 0.015), 86o (p = 0.021) and 25–40 BB (p = 0.024) would each pass p < 0.05; with it their q is 0.59–0.63 and no
 leak is shown. The strengths that pass are open shove (q < 0.001) and 3-bet shove (q = 0.039).
 
-**Proposal (not implemented; needs Mik's approval):**
-1. Leak and strength cards only at q ≤ 0.05. The "możliwe" level (q ≤ 0.20) accepts that up to one in five such
+**Decided by Mik (2026-10-13): points 1–3 accepted; point 4 needs no change.**
+1. Leak and strength cards only at q ≤ 0.05 (accepted). The "możliwe" level (q ≤ 0.20) accepts that up to one in five such
    cards is noise: too loose for a card that tells the player to change something. Spots with 0.05 < q ≤ 0.20 go to
    the collapsed "najbliżej progu" list with the rest.
-2. The heatmap colour is a description (the average per hand), not a finding; its tooltip says so ("kolor to
+2. (accepted) The heatmap colour is a description (the average per hand), not a finding; its tooltip says so ("kolor to
    średnia; o leaku decyduje test z korektą na wszystkie porównania").
 3. The fold-to-3-bet leak today measures against a rough guide (folding more than 70 %). After decision 5 (no solver
-   patterns) the guide should either go or be replaced by Hero's own history, like the trend. To decide before
-   stage 2.
+   patterns) the guide goes (accepted): fold to 3-bet is compared with Hero's own history, like the trend, and a
+   leak only when Hero folds more than before beyond noise.
 4. Trends are a separate small family (the tiles with a trend: VPIP, PFR, 3-bet). |z| ≥ 2.5 is Bonferroni at 5 %
    two-sided for up to four statistics (z = 2.50), so Mik's threshold already covers it; no further correction.
 
@@ -83,7 +83,9 @@ leak is shown. The strengths that pass are open shove (q < 0.001) and 3-bet shov
   all-in EV, luck. "Where you finish" stays. Below the tiles, room for the showdown-lines chart
   (docs/tasks/showdown-lines.md, its own PR).
 - **Trend** (decision 2026-10-13): the last 30 days against the rest of the history (not the whole history, so recent
-  hands do not count on both sides). Only when the 30-day window has at least 500 hands; otherwise no trend at all.
+  hands do not count on both sides). Only when both sides (the 30 days and the rest) have at least 500 hands, and for
+  a rate at least 100 opportunities on each side (3-bet, fold to 3-bet have far fewer opportunities than hands; 100 is
+  a proposal to confirm); otherwise no trend for that rate.
   An arrow only at |z| ≥ 2.5 (two-proportion test on the opportunities), and at most one at a time: the largest |z|.
   On Mik's data today: 8,463 hands in the window, 1,740 before it; no change beyond noise (largest: 3-bet
   13.9 % vs 15.4 %, z = −1.05).
