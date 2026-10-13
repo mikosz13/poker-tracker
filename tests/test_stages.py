@@ -174,6 +174,9 @@ class StageImportTests(unittest.TestCase):
         self.assertEqual((round(float(r["cash_won"]), 2), r["summary_missing"], r["provisional"], r["finish_place"]),
                          (52.12, 0, 0, 120))
         self.assertIsNone(self.db.scalar("SELECT provisional_prize FROM tournaments WHERE tournament_id = 900103"))
+        # one record after the summary: the event once in the results, the Day 2 once in tournaments
+        self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM tournament_results WHERE tournament_id IN (900101, 900103)"), 1)
+        self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM tournaments WHERE tournament_id = 900103"), 1)
 
     def test_the_provisional_command_saves_it(self):
         import tempfile
