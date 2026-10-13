@@ -735,7 +735,7 @@ async function viewTournament(id) {
   if (d.entries.length) h += `<p class="m">${t("tour.startingStack", {x: d.starting_stack == null ? t("tour.unknown") : num(d.starting_stack, 0)})}</p>`;
   if (!d.hands) { app.innerHTML = h + `<p class="m">${t("tour.noHands")}</p>`; bindIgnore(d.tournament_id); return; }
   const s = d.stack, a = d.allins;
-  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div>VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b><span class="m">${t("common.n", {n: d.decided})}</span></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
+  h += `<div class="k"><div>${t("common.hands")}<b>${d.hands}</b></div><div title="${esc(t("common.n", {n: num(d.decided, 0)}))}">VPIP / PFR<b>${pct(d.vpip_pct)} / ${pct(d.pfr_pct)}</b></div><div>${t("tour.net")}<b>${sgn(d.net_bb, 0, " BB")}</b></div>
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
   h += `<h2 style="display:flex;align-items:center;gap:10px">${t("tour.stackTitle")}<span class="seg" id="stack-unit" style="margin:0">${
     [["bb", "stack.unitBb"], ["chips", "stack.unitChips"]].map(([u, k]) => `<button data-u="${u}" class="${u === stackUnit ? "on" : ""}">${t(k)}</button>`).join("")}</span></h2>
@@ -971,10 +971,11 @@ function trendNote(tr) {
   }
   return `<p class="m">${t("trend.note", {state})}</p>`;
 }
+// the tile shows the rate only; how many chances it rests on is in the tooltip
 function rateTile(label, key, r, tr) {
   const s = tr.stats[key];
-  return `<div class="${r.few ? "few" : ""}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
-    <span class="m">${t("common.n", {n: num(r.n, 0)})}${s ? " · " + t("trend.recent", {x: pct(s.recent)}) : ""}</span></div>`;
+  return `<div class="${r.few ? "few" : ""}" title="${esc(t("common.n", {n: num(r.n, 0)}))}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
+    ${s ? `<span class="m">${t("trend.recent", {x: pct(s.recent)})}</span>` : ""}</div>`;
 }
 // cumulative BB over hand number: total, with and without showdown, and the total by all-in EV (dashed)
 const SD_LINES = [["total", "sd.total", "sd.tipTotal", "var(--fg)"], ["sd", "sd.sd", "sd.tipSd", "var(--blue)"],
