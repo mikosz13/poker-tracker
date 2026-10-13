@@ -63,7 +63,7 @@ class ShowdownTests(unittest.TestCase):
         hands = [dict(self.hands[0], at="2026-02-01 10:00") for _ in range(1000)]
         s = showdown_lines(hands, points=300)
         self.assertLessEqual(len(s["points"]), 300)
-        self.assertEqual(s["points"][-1]["n"], 1000)
+        self.assertEqual((s["points"][0]["n"], s["points"][-1]["n"]), (1, 1000))
 
 
 if __name__ == "__main__":

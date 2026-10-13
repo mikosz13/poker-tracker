@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Analysis → Overview: cumulative result in BB over your hands in four lines: total, with showdown, without showdown
+  (uncalled shoves included) and the total by all-in EV (dashed). A called preflop all-in is a showdown; an uncalled
+  shove is a steal. The tooltip gives the hand number, date and all four values; "How luck works" explains the split.
 - Analysis v2, stage 1:
   - Overview: ROI with its 95 % interval bar, ITM / cashed, VPIP, PFR and 3-bet with n, all-in EV, the luck badge
     and "Where you finish". A trend arrow compares the last 30 days with the rest of the history, only with 500+

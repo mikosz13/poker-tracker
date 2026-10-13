@@ -92,6 +92,8 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .pf td small{display:block;color:var(--muted);font-size:.72rem;font-weight:400}.pf td.few,.pf td.few span{color:var(--muted)!important}
 .pf tr.hl td{background:color-mix(in srgb,var(--blue) 8%,transparent)}.pf tr.tot td{border-top:2px solid var(--line);font-weight:600}
 .def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
+.sd-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;margin-top:6px}.sd-legend span{display:inline-flex;gap:6px;align-items:center;cursor:help}
+.sd-legend i{width:16px;height:3px;border-radius:2px;display:inline-block}.sd-legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)!important}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
@@ -974,6 +976,22 @@ function rateTile(label, key, r, tr) {
   return `<div class="${r.few ? "few" : ""}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
     <span class="m">${t("common.n", {n: num(r.n, 0)})}${s ? " · " + t("trend.recent", {x: pct(s.recent)}) : ""}</span></div>`;
 }
+// cumulative BB over hand number: total, with and without showdown, and the total by all-in EV (dashed)
+const SD_LINES = [["total", "sd.total", "sd.tipTotal", "var(--fg)"], ["sd", "sd.sd", "sd.tipSd", "var(--blue)"],
+  ["nsd", "sd.nsd", "sd.tipNsd", "var(--neg)"], ["ev", "sd.ev", "sd.tipEv", "var(--muted)", true]];
+function showdownBox(sd) {
+  if (!sd || sd.hands < 30) return `<p class="m">${t("sd.few")}</p>`;
+  return `<div class="box" style="margin:14px 0"><h3 style="margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)">${t("sd.title")}</h3>
+    <div class="tchart" id="c-sd"></div>
+    <div class="sd-legend">${SD_LINES.map(([k, label, tip, color, dash]) => `<span title="${esc(t(tip))}"><i class="${dash ? "dash" : ""}" style="background:${color}"></i>${t(label)}: <b>${sgn(sd.final[k], 0, " BB")}</b></span>`).join("")}</div>
+    <p class="m" style="margin:6px 0 0">${t("sd.note", {hands: t("common.handsN", {n: sd.hands}), showdowns: num(sd.showdowns, 0)})}</p></div>`;
+}
+function showdownChart(sd) {
+  if (!sd || sd.hands < 30 || !document.getElementById("c-sd")) return;
+  addChart("c-sd", sd.points, SD_LINES.map(([key, , , color, dash]) => ({key, color, dash})), v => bbUnit(v, 0),
+    p => t("sd.point", {n: num(p.n, 0), total: sgn(p.total, 0), sd: sgn(p.sd, 0), nsd: sgn(p.nsd, 0), ev: sgn(p.ev, 0)}),
+    {byIndex: true});
+}
 function preflopTable(rows, total, first, firstLabel, depth) {
   const head = [firstLabel, t("col.hands"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.rfi"), "rfi"),
     ...(depth ? [defHead(t("col.openShove"), "shove")] : []), defHead(t("col.threebet"), "threebet"),
@@ -1014,6 +1032,7 @@ async function viewAnalysis(tab) {
       <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
       ${trendNote(tr)}${pendingNote(m.pending)}
+      ${showdownBox(a.showdown)}
       <div class="trio">${luckBox(o.luck_badge)}</div>
       ${placeChart(o.places)}`;
   }
@@ -1066,6 +1085,8 @@ async function viewAnalysis(tab) {
       ${detailTable("money.byCategory", t("col.tag"), m.by_tag, x => tagLabel(x.key), "col.countTagTip")}`;
   }
   app.innerHTML = h;
+  charts = [];
+  if (tab === "overview") showdownChart(a.showdown);
 }
 
 // ---- Import -----------------------------------------------------------------
@@ -1234,6 +1255,8 @@ function viewLuck() {
   <p>${t("lp.levels")}</p>
   <p>${t("lp.bb")}</p>
   <p>${t("lp.moment")}</p></div>
+  <h2>${t("lp.sdTitle")}</h2>
+  <p>${t("lp.sd")}</p>
   <h2>${t("lp.itmTitle")}</h2>
   <p>${t("lp.itm")}</p>
   <h2>${t("lp.exampleTitle")}</h2>

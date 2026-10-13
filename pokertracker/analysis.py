@@ -468,7 +468,7 @@ def showdown_lines(hands, points=SHOWDOWN_POINTS):
     shoves, pots given up, blinds and antes folded), plus the total with the all-in EV in place of the result.
     Total = with showdown + without showdown, exactly. Points: [hand number, date, total, showdown, no showdown, EV]."""
     total = sd = nsd = ev = 0.0
-    step = max(1, math.ceil(len(hands) / points))
+    step = max(1, math.ceil(len(hands) / (points - 1)))           # the first and the last hand are always points
     out, count = [], 0
     for k, h in enumerate(hands, 1):
         total += h["net_bb"]
@@ -478,7 +478,7 @@ def showdown_lines(hands, points=SHOWDOWN_POINTS):
             count += 1
         else:
             nsd += h["net_bb"]
-        if k % step == 0 or k == len(hands):
+        if k == 1 or k % step == 0 or k == len(hands):
             out.append({"n": k, "at": h["at"], "total": round(total, 1), "sd": round(sd, 1), "nsd": round(nsd, 1),
                         "ev": round(ev, 1)})
     return {"hands": len(hands), "showdowns": count, "points": out,

@@ -705,5 +705,19 @@
   "few": "{n} okazje",
   "many": "{n} okazji",
   "other": "{n} okazji"
- }
+ },
+ "sd.title": "Wynik w BB: z showdownem i bez",
+ "sd.total": "Łącznie",
+ "sd.sd": "Z showdownem",
+ "sd.nsd": "Bez showdownu (w tym niesprawdzone shove'y)",
+ "sd.ev": "Łącznie wg all-in EV",
+ "sd.tipTotal": "Suma wyników wszystkich rąk w BB.",
+ "sd.tipSd": "Ręce, w których doszedłeś do showdownu (także sprawdzony all-in preflop).",
+ "sd.tipNsd": "Pozostałe ręce: kradzieże, niesprawdzone shove'y, odpuszczone pule, blindy i ante oddane foldem.",
+ "sd.tipEv": "Łącznie, ale w rękach z all-inem liczy się EV zamiast wyniku: linia bez szczęścia w all-inach.",
+ "sd.point": "Ręka {n}<br>łącznie {total} · z showdownem {sd}<br>bez showdownu {nsd} · wg EV {ev}",
+ "sd.note": "{hands}, w tym {showdowns} z showdownem. Sprawdzony all-in preflop to showdown; niesprawdzony shove to kradzież, więc jest w linii bez showdownu.",
+ "sd.few": "Mniej niż 30 rąk: na wykres jeszcze za wcześnie.",
+ "lp.sdTitle": "Z showdownem i bez",
+ "lp.sd": "Analiza → Przegląd dzieli wynik w BB na ręce, w których doszedłeś do showdownu, i resztę: <b>bez showdownu (w tym niesprawdzone shove'y)</b>. Niesprawdzony shove wygrywa blindy bez pokazania kart, więc to kradzież, nie showdown; sprawdzony all-in preflop zawsze pokazuje karty i jest showdownem. Linia przerywana to wynik łączny wg all-in EV: różnica do linii „Łącznie” to szczęście w all-inach opisane wyżej."
 }
