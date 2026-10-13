@@ -53,6 +53,31 @@ For the in-app "jak liczymy" text and Help; numbers from Mik's data (179 tournam
 - **Showdown lines**: see docs/tasks/showdown-lines.md (a called preflop all-in is a showdown; an uncalled shove is
   not).
 
+## Significance (leaks, strengths, trends)
+Checked before stage 1 (2026-10-13) on Mik's data.
+
+**What the code does today** (pokertracker/analysis.py, `spot_tests` and `classify`): every spot is one test in one
+family, and the whole family is corrected with Benjamini–Hochberg (q-values). On Mik's data the family has 156 tests:
+134 cells of the 13×13 grid (the 35 cells with fewer than 30 hands are not tested), 5 stack bands, 6 positions,
+5 lines (open, 3-bet, cold 4-bet, open shove, 3-bet shove), 3 blind decisions against folding and 3 fold-to-3-bet
+bands. A card is "prawdopodobne" at q ≤ 0.05 and "możliwe" at q ≤ 0.20.
+
+So the multiple comparisons are already accounted for, and it matters: without the correction 55 (p = 0.011), Q2s
+(p = 0.015), 86o (p = 0.021) and 25–40 BB (p = 0.024) would each pass p < 0.05; with it their q is 0.59–0.63 and no
+leak is shown. The strengths that pass are open shove (q < 0.001) and 3-bet shove (q = 0.039).
+
+**Proposal (not implemented; needs Mik's approval):**
+1. Leak and strength cards only at q ≤ 0.05. The "możliwe" level (q ≤ 0.20) accepts that up to one in five such
+   cards is noise: too loose for a card that tells the player to change something. Spots with 0.05 < q ≤ 0.20 go to
+   the collapsed "najbliżej progu" list with the rest.
+2. The heatmap colour is a description (the average per hand), not a finding; its tooltip says so ("kolor to
+   średnia; o leaku decyduje test z korektą na wszystkie porównania").
+3. The fold-to-3-bet leak today measures against a rough guide (folding more than 70 %). After decision 5 (no solver
+   patterns) the guide should either go or be replaced by Hero's own history, like the trend. To decide before
+   stage 2.
+4. Trends are a separate small family (VPIP, PFR, RFI, 3-bet). |z| ≥ 2.5 is Bonferroni for four statistics at 5 %
+   two-sided (z = 2.50), so Mik's threshold already covers it; no further correction.
+
 ## Stage 1
 - **Przegląd**: tiles ROI (95 % bar with the zero line), ITM / cashed (place or bounty), VPIP, PFR, 3-bet,
   all-in EV, luck. "Where you finish" stays. Below the tiles, room for the showdown-lines chart
