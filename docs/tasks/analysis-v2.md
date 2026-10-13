@@ -28,7 +28,8 @@ Przegląd | Preflop | Głębokość stacku | Leaki i mocne strony | Finanse (Fin
 ## Stage 1
 - **Przegląd**: tiles ROI (95 % bar with the zero line), ITM / cashed (place or bounty), VPIP, PFR, 3-bet,
   all-in EV, luck; a trend arrow for the last 30 days against the rest of the history only when beyond noise
-  (two-proportion test, |z| ≥ 2). "Where you finish" stays.
+  (two-proportion test, |z| ≥ 2). "Where you finish" stays. Below the tiles, room for the showdown-lines chart
+  (docs/tasks/showdown-lines.md, its own PR).
 - **Preflop**: per position VPIP, PFR, RFI, 3-bet, fold to 3-bet, bb/100 wg EV, hands; a total row. BB has no RFI and
   no fold to 3-bet; UTG no 3-bet chance before it; BTN/SB is heads-up.
 - **Głębokość stacku**: the same per stack band (<10, 10–15, 15–25, 25–40, 40+ BB) plus open shove %, short stacks
@@ -48,5 +49,6 @@ Przegląd | Preflop | Głębokość stacku | Leaki i mocne strony | Finanse (Fin
 800 px and 1100×820, light and dark, PL and EN; screenshots for approval before each merge; a summary of the results
 on Mik's data at the end of each stage.
 
-After stage 1 (separate small PR): all-in markers on the tournament stack chart (colour by result, tooltip with cards,
-equity and luck in BB, click opens the replayer).
+## Order
+Stage 0 → stage 1 → showdown lines (docs/tasks/showdown-lines.md) → all-in markers on the tournament stack chart
+(colour by result, tooltip with cards, equity and luck in BB, click opens the replayer) → stage 2. Each a separate PR.
