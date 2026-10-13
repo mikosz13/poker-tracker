@@ -393,21 +393,29 @@ def money(db, site=SITE, lang="en"):
             "tiers": tiers, "formats": formats, "first_entries": first, "re_entries": re_entries,
             "tested": len(family), "facts": money_facts(tiers, formats, first, re_entries, lang),
             "by_buyin": _rows_by(db, site, "buyin_total", "SELECT buyin_total AS key, COUNT(*) AS n, SUM(total_cost) AS cost, "
-                                 "SUM(profit) AS profit, SUM(cashed) AS cashed FROM tournament_results WHERE site = ? "
+                                 "SUM(profit) AS profit, SUM(in_the_money) AS itm, COUNT(in_the_money) AS itm_n FROM tournament_results WHERE site = ? "
                                  "GROUP BY buyin_total ORDER BY buyin_total"),
             "by_tag": _rows_by(db, site, "tag", "SELECT g.tag AS key, COUNT(*) AS n, SUM(r.total_cost) AS cost, "
-                               "SUM(r.profit) AS profit, SUM(r.cashed) AS cashed FROM tournament_results r "
+                               "SUM(r.profit) AS profit, SUM(r.in_the_money) AS itm, COUNT(r.in_the_money) AS itm_n FROM tournament_results r "
                                "JOIN tournament_tags g ON g.site = r.site AND g.tournament_id = r.tournament_id "
                                "WHERE r.site = ? AND g.tag NOT LIKE 'entry:%' GROUP BY g.tag ORDER BY g.tag"),
             "tickets": tickets_summary(db, site)}
 
 
 def _rows_by(db, site, _key, sql):
-    """Plain per-row results (whole history) for Money's detail tables: tournaments, cost, profit, ROI, cashed."""
+    """Plain per-row results (whole history) for Money's detail tables: tournaments, cost, profit, ROI, and ITM where
+    the files tell it (tournaments without bounties and satellites)."""
     return [{"key": r["key"], "n": int(r["n"]), "cost": round(_f(r["cost"]), 2), "profit": round(_f(r["profit"]), 2),
              "roi_pct": round(100 * _f(r["profit"]) / _f(r["cost"]), 1) if _f(r["cost"]) else None,
-             "cashed": int(r["cashed"] or 0), "cashed_pct": round(100 * int(r["cashed"] or 0) / int(r["n"]), 1)}
+             **itm_counts(r["itm"], r["itm_n"])}
             for r in db.query(sql, (site,))]
+
+
+def itm_counts(itm, known):
+    """ITM: reached the paid places. Known only without bounties (a bounty summary gives one total for place and
+    bounties) and in satellites (a ticket is ITM); known = how many tournaments it is known for."""
+    itm, known = int(itm or 0), int(known or 0)
+    return {"itm": itm, "itm_n": known, "itm_pct": round(100 * itm / known, 1) if known else None}
 
 
 def money_facts(tiers, formats, first, re_entries, lang="en"):
@@ -438,16 +446,12 @@ def overview(hands, db, site=SITE):
     n = len(hands)
     a = db.query("SELECT COUNT(*) AS n, SUM(net_bb) AS net, SUM(ev_bb) AS ev, SUM(luck_bb) AS luck FROM hero_allins "
                  "WHERE site = ?", (site,))[0]
-    t = db.query("SELECT COUNT(*) AS n, SUM(cashed) AS cashed, SUM(in_the_money) AS itm, COUNT(in_the_money) AS itm_n, "
-                 "SUM(CASE WHEN format = 'bounty' THEN cashed ELSE 0 END) AS cashed_b, "
-                 "SUM(CASE WHEN format = 'bounty' THEN 1 ELSE 0 END) AS n_b FROM tournament_results WHERE site = ?",
-                 (site,))[0]
+    t = db.query("SELECT COUNT(*) AS n, SUM(in_the_money) AS itm, COUNT(in_the_money) AS itm_n FROM tournament_results "
+                 "WHERE site = ?", (site,))[0]
     pct = lambda a, b: round(100 * int(a or 0) / int(b), 1) if int(b or 0) else None
     return {"hands": n, "tournaments": int(t["n"]),
-            # ITM only without bounties; in bounty tournaments "cashed" (place or bounty) is what the files tell
+            # ITM only where the files tell it: without bounties and in satellites (see itm_counts)
             "itm": int(t["itm"] or 0), "itm_n": int(t["itm_n"] or 0), "itm_pct": pct(t["itm"], t["itm_n"]),
-            "bounty_cashed": int(t["cashed_b"] or 0), "bounty_n": int(t["n_b"] or 0),
-            "bounty_cashed_pct": pct(t["cashed_b"], t["n_b"]),
             "places": place_split(db, site),
             "decided": (d := sum(h["decided"] for h in hands)),
             "vpip_pct": round(100 * sum(h["vpip"] for h in hands) / d, 1) if d else None,

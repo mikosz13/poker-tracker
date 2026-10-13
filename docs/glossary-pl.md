@@ -163,17 +163,18 @@ Legenda: **EN** = zostaje po angielsku · **PL** = tłumaczymy · **EN (PL)** = 
 Bilety liczymy do ROI po wartości nominalnej, po obu stronach: satelita = koszt buy-in, wygrana = wartość biletu;
 turniej docelowy = koszt pełny buy-in, nawet przy wejściu biletem.
 
-## 9. ITM, gotówka i miejsca (decyzja 11.10.2026)
+## 9. ITM i miejsca (decyzje 11.10 i 13.10.2026)
 
 | EN | PL |
 |---|---|
 | ITM (only without bounties; a ticket counts) | ITM (tylko bez bounty; bilet się liczy) |
-| Cashed (place or bounty) | Z gotówką (miejsce lub bounty) |
 | Top 10% / 15% of the field | Top 10% / 15% pola |
 | Where you finish | Gdzie kończysz |
 
-W turniejach bounty podsumowanie podaje tylko łączną kwotę, a historie rąk nie zawierają wypłat bounty, więc nagrody
-za miejsce nie da się oddzielić od knockoutów. Top 10% / 15% pola to fakty (miejsce / liczba graczy), z przedziałem
+ITM to dojście do miejsc płatnych. W turniejach bounty podsumowanie podaje tylko łączną kwotę, a historie rąk nie
+zawierają wypłat bounty, więc nie wiadomo, czy Hero doszedł do strefy płatnej: bounty nie wchodzą do ITM (ich pieniądze
+liczą się w zysku i ROI). Kafelek „Z gotówką (miejsce lub bounty)” usunięty 13.10.2026: u Mika 31 z 59 takich „wypłat”
+padło poza top 20% pola, czyli to same bounty. Top 10% / 15% pola to fakty (miejsce / liczba graczy), z przedziałem
 95% (bootstrap), bez założeń o strukturze wypłat.
 
 ## 10. Format liczb (decyzja 11.10.2026)

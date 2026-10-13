@@ -107,8 +107,21 @@ class SessionInsightTests(unittest.TestCase):
 
     def test_summary_sentence(self):
         i = self.insights(900001)
-        self.assertTrue(i["summary"].startswith("1 tournament, 1 cashed, +$0.00."), i["summary"])
+        self.assertTrue(i["summary"].startswith("1 tournament, +$0.00."), i["summary"])   # bounty: ITM unknown
         self.assertIn("Busted 1 time.", i["summary"])                   # an 18 % bust is not called a must-see
+
+    def test_summary_names_itm_only_where_the_files_tell_it(self):
+        from pokertracker.db import Database
+        from pokertracker.importer import import_texts
+        from pokertracker.server import tournaments_list
+        from pokertracker.session import summary_sentence
+        from tests.fixtures import SUMMARY_BOUNTY, SUMMARY_SATELLITE
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("b", SUMMARY_BOUNTY), ("s", SUMMARY_SATELLITE)], equity=False)
+        text = summary_sentence(tournaments_list(db), {"luck": {"count": 0}, "busts": []}, "pl")
+        self.assertIn("ITM 1 z 1 bez bounty", text)                       # the satellite's ticket; the bounty is left out
 
     def test_biggest_pots_and_no_opponent_ids(self):
         i = self.insights(900003)                                       # Hero wins the 3-way all-in with KK

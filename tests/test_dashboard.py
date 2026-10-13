@@ -95,10 +95,10 @@ class PeriodTests(unittest.TestCase):
 
     def test_itm_percent(self):
         d = dashboard_data(self.db, now=self.now)
-        # the satellite's ticket is ITM; the bounty tournament's $20 may be knockouts alone: "cashed", not ITM
+        # the satellite's ticket is ITM; the bounty tournament's $20 may be knockouts alone: ITM unknown, left out
         self.assertEqual((d["itm"], d["itm_n"], d["itm_pct"]), (1, 1, 100.0))
-        self.assertEqual(d["bounty_cashed"], {"n": 1, "cashed": 1, "pct": 100.0})
-        self.assertEqual({b["buyin"]: b["cashed_pct"] for b in d["by_buyin"]}, {5.0: 100.0, 10.0: 100.0})
+        self.assertNotIn("bounty_cashed", d)
+        self.assertEqual({b["buyin"]: (b["itm_n"], b["itm_pct"]) for b in d["by_buyin"]}, {5.0: (1, 100.0), 10.0: (0, None)})
         self.assertIsNone(dashboard_data(self.db, period="24h", now=datetime_after(self.now))["itm_pct"])
 
     def test_dated_chart_points(self):

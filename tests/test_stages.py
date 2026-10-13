@@ -145,7 +145,7 @@ class StageImportTests(unittest.TestCase):
         rows = tournaments_list(self.db)
         text = summary_sentence(rows, {"luck": {"count": 0}, "busts": []}, "pl")
         self.assertIn("Awans do Day 2 w $5 Ocean KO Opener, $1M GTD [Stage 1].", text)
-        self.assertIn("0 z gotówką", text)
+        self.assertNotIn("ITM", text)                                 # a bounty day 1: ITM is not in the files
 
     def test_day2_without_summary_joins_its_flights_from_the_hands(self):
         from pokertracker.server import tournaments_list

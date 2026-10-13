@@ -136,7 +136,7 @@ class PythonTextTests(unittest.TestCase):
         import_texts(self.db, [("h", HISTORY), ("b", SUMMARY_BOUNTY)])
         rows = [x for x in tournaments_list(self.db) if x["tournament_id"] == 900001]
         text = session_insights(self.db, rows, lang="pl")["summary"]
-        self.assertTrue(text.startswith("1 turniej, 1 z gotówką, +0,00 $."), text)
+        self.assertTrue(text.startswith("1 turniej, +0,00 $."), text)        # bounty: ITM not in the files
         self.assertIn("1 odpadnięcie.", text)
 
 
