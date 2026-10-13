@@ -135,6 +135,9 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .band-key{position:relative;display:inline-block;height:12px;vertical-align:middle;top:0}.band-v{text-align:right}input.pick{width:16px;height:16px;padding:0}.themes button{display:flex;align-items:center;padding:4px 7px}.themes svg{width:15px;height:15px}
 .seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 12px}.seg button{padding:5px 10px;font-size:.88rem}
 .seg button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+.seg[hidden]{display:none}
+.p-custom{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;margin-left:8px;font-size:.88rem}
+.p-custom input{font:inherit;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .tchart{position:relative;background:var(--card);border-radius:10px;padding:4px 0;touch-action:pan-y}
 .tchart svg{display:block;width:100%}.tchart .tip{position:absolute;pointer-events:none;background:var(--bg);color:var(--fg);
   border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:.8rem;box-shadow:0 3px 10px rgba(0,0,0,.2);
@@ -332,10 +335,31 @@ const handName = h => h.category == null ? esc(h.hand) : t("hand.cat." + h.categ
 const luckLink = () => `<a href="#/luck">${t("common.howLuck")}</a>`;
 
 // ---- Dashboard -------------------------------------------------------------
-const PERIODS = ["24h", "3d", "1w", "2w", "4w", "3m", "6m", "max"];       // labels: period.<key>, period.<key>.last
+// labels: period.<key>, period.<key>.last; the rarer ones sit under "More"
+const PERIOD_MAIN = ["session", "24h", "7d", "14d", "30d"], PERIOD_MORE = ["3m", "6m", "max", "custom"];
+const PERIODS = [...PERIOD_MAIN, ...PERIOD_MORE];
+const periodQuery = (period, from, to) => period ? `?period=${encodeURIComponent(period)}`
+  + (period === "custom" && from && to ? `&from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}` : "") : "";
+// "06.10 – 13.10", with the time when the period is shorter than two days (24 h, a session)
+function periodRange(d) {
+  const from = d.since || d.first_at;
+  if (!from) return "";
+  const short = d.period === "session" || d.period === "24h";
+  const fmt = x => short ? dateTime(String(x).slice(0, 16)) : dateTime(String(x).slice(0, 10));
+  return `${fmt(from)} – ${d.until ? fmt(d.until) : t("period.now")}`;
+}
+function periodControl(d) {
+  const more = PERIOD_MORE.includes(d.period), c = d.custom || {};
+  return `<div class="seg" id="periods">${PERIOD_MAIN.map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}
+      <button id="p-more" class="${more ? "on" : ""}" aria-expanded="${more}">${more ? t("period." + d.period) : t("period.more")} ▾</button></div>
+    <div class="seg" id="p-panel"${more ? "" : " hidden"}>${PERIOD_MORE.filter(k => k !== "custom").map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}
+      <span class="p-custom"><label>${t("period.from")} <input type="date" id="p-from" value="${esc(c.from || "")}"></label>
+      <label>${t("period.to")} <input type="date" id="p-to" value="${esc(c.to || "")}"></label>
+      <button id="p-apply" class="${d.period === "custom" ? "on" : ""}">${t("period.apply")}</button></span></div>`;
+}
 
-async function viewDashboard(period) {
-  const mine = routeSeq, q = period ? `?period=${encodeURIComponent(period)}` : "";
+async function viewDashboard(period, from, to) {
+  const mine = routeSeq, q = periodQuery(period, from, to);
   const [{dashboard: d, session: s}, st] = await Promise.all([api("/api/dashboard" + q), api("/api/status")]);
   if (mine !== routeSeq) return;                         // the user went elsewhere while this was loading
   const banner = st.running ? `<p class="warn">${t("dash.importing", {done: st.done, total: st.total})}</p>` : "";
@@ -361,12 +385,13 @@ async function viewDashboard(period) {
       ${table([t("col.tournament"), t("col.place"), t("col.profitUsd"), t("col.luckBb")], s.tournaments.map(x => `<tr class="click" onclick="location.hash='#/t/${x.tournament_id}'">
         <td>${esc(x.name)} <span class="m">${money(x.buyin_total)}</span></td><td>${x.finish_place ?? "–"}/${x.players ?? "–"}</td>
         <td>${x.profit == null ? `<span class="m">${t("common.noSummary")}</span>` : sgn(x.profit, 2)}</td><td>${sgn(x.luck_bb)}</td></tr>`), "scrollbox")}
-      <p style="margin:8px 0 0"><a href="#/tournaments?period=${encodeURIComponent(d.period)}">${t("sess.allTournaments")}</a></p></div>`;
+      <p style="margin:8px 0 0"><a href="#/tournaments?period=session">${t("sess.allTournaments")}</a></p></div>`;
   }
-  h += `<h2>${t(`period.${d.period}.last`)}</h2>
-    <div class="seg" id="periods">${PERIODS.map(k => `<button data-p="${k}" class="${k === d.period ? "on" : ""}">${t("period." + k)}</button>`).join("")}</div>`;
+  h += `<h2>${t(`period.${d.period}.last`)} <span class="m" style="font-weight:400;font-size:.85rem">${periodRange(d)}${d.tournaments
+    ? ` · <a href="#/tournaments${periodQuery(d.period, (d.custom || {}).from, (d.custom || {}).to)}">${t("period.list")}</a>` : ""}</span></h2>${periodControl(d)}`;
   if (!d.tournaments && !d.hands) {
-    app.innerHTML = h + `<p class="m">${t("dash.nothingPlayed")}</p>`;
+    app.innerHTML = h + `<p class="m">${d.last_played ? t("period.empty", {date: dateTime(d.last_played)}) : t("dash.nothingPlayed")}</p>`
+      + (d.period !== "session" && s ? `<p><button data-p="session" id="p-session">${t("period.showSession")}</button></p>` : "");
     bindPeriods();
     return;
   }
@@ -480,12 +505,25 @@ function reviewHands(si) {
 }
 
 function bindPeriods() {
-  document.getElementById("periods").onclick = async e => {
-    const b = e.target.closest("button");
-    if (!b) return;
+  const pick = async (period, from, to) => {
     try { await api("/api/display", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
-                                     body: JSON.stringify({dashboard_period: b.dataset.p})}); } catch (err) { /* still shown */ }
-    viewDashboard(b.dataset.p);
+                                     body: JSON.stringify({dashboard_period: period, ...(from ? {dashboard_from: from, dashboard_to: to} : {})})});
+    } catch (err) { /* still shown */ }
+    viewDashboard(period, from, to);
+  };
+  const panel = document.getElementById("p-panel");
+  for (const id of ["periods", "p-panel", "p-session"]) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("click", e => { const b = e.target.closest("button[data-p]"); if (b) pick(b.dataset.p); });
+  }
+  document.getElementById("p-more").onclick = e => {
+    panel.hidden = !panel.hidden;
+    e.currentTarget.setAttribute("aria-expanded", String(!panel.hidden));
+  };
+  document.getElementById("p-apply").onclick = () => {
+    const from = document.getElementById("p-from").value, to = document.getElementById("p-to").value;
+    if (from && to) pick("custom", from, to);
+    else (from ? document.getElementById("p-to") : document.getElementById("p-from")).focus();
   };
 }
 
@@ -584,9 +622,11 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
 
 
 // ---- Tournaments ------------------------------------------------------------
-let filters = {buyin: "", format: "", entry: "", period: "max"};
-const SPANS_H = {"24h": 24, "3d": 72, "1w": 168, "2w": 336, "4w": 672, "3m": 91 * 24, "6m": 182 * 24};
-const inPeriod = (date, period) => !SPANS_H[period] || Date.parse(String(date).replace(" ", "T")) >= Date.now() - SPANS_H[period] * 3600e3;
+let filters = {buyin: "", format: "", entry: "", period: "max", from: "", to: ""};
+// the period's bounds come from the server, so the list and the dashboard agree (sessions, custom days, time zone)
+let bounds = {since: null, until: null};
+const inPeriod = date => (!bounds.since || String(date) >= bounds.since.slice(0, 16)) && (!bounds.until || String(date) <= bounds.until.slice(0, 16));
+async function loadBounds() { bounds = await api("/api/period" + periodQuery(filters.period, filters.from, filters.to)); }
 // "Oct 10" / "10.10", with the year only when it is not this year: keeps the date column narrow
 const shortDate = s => {
   const d = new Date(String(s).slice(0, 10) + "T12:00");
@@ -596,12 +636,12 @@ const shortDate = s => {
   return d.toLocaleDateString("en-US", {month: "short", day: "numeric", ...(other ? {year: "numeric"} : {})});
 };
 async function viewTournaments() {
-  const mine = routeSeq, all = await api("/api/tournaments");
+  const mine = routeSeq, [all] = await Promise.all([api("/api/tournaments"), loadBounds()]);
   if (mine !== routeSeq) return;
   const opts = (vals, cur, label, show) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option value="${esc(v)}" ${String(v) === cur ? "selected" : ""}>${show(v)}</option>`).join("");
   const draw = () => {
-    const rows = all.filter(x => inPeriod(x.date, filters.period) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
+    const rows = all.filter(x => inPeriod(x.date) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
       && (!filters.format || x.format === filters.format)
       && (!filters.entry || x.tags.includes("entry:" + filters.entry)));
     const done = rows.filter(x => x.profit != null);
@@ -618,13 +658,18 @@ async function viewTournaments() {
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
-    <select id="fp">${PERIODS.map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join("")}</select>
+    <select id="fp">${PERIODS.filter(k => k !== "custom" || (filters.period === "custom" && filters.from)).map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${
+      k === "max" ? t("filter.anyTime") : k === "custom" ? `${t("period.custom")}: ${dateTime(filters.from)} – ${dateTime(filters.to)}` : t(`period.${k}.last`)}</option>`).join("")}</select>
     <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
     <select id="ff">${opts(all.map(x => x.format), filters.format, t("filter.allFormats"), v => t("format." + v))}</select>
     <select id="fe"><option value="">${t("filter.anyEntry")}</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>${t("filter.fromStart")}</option>
       <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select></div><div id="list"></div>`;
   for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
-    document.getElementById(id).onchange = e => { filters[key] = e.target.value; draw(); };
+    document.getElementById(id).onchange = async e => {
+      filters[key] = e.target.value;
+      if (key === "period") await loadBounds();
+      draw();
+    };
   draw();
 }
 
@@ -1133,8 +1178,8 @@ async function route(keepScroll) {
     let m;
     if (h === "#/" || h === "#") await viewDashboard();
     else if (h === "#/tournaments" || h.startsWith("#/tournaments?")) {
-      const period = new URLSearchParams(h.split("?")[1] || "").get("period");
-      if (period) filters.period = period;
+      const q = new URLSearchParams(h.split("?")[1] || "");
+      if (q.get("period")) Object.assign(filters, {period: q.get("period"), from: q.get("from") || "", to: q.get("to") || ""});
       await viewTournaments();
     }
     else if ((m = h.match(/^#\/t\/(\d+)$/))) await viewTournament(m[1]);

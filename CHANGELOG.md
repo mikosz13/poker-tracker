@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Dashboard periods: Last session · 24 h · 7 days · 14 days · 30 days, and under "More" 3 months, 6 months, All
+  history and a custom range (from–to, whole days, remembered). The heading shows the dates the period covers and links
+  to the tournament list with the same period; the list takes its bounds from the app, so both count the same
+  tournaments. An empty period says when you last played and offers the last session. "3 days" is gone; a period
+  remembered by 0.7 ("1 week", "2 weeks", "4 weeks") becomes 7, 14 or 30 days.
 - A Day 2 without a summary (PokerCraft offered Mik's Day 2 hands but no Day 2 summary): the day is recognised from the
   name in its hands ("[Day 2]") and joins its flights as one event. The event counts the cost of every flight and the
   cash known so far; the place is unknown and the Day 2 prize is not counted, and that is flagged on the tournament,

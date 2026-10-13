@@ -68,6 +68,20 @@ class ServerTests(unittest.TestCase):
         ts = json.loads(self.get("/api/tournaments")[1])
         self.assertEqual({t["tournament_id"] for t in ts}, {900001, 900002, 900003})
 
+        # periods: the last session, a custom range (remembered), and the same bounds for the tournament list
+        sess = json.loads(self.get("/api/dashboard?period=session")[1])["dashboard"]
+        self.assertEqual((sess["period"], sess["until"] is not None), ("session", True))
+        self.assertEqual(sess["hands"], dash["session"]["hands"])           # the same hands as the session box
+        custom = json.loads(self.get("/api/dashboard?period=custom&from=2026-01-02&to=2026-01-02")[1])["dashboard"]
+        self.assertEqual((custom["tournaments"], custom["hands"], custom["custom"]),
+                         (1, 0, {"from": "2026-01-02", "to": "2026-01-02"}))       # the satellite only
+        self.assertEqual(self.post("/api/display", {"dashboard_period": "custom", "dashboard_from": "2026-01-02",
+                                                    "dashboard_to": "2026-01-02"})[0], 200)
+        self.assertEqual(json.loads(self.get("/api/dashboard")[1])["dashboard"]["tournaments"], 1)
+        self.assertEqual(json.loads(self.get("/api/period")[1]),
+                         {"period": "custom", "since": "2026-01-02 00:00:00", "until": "2026-01-02 23:59:59"})
+        self.post("/api/display", {"dashboard_period": "max"})
+
         t = json.loads(self.get("/api/tournament/900001")[1])
         self.assertEqual(len(t["hand_list"]), 3)
         hand = json.loads(self.get("/api/hand/" + t["hand_list"][1]["hand_id"])[1])

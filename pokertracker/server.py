@@ -11,7 +11,7 @@ from urllib.parse import parse_qs
 from .analysis import analysis_data
 from .session import session_insights
 from .tickets import ticket_entries, tickets_won
-from .dashboard import PERIODS, dashboard_data
+from .dashboard import DAY, PERIODS, dashboard_data, normal_period, period_bounds
 from .db import Database
 from .i18n import I18N, LANGS, pick
 from .importer import (DAY2_WAIT_DAYS, changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
@@ -118,6 +118,25 @@ def last_session(db, site=SITE, lang="en"):
             "luck_bb": sum(float(t["luck_bb"] or 0) for t in session),
             "from": str(min(t["first_hand"] for t in session))[:16], "to": str(session[0]["last_hand"])[:16],
             "insights": session_insights(db, session, site, lang)}
+
+
+def session_bounds(s):
+    """(since, until) of a session from last_session: from the earliest start (a late registration starts before its
+    first hand) to the last hand."""
+    if not s:
+        return None
+    ts = s["tournaments"]
+    return (min(str(t["started_at"] or t["first_hand"])[:19] for t in ts),
+            max(str(t["last_hand"]) for t in ts)[:19])
+
+
+def chosen_period(db, query):
+    """The period asked for (?period=&from=&to=), else the one remembered; with its (since, until)."""
+    period = normal_period((query.get("period") or [get_setting(db, "dashboard_period") or "max"])[0])
+    start = (query.get("from") or [get_setting(db, "dashboard_from")])[0]
+    end = (query.get("to") or [get_setting(db, "dashboard_to")])[0]
+    session = last_session(db) if period == "session" else None
+    return period, start, end, period_bounds(period, start=start, end=end, session=session_bounds(session))
 
 
 def tournament_detail(db, tournament_id, site=SITE):
@@ -274,11 +293,14 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
             lang = pick((query.get("lang") or [None])[0])          # the language of texts made here
             with Database(url) as db:
-                if path == "/api/dashboard":                          # ?period=24h|3d|1w|2w|4w|3m|6m|max
-                    period = (query.get("period") or [get_setting(db, "dashboard_period") or "max"])[0]
-                    period = period if period in PERIODS else "max"
-                    return self._send(200, {"dashboard": dashboard_data(db, period=period),
-                                            "session": last_session(db, lang=lang)})
+                if path == "/api/dashboard":     # ?period=session|24h|7d|14d|30d|3m|6m|max|custom (&from=&to= days)
+                    period, start, end, bounds = chosen_period(db, query)
+                    d = dashboard_data(db, period=period, bounds=bounds)
+                    d["custom"] = {"from": start, "to": end} if period == "custom" else None
+                    return self._send(200, {"dashboard": d, "session": last_session(db, lang=lang)})
+                if path == "/api/period":                             # the same bounds, for the tournament list
+                    period, start, end, (since, until) = chosen_period(db, query)
+                    return self._send(200, {"period": period, "since": since, "until": until})
                 if path == "/api/analysis":                           # always the whole history
                     return self._send(200, analysis_data(db, lang=lang))
                 if path == "/api/tournaments":
@@ -352,6 +374,9 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                         set_setting(db, "four_color", "1" if body["four_color"] else "0")
                     if body.get("dashboard_period") in PERIODS:
                         set_setting(db, "dashboard_period", body["dashboard_period"])
+                    for key in ("dashboard_from", "dashboard_to"):          # the days of a custom range
+                        if DAY.match(str(body.get(key) or "")):
+                            set_setting(db, key, body[key])
                     db.commit()
                     return self._send(200, {"four_color": get_setting(db, "four_color") != "0",
                                             "dashboard_period": get_setting(db, "dashboard_period") or "max",
