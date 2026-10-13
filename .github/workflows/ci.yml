@@ -1,8 +1,18 @@
 name: CI
 
+# Pushes run CI only on main; a branch is tested through its pull request (one run per change, not two).
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A new push to a pull request cancels its older run; runs on main are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Docs-only pull requests (docs/** and *.md) skip the test steps but still run every job, so the required checks
+# report success and auto-merge does not wait forever (a workflow-level paths-ignore would never report them).
 
 jobs:
   tests:
@@ -15,11 +25,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Docs-only change?
+        id: docs
+        shell: bash
+        run: |
+          # files outside docs/ that are not Markdown (no grep -q: with -v it misbehaves in macOS grep)
+          code=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -vE '^docs/|\.md$' || true)
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -z "$code" ]; then
+            echo "only=true" >> "$GITHUB_OUTPUT"; echo "Only docs changed: tests skipped."
+          else
+            echo "only=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-python@v7
+        if: steps.docs.outputs.only != 'true'
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e .
+        if: steps.docs.outputs.only != 'true'
       - run: python -m unittest discover -s tests -t . -v
+        if: steps.docs.outputs.only != 'true'
 
   postgres:
     name: Tests on PostgreSQL 16
@@ -42,8 +68,24 @@ jobs:
       POKERTRACKER_TEST_POSTGRES: postgresql://poker:poker@localhost:5432/poker
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Docs-only change?
+        id: docs
+        shell: bash
+        run: |
+          # files outside docs/ that are not Markdown (no grep -q: with -v it misbehaves in macOS grep)
+          code=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD" | grep -vE '^docs/|\.md$' || true)
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ -z "$code" ]; then
+            echo "only=true" >> "$GITHUB_OUTPUT"; echo "Only docs changed: tests skipped."
+          else
+            echo "only=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-python@v7
+        if: steps.docs.outputs.only != 'true'
         with:
           python-version: "3.12"
       - run: pip install -e ".[postgres]"
+        if: steps.docs.outputs.only != 'true'
       - run: python -m unittest tests.test_postgres tests.test_migrations -v
+        if: steps.docs.outputs.only != 'true'
