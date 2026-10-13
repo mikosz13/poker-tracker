@@ -197,6 +197,21 @@ za miejsce nie da się oddzielić od knockoutów. Top 10% / 15% pola to fakty (m
 Każdy przypadek ma test na ręce w formacie GG (`tests/test_vpip.py`). Rankingi rąk startowych i pozycji liczymy na
 wyniku bez szczęścia w all-inach (wg EV), żeby jeden przegrany coinflip nie decydował.
 
+## 11a. RFI, 3-bet, fold to 3-bet, open shove (Analysis v2, decyzja 13.10.2026)
+
+Każdy wskaźnik liczony od swoich okazji (jak w PokerTracker 4), z n w aplikacji; poniżej 30 okazji szary.
+
+| Wskaźnik | Okazja (mianownik) | Liczy się, gdy |
+|---|---|---|
+| RFI | pierwsza decyzja Hero, wszyscy przed nim spasowali (bez limperów), poza BB | Hero podbija (all-in też) |
+| Open shove | okazja RFI przy danym stacku (każdy przedział stacku ma własną bazę) | raise Hero to all-in |
+| 3-bet | dokładnie jeden raise przed pierwszą decyzją Hero (callerzy mogą być: squeeze się liczy) | Hero przebija |
+| Fold to 3-bet | Hero otworzył (nie all-in) i padło dokładnie jedno przebicie | Hero pasuje |
+| bb/100 wg EV | każda ręka | suma wyników wg EV / ręce × 100 |
+
+Testy na rękach GG: `tests/test_preflop.py`. Trend: ostatnie 30 dni wobec reszty historii, min. 500 rąk i 100 okazji
+po obu stronach, strzałka przy |z| ≥ 2,5, najwyżej jedna.
+
 ## 12. Odmiana przez liczby (w aplikacji)
 
 Formy w plikach tłumaczeń jako `one` / `few` / `many` (reguły CLDR, w JS przez `Intl.PluralRules`, w Pythonie ta sama

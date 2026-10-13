@@ -89,6 +89,9 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .log .li:hover{background:var(--bg)}.log .li.cur{background:var(--blue);color:#fff}.log .li.cur .m,.log .li.cur .pos,.log .li.cur .neg{color:#fff}
 .log .li b{font-weight:700}.log .li .cs{display:flex;gap:2px}.log .li .card{margin:0;font-size:.8rem;padding:0 3px;min-width:1.7em}
 .ctrl{display:flex;gap:6px;justify-content:center;margin:10px 0}.ctrl button{min-width:3em}
+.pf td small{display:block;color:var(--muted);font-size:.72rem;font-weight:400}.pf td.few,.pf td.few span{color:var(--muted)!important}
+.pf tr.hl td{background:color-mix(in srgb,var(--blue) 8%,transparent)}.pf tr.tot td{border-top:2px solid var(--line);font-weight:600}
+.def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .lscale{display:flex;gap:4px}.lv{flex:1;text-align:center;font-size:.7rem;line-height:1.2;padding:6px 2px;border-radius:8px;
@@ -940,7 +943,46 @@ const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.le
   hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
     <td>${x.cards ? cards(x.cards) : "–"}</td><td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
-const ANALYSIS_TABS = ["overview", "leaks", "money"];                  // labels: an.tab.<key>
+const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money"];   // labels: an.tab.<key>
+
+// Analysis v2: a rate over its opportunities, "31,1%" with n under it; greyed below the minimum; definitions in tooltips
+const defHead = (label, key) => `<span class="def" title="${esc(t("def." + key))}">${label}</span>`;
+function rateCell(r, key, title) {
+  if (!r || !r.n) return `<td class="m">–</td>`;
+  const tip = r.few ? t("common.few", {min: t("common.opps", {n: 30})}) : title || t("def." + key);
+  return `<td class="${r.few ? "few" : ""}" title="${esc(tip)}">${pct(r.pct)}<small>${t("common.n", {n: num(r.n, 0)})}</small></td>`;
+}
+const STAT_LABEL = {vpip: "VPIP", pfr: "PFR", threebet: "3-bet"};
+function trendArrow(tr, key) {
+  if (!tr.arrow || tr.arrow.key !== key) return "";
+  return ` <span class="${tr.arrow.up ? "pos" : "neg"}" title="${esc(t(tr.arrow.up ? "trend.up" : "trend.down"))}">${tr.arrow.up ? "▲" : "▼"}</span>`;
+}
+function trendNote(tr) {
+  const stats = Object.entries(tr.stats);
+  let state;
+  if (!stats.length) state = t("trend.few", {recent: num(tr.recent_hands, 0), older: num(tr.older_hands, 0)});
+  else {
+    const [k, s] = tr.arrow ? [tr.arrow.key, tr.stats[tr.arrow.key]] : stats.reduce((a, b) => Math.abs(b[1].z) > Math.abs(a[1].z) ? b : a);
+    state = t(tr.arrow ? "trend.shown" : "trend.none", {stat: STAT_LABEL[k], recent: pct(s.recent), older: pct(s.older)});
+  }
+  return `<p class="m">${t("trend.note", {state})}</p>`;
+}
+function rateTile(label, key, r, tr) {
+  const s = tr.stats[key];
+  return `<div class="${r.few ? "few" : ""}"><span>${defHead(label, key)}${trendArrow(tr, key)}</span><b>${pct(r.pct)}</b>
+    <span class="m">${t("common.n", {n: num(r.n, 0)})}${s ? " · " + t("trend.recent", {x: pct(s.recent)}) : ""}</span></div>`;
+}
+function preflopTable(rows, total, first, firstLabel, depth) {
+  const head = [firstLabel, t("col.hands"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.rfi"), "rfi"),
+    ...(depth ? [defHead(t("col.openShove"), "shove")] : []), defHead(t("col.threebet"), "threebet"),
+    ...(depth ? [] : [defHead(t("col.fold3"), "fold3")]), defHead(t("col.ev100"), "ev100")];
+  const row = (r, label, cls = "") => `<tr class="${cls}"><td>${label}</td><td class="${r.few ? "few" : ""}">${num(r.hands, 0)}</td>
+    ${rateCell(r.vpip, "vpip")}${rateCell(r.pfr, "pfr")}${rateCell(r.rfi, "rfi")}
+    ${depth ? rateCell(r.shove, "shove", t("def.shoveCell", {band: esc(label), count: r.shove.count, n: r.shove.n})) : ""}${rateCell(r.threebet, "threebet")}
+    ${depth ? "" : rateCell(r.fold3, "fold3")}<td class="${r.few ? "few" : ""}">${sgn(r.ev100, 1)}</td></tr>`;
+  return table(head, [...rows.map(r => row(r, esc(r[first]), depth && r.high <= 15 ? "hl" : "")),
+                      ...(total ? [row(total, `<b>${t("an.total")}</b>`, "tot")] : [])], "pf");
+}
 
 // a 95 % interval as a small bar with the zero line; red when wholly below zero, green when above
 function ciBar(iv) {
@@ -962,15 +1004,21 @@ async function viewAnalysis(tab) {
   let h = `<h1>${t("nav.analysis")}</h1><p class="m">${t("an.intro", {tournaments: t("common.tournaments", {n: o.tournaments}), hands: t("common.handsN", {n: o.hands})})}</p>
     <div class="seg">${ANALYSIS_TABS.map(k => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t("an.tab." + k)}</button></a>`).join("")}</div>`;
 
+  const pf = a.preflop, tr = pf.trend, T = pf.total;
   if (tab === "overview") {
-    h += `<div class="k"><div>${t("common.hands")}<b>${num(o.hands, 0)}</b></div><div>VPIP / PFR<b>${pct(o.vpip_pct)} / ${pct(o.pfr_pct)}</b><span class="m">${t("common.n", {n: o.decided})}</span></div>
-      <div>bb/100<b>${sgn(o.bb_per_100, 1)}</b><span class="m">${t("an.evAdjusted", {x: sgn(o.bb_per_100_ev, 1)})}</span></div>
-      <div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m">${ri ? t("an.ci", {lo: num(ri.low, 0), hi: num(ri.high, 0)}) : ""}</span></div>
-      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}<div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
+    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b>${ri ? ciBar(ri) : ""}</div>
+      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}
+      ${rateTile("VPIP", "vpip", T.vpip, tr)}${rateTile("PFR", "pfr", T.pfr, tr)}${rateTile("3-bet", "threebet", T.threebet, tr)}
+      <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>
-      ${placeChart(o.places)}
-      <p class="m">${t("an.v2")}</p>`;
+      ${trendNote(tr)}${pendingNote(m.pending)}
+      <div class="trio">${luckBox(o.luck_badge)}</div>
+      ${placeChart(o.places)}`;
   }
+  if (tab === "preflop")
+    h += `<p class="m">${t("pf.intro", {min: pf.min_opp})}</p>${preflopTable(pf.positions, T, "position", t("col.position"))}<p class="m">${t("pf.note")}</p>`;
+  if (tab === "depth")
+    h += `<p class="m">${t("dp.intro")}</p>${preflopTable(pf.depths, null, "depth", t("col.stack"), true)}<p class="m">${t("dp.note")}</p>`;
 
   if (tab === "leaks") {
     h += `<p class="m">${t("an.leaksIntro", {tested: a.tested})}</p><h2>${t("an.leaks")}</h2>`;

@@ -15,7 +15,7 @@ from collections import defaultdict
 import numpy as np
 
 from . import preflop
-from .dashboard import hand_class, pending_results
+from .dashboard import hand_class, luck_badge, pending_results
 from .i18n import num, t
 from .places import place_split
 from .tickets import tickets_summary
@@ -450,7 +450,9 @@ def overview(hands, db, site=SITE):
             "bb_per_100": round(100 * sum(h["net_bb"] for h in hands) / n, 1) if n else None,
             "bb_per_100_ev": round(100 * sum(h["adj_bb"] for h in hands) / n, 1) if n else None,
             "allins": {"count": int(a["n"]), "actual_bb": round(_f(a["net"]), 1), "ev_bb": round(_f(a["ev"]), 1),
-                       "luck_bb": round(_f(a["luck"]), 1)}}
+                       "luck_bb": round(_f(a["luck"]), 1)},
+            "luck_badge": luck_badge(db.query("SELECT equity, ev_bb, invested_bb, luck_bb FROM hero_allins WHERE site = ?",
+                                              (site,)))}
 
 
 def all_in_strength(db, site=SITE, lang="en"):

@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Analysis v2, stage 1:
+  - Overview: ROI with its 95 % interval bar, ITM / cashed, VPIP, PFR and 3-bet with n, all-in EV, the luck badge
+    and "Where you finish". A trend arrow compares the last 30 days with the rest of the history, only with 500+
+    hands and 100+ opportunities on each side and a change beyond noise (|z| ≥ 2.5), at most one at a time.
+  - New tab Preflop: per position VPIP, PFR, RFI, 3-bet, fold to 3-bet and bb/100 by EV, with a total row.
+  - New tab Stack depth: the same per stack band plus open shove, each band out of its own RFI chances.
+  - Every rate is counted over its opportunities as PokerTracker 4 does (RFI without limpers, 3-bet with squeezes,
+    fold to 3-bet after Hero's own non-all-in open), shows n, is greyed under 30 opportunities and has its
+    definition in a tooltip; tests on GGPoker hands.
 - Tournament stack chart: a BB / Chips switch (remembered). In chips a deep run shows how the stack grew even while it
   fell in big blinds (Mik's Day 2: 977k → peak 9.3M → bust from 5.6M, which is 279 → 11 BB). The tooltip shows both,
   with the big blind; the line under the chart follows the unit.
