@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- The ROI tile in Analysis says in its tooltip why it has no interval and links to the 95 % interval in Money;
+  "How luck works" explains the interval and the verdicts built on it. Money keeps the interval.
 - Session review: the biggest pots won and lost (and bad beats / suckouts) name their tournament, like busts.
 - Analysis → Overview: the ROI tile shows the number only (the 95 % bar was squeezed and unclear there; Money keeps
   the interval next to its verdicts).

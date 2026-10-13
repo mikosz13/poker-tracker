@@ -719,5 +719,9 @@
  "sd.note": "{hands}, w tym {showdowns} z showdownem. Sprawdzony all-in preflop to showdown; niesprawdzony shove to kradzież, więc jest w linii bez showdownu.",
  "sd.few": "Mniej niż 30 rąk: na wykres jeszcze za wcześnie.",
  "lp.sdTitle": "Z showdownem i bez",
- "lp.sd": "Analiza → Przegląd dzieli wynik w BB na ręce, w których doszedłeś do showdownu, i resztę: <b>bez showdownu (w tym niesprawdzone shove'y)</b>. Niesprawdzony shove wygrywa blindy bez pokazania kart, więc to kradzież, nie showdown; sprawdzony all-in preflop zawsze pokazuje karty i jest showdownem. Linia przerywana to wynik łączny wg all-in EV: różnica do linii „Łącznie” to szczęście w all-inach opisane wyżej."
+ "lp.sd": "Analiza → Przegląd dzieli wynik w BB na ręce, w których doszedłeś do showdownu, i resztę: <b>bez showdownu (w tym niesprawdzone shove'y)</b>. Niesprawdzony shove wygrywa blindy bez pokazania kart, więc to kradzież, nie showdown; sprawdzony all-in preflop zawsze pokazuje karty i jest showdownem. Linia przerywana to wynik łączny wg all-in EV: różnica do linii „Łącznie” to szczęście w all-inach opisane wyżej.",
+ "an.roiTip": "ROI z biletami po wartości nominalnej po obu stronach. Tu bez przedziału, żeby kafelek był czytelny: przedział 95% (jak daleko od tej liczby może być Twoje długoterminowe ROI przy tej liczbie turniejów) jest w Finansach, obok werdyktów.",
+ "an.roiLink": "przedział 95% w Finansach",
+ "lp.roiTitle": "ROI i przedział 95%",
+ "lp.roi": "W Finansach przy każdym ROI jest przedział 95%: zakres, w którym przy tak małej liczbie turniejów prawdopodobnie leży Twoje długoterminowe ROI (bootstrap po Twoich turniejach). Z niego biorą się werdykty „ponad przypadek”: grupa jest na plusie lub na minusie tylko wtedy, gdy cały przedział leży nad lub pod zerem. Kafelek ROI w Analizie pomija przedział, żeby był czytelny, i odsyła do Finansów."
 }
