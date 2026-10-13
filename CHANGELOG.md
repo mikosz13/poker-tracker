@@ -10,6 +10,8 @@
   - Every rate is counted over its opportunities as PokerTracker 4 does (RFI without limpers, 3-bet with squeezes,
     fold to 3-bet after Hero's own non-all-in open), shows n, is greyed under 30 opportunities and has its
     definition in a tooltip; tests on GGPoker hands.
+  - A single all-in raise is a 3-bet chance only when Hero can raise over it (an all-in for less than Hero has is an
+    isolation chance; one Hero can only call is not): on Mik's data 3-bet 14.6 % (n = 4,728) instead of 14.1 % (4,878).
 - Tournament stack chart: a BB / Chips switch (remembered). In chips a deep run shows how the stack grew even while it
   fell in big blinds (Mik's Day 2: 977k → peak 9.3M → bust from 5.6M, which is 279 → 11 BB). The tooltip shows both,
   with the big blind; the line under the chart follows the unit.

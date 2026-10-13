@@ -16,7 +16,7 @@ Przegląd | Preflop | Głębokość stacku | Leaki i mocne strony | Finanse (Fin
   from Hero's own history (the trend, below).
 
 ## Definitions (PokerTracker 4 style; the denominator is the opportunities)
-Accepted by Mik without changes (2026-10-13).
+Accepted by Mik (2026-10-13); the 3-bet chance was then refined for all-in raises (option 2, below).
 
 | Metric | Opportunity | Counted when |
 |---|---|---|
@@ -24,7 +24,7 @@ Accepted by Mik without changes (2026-10-13).
 | PFR | same as VPIP | any raise preflop (limp-raise counts) |
 | RFI | Hero's first decision with everyone before folded (no limpers), not in the BB | Hero raises (all-in included) |
 | Open shove | an RFI opportunity | Hero's raise is all-in |
-| 3-bet | exactly one raise before Hero's first decision (callers allowed: a squeeze counts) | Hero raises |
+| 3-bet | exactly one raise before Hero's first decision (callers allowed: a squeeze counts); not when that raise is all-in and Hero cannot raise over it (Hero's stack − ante ≤ the amount raised to: a call would put Hero all-in) | Hero raises |
 | Fold to 3-bet | Hero opened (not all-in) and exactly one re-raise followed | Hero folds |
 | bb/100 wg EV | every hand | sum of EV results / hands × 100 |
 
@@ -50,6 +50,25 @@ For the in-app "jak liczymy" text and Help; numbers from Mik's data (179 tournam
 
   The tooltip says "z okazji RFI przy stacku X–Y BB" and the cell shows n, so 22.0 % (n = 286) and 9.6 % (n = 426)
   are not read as shares of all hands in the band, and the two bands are not compared as if they had one base.
+- **3-bet facing an all-in raise** (decision 2026-10-13, option 2). A raise all-in is a 3-bet chance only when Hero
+  can raise over it:
+  - *Not a chance*: UTG shoves 9,975 (raise to 9,975); Hero in the BB has 10,000 and posted a 25 ante, so a call
+    leaves Hero 0 chips. Hero can only call or fold.
+  - *A chance (isolation)*: UTG is all-in for 4,200; Hero has 10,000, so Hero can re-raise to play the short stack
+    alone. A re-raise counts as a 3-bet, a call or fold as a missed one.
+
+  On Mik's data (11,446 hands, to 13.10.2026): 622 of the 4,878 chances faced an all-in raise; 472 of them Hero
+  could raise over (48 3-bets among them), 150 not (0 raises, as it must be). The 150 leave the denominator:
+
+  | | Chances (n) | 3-bets | 3-bet |
+  |---|---|---|---|
+  | before (any single raise) | 4,878 | 690 | 14.1 % |
+  | after (option 2) | 4,728 | 690 | 14.6 % |
+
+  Tests: `tests/test_preflop.py` (AllInRaiseTests).
+- **Why n changed from 4,343 (mockup) to 4,878.** The mockup used Mik's database up to 11.10.2026 00:07 (10,203
+  hands); the app now has 11,446 hands to 13.10.2026. The 1,243 hands played since add 535 chances (4,343 + 535 =
+  4,878, same definition); no hand counted before changed. With option 2 the mockup's data gives 4,195 (14.6 %).
 - **Showdown lines**: see docs/tasks/showdown-lines.md (a called preflop all-in is a showdown; an uncalled shove is
   not).
 

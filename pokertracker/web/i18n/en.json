@@ -661,7 +661,7 @@
  "def.vpip": "VPIP: how often you put chips in voluntarily preflop (call, bet or raise; completing the small blind counts, checking the big blind does not). Out of hands with a preflop decision (no walks, no all-ins forced by the blind).",
  "def.pfr": "PFR: how often you raise preflop (any raise, a limp-raise too). Same hands as VPIP.",
  "def.rfi": "RFI (raise first in): how often you open with a raise when everyone before you folded (no limpers). Chance: your first decision in an unopened pot, not in the big blind.",
- "def.threebet": "3-bet: how often you re-raise when exactly one raise came before your first decision (callers allowed, so a squeeze counts).",
+ "def.threebet": "3-bet: how often you re-raise when exactly one raise came before your first decision (callers allowed, so a squeeze counts). An all-in you cannot raise over (a call would put you all-in) is not a chance; an all-in for less than you have is (isolation).",
  "def.fold3": "Fold to 3-bet: how often you fold when your open (not all-in) is re-raised once.",
  "def.shove": "Open shove: how often you open all-in when everyone before you folded. Out of the RFI chances at this stack.",
  "def.ev100": "bb/100 by EV: the result per 100 hands without all-in luck (in a hand with an all-in the EV counts, not the result).",
