@@ -559,15 +559,17 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.max(170, Math.min(260, W * .38)));
   const L = 58, R = 14, B = 26, iw = W - L - R;
   const ts = pts.map(p => Date.parse(p.at.replace(" ", "T")));
-  let t0 = Math.min(...ts), t1 = Math.max(...ts);
-  if (t1 === t0) t1 = t0 + 3600e3;
+  // x by time, or by position in the series (opts.byIndex: p.n, e.g. the hand number) with the date in the tooltip
+  const xs = opts.byIndex ? pts.map(p => p.n) : ts;
+  let t0 = Math.min(...xs), t1 = Math.max(...xs);
+  if (t1 === t0) t1 = t0 + (opts.byIndex ? 1 : 3600e3);
   const vals = series.flatMap(s => pts.map(p => p[s.key]));
   const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
   const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
   const x = t => L + (t - t0) / (t1 - t0) * iw;
   // annotation labels go in rows above the plot so that labels close in time do not overlap
   const rowEnds = [], placed = (opts.markers || []).filter(m => !m.dot).map(m => {
-    const mx = x(ts[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
+    const mx = x(xs[m.i]), w = m.label.length * 6.3, end = mx > W - w - 10;
     const a = end ? mx - w - 4 : mx + 4, b = a + w;
     let row = rowEnds.findIndex(e => a > e + 8);
     if (row < 0) row = rowEnds.length < 3 ? rowEnds.length : rowEnds.indexOf(Math.min(...rowEnds));
@@ -584,21 +586,21 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   let prevLab = "";
   for (let k = 0; k <= nx; k++) {
     const t = t0 + (t1 - t0) * k / nx, d = new Date(t);
-    const lab = spanH <= 36 ? timeLabel(d) : dayLabel(d);
+    const lab = opts.byIndex ? num(Math.round(t), 0) : spanH <= 36 ? timeLabel(d) : dayLabel(d);
     if (lab === prevLab) continue;                       // a few days on a wide axis: one label per day
     prevLab = lab;
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
   }
   // annotations: a dashed line and a label at the point they belong to; "dot" ones mark a single point (e.g. a bust)
-  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(ts[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
+  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(xs[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
       text-anchor="middle" style="fill:var(--neg);font-size:14px;font-weight:700">✕</text>`).join("") + placed.map(m => {
     const ly = 12 + m.row * 15;
     return `<line x1="${m.mx}" x2="${m.mx}" y1="${ly - 4}" y2="${T + ih}" style="stroke:var(--orange);stroke-dasharray:4 3"/>
       <text x="${m.mx + (m.end ? -4 : 4)}" y="${ly + 4}" text-anchor="${m.end ? "end" : "start"}"
         style="fill:var(--orange);font-size:11px;font-weight:700">${m.title ? `<title>${esc(m.title)}</title>` : ""}${esc(m.label)}</text>`;
   }).join("");
-  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round"
-    points="${pts.map((p, i) => `${x(ts[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
+  const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round${s.dash ? ";stroke-dasharray:6 4" : ""}"
+    points="${pts.map((p, i) => `${x(xs[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
   box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${marks}${lines}
     <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
       ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
@@ -607,8 +609,8 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   const show = e => {
     const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
     let i = 0;
-    ts.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(ts[i]) - mx)) i = k; });
-    const px = x(ts[i]);
+    xs.forEach((t, k) => { if (Math.abs(x(t) - mx) < Math.abs(x(xs[i]) - mx)) i = k; });
+    const px = x(xs[i]);
     hov.style.display = "";
     hov.querySelector("line").setAttribute("x1", px); hov.querySelector("line").setAttribute("x2", px);
     hov.querySelectorAll("circle").forEach((c, k) => { c.setAttribute("cx", px); c.setAttribute("cy", y(pts[i][series[k].key])); });
@@ -622,7 +624,7 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   };
   const nearest = e => {
     const r = svg.getBoundingClientRect(), mx = (e.clientX - r.left) * W / r.width;
-    return ts.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(ts[best]) - mx) ? k : best, 0);
+    return xs.reduce((best, t, k) => Math.abs(x(t) - mx) < Math.abs(x(xs[best]) - mx) ? k : best, 0);
   };
   if (opts.onPick) svg.addEventListener("click", e => opts.onPick(pts[nearest(e)]));
   svg.addEventListener("pointermove", show);
