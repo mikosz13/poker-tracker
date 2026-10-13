@@ -47,6 +47,9 @@ python -m pokertracker dashboard --html dashboard.html
 
 Re-importing the same files is safe: hands are deduplicated by hand id, summaries are upserted.
 Files can arrive in any order (summary before hands, one file per entry, ...).
+If PokerCraft offers the hands of a later day (Day 2) but not its summary, the event still counts, flagged as missing
+the day's prize; `python -m pokertracker provisional <tournament id> <amount>` counts the cash won that day until the
+summary is imported and replaces it.
 
 ## Desktop app
 
