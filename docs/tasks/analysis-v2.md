@@ -75,8 +75,8 @@ leak is shown. The strengths that pass are open shove (q < 0.001) and 3-bet shov
 3. The fold-to-3-bet leak today measures against a rough guide (folding more than 70 %). After decision 5 (no solver
    patterns) the guide should either go or be replaced by Hero's own history, like the trend. To decide before
    stage 2.
-4. Trends are a separate small family (VPIP, PFR, RFI, 3-bet). |z| ≥ 2.5 is Bonferroni for four statistics at 5 %
-   two-sided (z = 2.50), so Mik's threshold already covers it; no further correction.
+4. Trends are a separate small family (the tiles with a trend: VPIP, PFR, 3-bet). |z| ≥ 2.5 is Bonferroni at 5 %
+   two-sided for up to four statistics (z = 2.50), so Mik's threshold already covers it; no further correction.
 
 ## Stage 1
 - **Przegląd**: tiles ROI (95 % bar with the zero line), ITM / cashed (place or bounty), VPIP, PFR, 3-bet,
