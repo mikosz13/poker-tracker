@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Session review: the biggest pots won and lost (and bad beats / suckouts) name their tournament, like busts.
+- Analysis → Overview: the ROI tile shows the number only (the 95 % bar was squeezed and unclear there; Money keeps
+  the interval next to its verdicts).
+- ITM only: one ITM tile (reached the paid places), counted where the files say it, in tournaments without bounties
+  and satellites. "Cashed (place or bounty)" is gone from the dashboard, Analysis, the tables in Money, late reg vs
+  start and the session sentence; bounty money still counts in profit and ROI. The tooltip and "How luck works" say
+  why bounty tournaments are left out.
+- The VPIP, PFR and 3-bet tiles show the rate only; n is in the tooltip (tables keep it).
 - Analysis → Overview: cumulative result in BB over your hands in four lines: total, with showdown, without showdown
   (uncalled shoves included) and the total by all-in EV (dashed). A called preflop all-in is a showdown; an uncalled
   shove is a steal. The tooltip gives the hand number, date and all four values; "How luck works" explains the split.

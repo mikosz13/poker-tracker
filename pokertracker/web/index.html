@@ -261,24 +261,24 @@ async function api(path, opts) {
   return j;
 }
 const table = (head, rows, cls = "") => `<div class="scroll ${cls}"><table><tr>${head.map(h => `<th>${h}</th>`).join("")}</tr>${rows.join("")}</table></div>`;
-// Money's folded detail tables (whole history): tournaments, cashed, profit and ROI per row
+// Money's folded detail tables (whole history): tournaments, ITM where known, profit and ROI per row
 function detailTable(title, first, list, label, countTip) {
   if (!list || !list.length) return "";
-  return `<details class="more"><summary>${t(title)}</summary>${table([first, countHead(countTip), ...cashedHead(), t("col.profitUsd"), "ROI"],
-    list.map(x => `<tr class="${fewClass(x.n, MIN_T)}" title="${fewTip(x.n, MIN_T, "t")}"><td>${label(x)}</td><td>${x.n}</td><td>${x.cashed}</td>
-      <td>${pct(x.cashed_pct)}</td><td>${sgn(x.profit, 2)}</td><td>${x.roi_pct == null ? "–" : sgn(x.roi_pct, 0, "%")}</td></tr>`))}</details>`;
+  return `<details class="more"><summary>${t(title)}</summary>${table([first, countHead(countTip), ...itmHead(), t("col.profitUsd"), "ROI"],
+    list.map(x => `<tr class="${fewClass(x.n, MIN_T)}" title="${fewTip(x.n, MIN_T, "t")}"><td>${label(x)}</td><td>${x.n}</td>${itmCells(x)}
+      <td>${sgn(x.profit, 2)}</td><td>${x.roi_pct == null ? "–" : sgn(x.roi_pct, 0, "%")}</td></tr>`))}</details>`;
 }
 // small samples: greyed, with a tooltip (fewer than 10 tournaments or 30 hands)
 const MIN_T = 10, MIN_H = 30;
 const fewClass = (n, min) => n < min ? "few" : "";
 const fewTip = (n, min, unit) => n < min ? esc(t("common.few", {min: t(unit === "h" ? "common.handsN" : "common.tournaments", {n: min})})) : "";
-// ITM only without bounties; in bounty tournaments only "cashed (place or bounty)" is known from the files
+// ITM only where the files tell it: without bounties and in satellites (a bounty summary gives one total)
 // "Tournaments" with what it counts in a tooltip (a dotted underline marks it)
 const countHead = (tip = "col.countTip") => `<span class="tip" title="${esc(t(tip))}">${t("col.count")}</span>`;
-const cashedHead = () => [`<span class="tip" title="${esc(t("cashed.tip"))}">${t("col.cashed")}</span>`, t("col.cashedPct")];
-function itmTiles(itm, n, b) {
-  return `<div class="${n ? fewClass(n, MIN_T) : ""}" title="${n ? fewTip(n, MIN_T, "t") : ""}">${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>
-    ${b && b.n ? `<div class="${fewClass(b.n, MIN_T)}" title="${esc(t("cashed.tip"))}">${t("cashed.title")}<b>${pct(b.pct)}</b>${b.cashed != null ? `<span class="m">${t("cashed.sub", {cashed: b.cashed, n: b.n})}</span>` : ""}</div>` : ""}`;
+const itmHead = () => [`<span class="tip" title="${esc(t("itm.tip"))}">${t("col.itm")}</span>`, t("col.itmPct")];
+const itmCells = x => x.itm_n ? `<td>${t("itm.short", {itm: x.itm, n: x.itm_n})}</td><td>${pct(x.itm_pct)}</td>` : `<td class="m">–</td><td class="m">–</td>`;
+function itmTile(itm, n) {
+  return `<div class="${n ? fewClass(n, MIN_T) : ""}" title="${esc(t("itm.tip"))}${n && n < MIN_T ? " " + fewTip(n, MIN_T, "t") : ""}">${t("itm.title")}<b>${n ? pct(100 * itm / n) : "–"}</b><span class="m">${n ? t("itm.sub", {itm, n}) : t("itm.none")}</span></div>`;
 }
 // top 10 % / 15 % of the field: facts (place / players), with a 95 % bootstrap interval over tournaments
 function topTiles(split) {
@@ -410,7 +410,7 @@ async function viewDashboard(period, from, to) {
   const roi = d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%");
   const inclCash = x => d.tickets ? `<span class="m">${t("money.inclCash", {x})}</span>` : "";
   h += `<div class="k"><div>${t("common.tournamentsTitle")}<b>${d.tournaments}</b></div><div>${t("dash.profitCash")}<b>${sgn(d.profit, 0, " $")}</b>${inclCash(sgn(d.cash_profit, 0, " $"))}</div>
-    <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div>${itmTiles(d.itm, d.itm_n, d.bounty_cashed)}${topTiles(d.places)}
+    <div>ROI<b>${roi}</b>${d.roi_cash_pct == null ? "" : inclCash(sgn(d.roi_cash_pct, 0, "%"))}</div>${itmTile(d.itm, d.itm_n)}${topTiles(d.places)}
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}</b><span class="m">${d.knockouts.per_tournament == null ? "" : t("dash.koPer", {x: num(d.knockouts.per_tournament, 2)})}</span></div></div>
     <p class="m">${t("dash.costLine", {cost: money(d.cost), cash: money(d.cash)})}${d.tickets ? t("dash.tickets", {x: money(d.tickets)}) : ""} · ${t("common.handsN", {n: d.hands})}</p>${pendingNote(d.pending)}`;
   if (d.tournaments < 30) h += `<p class="warn">${t("dash.smallSample", {tournaments: t("common.tournaments", {n: d.tournaments})})}</p>`;
@@ -422,11 +422,11 @@ async function viewDashboard(period, from, to) {
   if (d.allins.count) h += `<p>${t("dash.allinsLine", {allins: t("common.allins", {n: d.allins.count}), net: sgn(d.allins.net_bb), ev: sgn(d.allins.ev_bb), luck: sgn(d.allins.luck_bb)})}</p>`;
   // the detail tables: late registration and positions folded under "More"; buy-in and categories live in Money
   const entry = d.tags.filter(x => x.tag.startsWith("entry:")).map(x => `<tr class="${fewClass(x.n, MIN_T)}" title="${fewTip(x.n, MIN_T, "t")}">
-    <td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td><td>${x.cashed}</td><td>${pct(x.cashed_pct)}</td><td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
+    <td>${t("entry." + x.tag.split(":")[1])}</td><td>${x.n}</td>${itmCells(x)}<td>${sgn(x.roi_pct, 0, "%")}</td></tr>`);
   const posRows = d.positions.map(p => `<tr class="${fewClass(p.hands, MIN_H)}" title="${fewTip(p.hands, MIN_H, "h")}">
     <td>${esc(p.position)}</td><td>${p.hands}</td><td>${pct(p.vpip_pct)}</td><td>${pct(p.pfr_pct)}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100_ev, 0)}</td></tr>`);
   if (entry.length || posRows.length) h += `<details class="more"><summary>${t("dash.more")}</summary>
-    ${entry.length ? `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), countHead(), ...cashedHead(), "ROI"], entry)}` +
+    ${entry.length ? `<h2>${t("dash.lateVsStart")}</h2>${table([t("col.entered"), countHead(), ...itmHead(), "ROI"], entry)}` +
       (d.entry_incomplete ? `<p class="m">${t("dash.incomplete", {tournaments: t("common.tournaments", {n: d.entry_incomplete})})}</p>` : "") : ""}
     ${posRows.length ? `<h2>${t("dash.byPosition")}</h2>${table([t("col.position"), t("col.hands"), "VPIP", "PFR", "BB", `<span class="tip" title="${esc(t("pos.evNote"))}">bb/100</span>`], posRows)}` : ""}
     </details>`;
@@ -508,9 +508,9 @@ function reviewHands(si) {
     <td style="vertical-align:top">${sgn(x.net_bb)}</td></tr>`;
   const groups = [
     [t("review.busts"), si.busts.map(x => row(x, esc(x.name)))],
-    [t("review.beats"), si.beats.map(x => row(x, esc(x.kind)))],
-    [t("review.lost"), si.pots.lost.map(x => row(x))],
-    [t("review.won"), si.pots.won.map(x => row(x))]].filter(g => g[1].length);
+    [t("review.beats"), si.beats.map(x => row(x, `${esc(x.kind)} · ${esc(x.name || "")}`))],
+    [t("review.lost"), si.pots.lost.map(x => row(x, esc(x.name || "")))],
+    [t("review.won"), si.pots.won.map(x => row(x, esc(x.name || "")))]].filter(g => g[1].length);
   const n = si.busts.length + si.beats.length + si.pots.lost.length + si.pots.won.length;
   return n ? `<details style="margin-top:8px"><summary style="cursor:pointer;color:var(--blue)">${t("review.title", {n})}</summary>
     ${groups.map(([title, rows]) => `<h3 style="font-size:.9rem;margin:10px 0 4px">${title}</h3>${table([t("col.hand"), "BB"], rows)}`).join("")}</details>` : "";
@@ -1027,8 +1027,8 @@ async function viewAnalysis(tab) {
 
   const pf = a.preflop, tr = pf.trend, T = pf.total;
   if (tab === "overview") {
-    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b>${ri ? ciBar(ri) : ""}</div>
-      ${itmTiles(o.itm, o.itm_n, {pct: o.bounty_cashed_pct, n: o.bounty_n, cashed: o.bounty_cashed})}
+    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b></div>
+      ${itmTile(o.itm, o.itm_n)}
       ${rateTile("VPIP", "vpip", T.vpip, tr)}${rateTile("PFR", "pfr", T.pfr, tr)}${rateTile("3-bet", "threebet", T.threebet, tr)}
       <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
       <span class="m">${t("an.allinSub", {actual: sgn(o.allins.actual_bb, 0), luck: sgn(o.allins.luck_bb, 0)})}</span></div></div>

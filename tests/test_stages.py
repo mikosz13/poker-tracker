@@ -145,7 +145,7 @@ class StageImportTests(unittest.TestCase):
         rows = tournaments_list(self.db)
         text = summary_sentence(rows, {"luck": {"count": 0}, "busts": []}, "pl")
         self.assertIn("Awans do Day 2 w $5 Ocean KO Opener, $1M GTD [Stage 1].", text)
-        self.assertIn("0 z gotówką", text)
+        self.assertNotIn("ITM", text)                                 # a bounty day 1: ITM is not in the files
 
     def test_day2_without_summary_joins_its_flights_from_the_hands(self):
         from pokertracker.server import tournaments_list
@@ -174,6 +174,20 @@ class StageImportTests(unittest.TestCase):
         self.assertEqual((round(float(r["cash_won"]), 2), r["summary_missing"], r["provisional"], r["finish_place"]),
                          (52.12, 0, 0, 120))
         self.assertIsNone(self.db.scalar("SELECT provisional_prize FROM tournaments WHERE tournament_id = 900103"))
+
+    def test_the_provisional_command_saves_it(self):
+        import tempfile
+        from pathlib import Path
+        from pokertracker.cli import main
+        with tempfile.TemporaryDirectory() as tmp:
+            url = f"sqlite:///{Path(tmp) / 'p.db'}"
+            with Database(url) as db:
+                db.init_schema()
+                import_texts(db, [("s1.txt", STAGE1_ADVANCED), ("d2.txt", DAY2_HANDS)], equity=False)
+                db.commit()
+            main(["--db", url, "provisional", "900103", "250"])
+            with Database(url) as db:                                # a new connection sees it
+                self.assertEqual(float(db.scalar("SELECT provisional_prize FROM tournaments WHERE tournament_id = 900103")), 250.0)
 
     def test_migration_links_a_day2_stored_without_its_stage(self):
         import_texts(self.db, [("s1.txt", STAGE1_ADVANCED), ("d2.txt", DAY2_HANDS)], equity=False)
