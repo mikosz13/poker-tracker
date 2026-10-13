@@ -28,6 +28,31 @@ Accepted by Mik without changes (2026-10-13).
 | Fold to 3-bet | Hero opened (not all-in) and exactly one re-raise followed | Hero folds |
 | bb/100 wg EV | every hand | sum of EV results / hands × 100 |
 
+## Jak liczymy (how we count)
+For the in-app "jak liczymy" text and Help; numbers from Mik's data (179 tournaments, 10,203 hands, to 11.10.2026).
+
+- **Hands vs the VPIP/PFR denominator.** 10,203 hands, 10,124 with a preflop decision. The 79 left out are all hands
+  where Hero had nothing to decide: 75 walks in the BB (everyone folded to Hero) and 4 hands where the ante and the
+  blind took Hero's whole stack (Speed Racer [10 BB] and the like, stacks of 0.08–0.32 BB, in the SB, BTN/SB and
+  BTN). No sit-outs among them: GGPoker folds a sitting-out player's hand, so such a hand shows as a fold and stays in
+  the denominator (the hand text cannot tell it from a real fold).
+  For stage 1: GGPoker writes no "and is all-in" on such a post (the stack simply equals ante + blind), so the
+  `all_in` flag of the post is not set; those hands leave the denominator only because Hero has no decision. A test
+  on this exact format goes with stage 1.
+- **Stack depth** is Hero's stack at the start of the hand (the seat line, before ante and blind) in big blinds of
+  that hand. Bands: < 10, 10–15, 15–25, 25–40, 40+ BB.
+- **Open shove** counts per band from the RFI opportunities in that band, so each band has its own base:
+
+  | Band | Base: RFI opportunities | Of hands in the band | Open shoves | Open shove |
+  |---|---|---|---|---|
+  | < 10 BB | 286 | 662 | 63 | 22.0 % |
+  | 10–15 BB | 426 | 915 | 41 | 9.6 % |
+
+  The tooltip says "z okazji RFI przy stacku X–Y BB" and the cell shows n, so 22.0 % (n = 286) and 9.6 % (n = 426)
+  are not read as shares of all hands in the band, and the two bands are not compared as if they had one base.
+- **Showdown lines**: see docs/tasks/showdown-lines.md (a called preflop all-in is a showdown; an uncalled shove is
+  not).
+
 ## Stage 1
 - **Przegląd**: tiles ROI (95 % bar with the zero line), ITM / cashed (place or bounty), VPIP, PFR, 3-bet,
   all-in EV, luck. "Where you finish" stays. Below the tiles, room for the showdown-lines chart
@@ -40,7 +65,7 @@ Accepted by Mik without changes (2026-10-13).
 - **Preflop**: per position VPIP, PFR, RFI, 3-bet, fold to 3-bet, bb/100 wg EV, hands; a total row. BB has no RFI and
   no fold to 3-bet; UTG no 3-bet chance before it; BTN/SB is heads-up. Numbers only, no reference ranges.
 - **Głębokość stacku**: the same per stack band (<10, 10–15, 15–25, 25–40, 40+ BB) plus open shove %, short stacks
-  highlighted.
+  highlighted; the open-shove base per band as in "Jak liczymy".
 - Definitions in code with tests; computed in under 1 s for 10,000 hands.
 
 ## Stage 2
