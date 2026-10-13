@@ -494,6 +494,7 @@ def set_provisional_prize(db, tournament_id, amount, site=SITE):
         return "the amount cannot be negative"
     db.execute("UPDATE tournaments SET provisional_prize = ? WHERE site = ? AND tournament_id = ?",
                (amount, site, tournament_id))
+    db.commit()                                     # the command line closes the database right after
     return (f"#{tournament_id} {t[0]['name']}: " + (f"${amount:,.2f} counted until the summary is imported"
                                                      if amount is not None else "amount removed"))
 
