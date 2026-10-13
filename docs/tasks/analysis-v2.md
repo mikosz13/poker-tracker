@@ -58,7 +58,8 @@ For the in-app "jak liczymy" text and Help; numbers from Mik's data (179 tournam
     alone. A re-raise counts as a 3-bet, a call or fold as a missed one.
 
   On Mik's data (11,446 hands, to 13.10.2026): 622 of the 4,878 chances faced an all-in raise; 472 of them Hero
-  could raise over (48 3-bets among them), 150 not (0 raises, as it must be). The 150 leave the denominator:
+  could raise over (48 3-bets among them: isolations, 39 all-in and 9 smaller raises), 150 not (0 raises, as it must
+  be). The 150 leave the denominator:
 
   | | Chances (n) | 3-bets | 3-bet |
   |---|---|---|---|
@@ -66,6 +67,9 @@ For the in-app "jak liczymy" text and Help; numbers from Mik's data (179 tournam
   | after (option 2) | 4,728 | 690 | 14.6 % |
 
   Tests: `tests/test_preflop.py` (AllInRaiseTests).
+- **In one sentence:** the mockup's 4,343 is the same definition on fewer hands (to 11.10, 10,203 hands), 4,878 is
+  it on all 11,446 hands to 13.10 (the 1,243 newer hands add 535 chances), and 4,728 is 4,878 minus the 150 all-ins
+  Hero could not raise over; none of the three numbers is wrong.
 - **Why n changed from 4,343 (mockup) to 4,878.** The mockup used Mik's database up to 11.10.2026 00:07 (10,203
   hands); the app now has 11,446 hands to 13.10.2026. The 1,243 hands played since add 535 chances (4,343 + 535 =
   4,878, same definition); no hand counted before changed. With option 2 the mockup's data gives 4,195 (14.6 %).
