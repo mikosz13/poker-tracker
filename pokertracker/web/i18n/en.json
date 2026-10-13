@@ -700,5 +700,9 @@
  "sd.note": "{hands}, {showdowns} of them with showdown. A called preflop all-in is a showdown; an uncalled shove is a steal, so it is on the line without showdown.",
  "sd.few": "Fewer than 30 hands: no chart yet.",
  "lp.sdTitle": "With and without showdown",
- "lp.sd": "Analysis → Overview splits the result in BB into hands you took to showdown and the rest: <b>without showdown (uncalled shoves included)</b>. An uncalled shove wins the blinds without showing cards, so it is a steal, not a showdown; a called preflop all-in always shows cards and is a showdown. The dashed line is the total by all-in EV: the gap to the total is the all-in luck described above."
+ "lp.sd": "Analysis → Overview splits the result in BB into hands you took to showdown and the rest: <b>without showdown (uncalled shoves included)</b>. An uncalled shove wins the blinds without showing cards, so it is a steal, not a showdown; a called preflop all-in always shows cards and is a showdown. The dashed line is the total by all-in EV: the gap to the total is the all-in luck described above.",
+ "an.roiTip": "ROI with tickets at face value on both sides. No interval here, to keep the tile readable: the 95 % interval (how far your long-run ROI may be from this number, given how many tournaments you played) is in Money, next to the verdicts.",
+ "an.roiLink": "95 % interval in Money",
+ "lp.roiTitle": "ROI and its 95 % interval",
+ "lp.roi": "Money shows a 95 % interval next to each ROI: the range where your long-run ROI probably lies, given how few tournaments there are (bootstrap over your tournaments). The verdicts \"beyond chance\" come from it: a group is called winning or losing only when the whole interval is above or below zero. The ROI tile in Analysis leaves the interval out to stay readable and links to Money instead."
 }

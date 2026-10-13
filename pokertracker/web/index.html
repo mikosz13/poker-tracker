@@ -1027,7 +1027,7 @@ async function viewAnalysis(tab) {
 
   const pf = a.preflop, tr = pf.trend, T = pf.total;
   if (tab === "overview") {
-    h += `<div class="k"><div>ROI<b>${sgn(m.roi_pct, 0, "%")}</b></div>
+    h += `<div class="k"><div title="${esc(t("an.roiTip"))}">ROI<b>${sgn(m.roi_pct, 0, "%")}</b><span class="m"><a href="#/analysis?tab=money">${t("an.roiLink")}</a></span></div>
       ${itmTile(o.itm, o.itm_n)}
       ${rateTile("VPIP", "vpip", T.vpip, tr)}${rateTile("PFR", "pfr", T.pfr, tr)}${rateTile("3-bet", "threebet", T.threebet, tr)}
       <div>All-in EV<b>${sgn(o.allins.ev_bb, 0, " BB")}</b>
@@ -1256,6 +1256,8 @@ function viewLuck() {
   <p>${t("lp.levels")}</p>
   <p>${t("lp.bb")}</p>
   <p>${t("lp.moment")}</p></div>
+  <h2>${t("lp.roiTitle")}</h2>
+  <p>${t("lp.roi")}</p>
   <h2>${t("lp.sdTitle")}</h2>
   <p>${t("lp.sd")}</p>
   <h2>${t("lp.itmTitle")}</h2>
