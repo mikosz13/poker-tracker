@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Test: importing a Day 2 summary after a provisional amount leaves one record with the amount from the file.
 - The ROI tile in Analysis says in its tooltip why it has no interval and links to the 95 % interval in Money;
   "How luck works" explains the interval and the verdicts built on it. Money keeps the interval.
 - Session review: the biggest pots won and lost (and bad beats / suckouts) name their tournament, like busts.
