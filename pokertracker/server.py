@@ -332,6 +332,16 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 if path == "/api/period":                             # the same bounds, for the tournament list
                     period, start, end, (since, until) = chosen_period(db, query)
                     return self._send(200, {"period": period, "since": since, "until": until})
+                if path == "/api/search":                             # the Hands tab (hand_search.build_where)
+                    from .hand_search import search
+                    f = {k: v[0] for k, v in query.items()}
+                    if f.get("period"):
+                        _, _, _, (f["since"], f["until"]) = chosen_period(db, query)
+                    try:
+                        return self._send(200, search(db, f, offset=int(f.get("offset") or 0),
+                                                      limit=min(int(f.get("limit") or 100), 500)))
+                    except ValueError:
+                        return self._send(400, {"error": "bad filter"})
                 if path == "/api/hands":                              # ?cards=AKs: the hands of one grid cell
                     return self._send(200, hands_of_class(db, (query.get("cards") or [""])[0]))
                 if path == "/api/analysis":                           # always the whole history

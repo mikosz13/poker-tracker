@@ -173,6 +173,37 @@ CREATE TABLE IF NOT EXISTS settings (
     value  TEXT
 );
 
+-- Hand search: one row per Hero hand with what the filters need, rebuilt after each import (see hand_search.py).
+-- Flags are 0/1 integers so the same SQL runs on SQLite and PostgreSQL.
+CREATE TABLE IF NOT EXISTS hand_facts (
+    site          TEXT    NOT NULL,
+    hand_id       TEXT    NOT NULL,
+    tournament_id BIGINT  NOT NULL,
+    played_at     TIMESTAMP NOT NULL,
+    name          TEXT,
+    buyin_total   NUMERIC,
+    format        TEXT,
+    position      TEXT,
+    cards         TEXT,
+    hand_class    TEXT,                      -- AKs, 72o, QQ
+    stack_bb      NUMERIC,
+    action        TEXT,                      -- Hero's first preflop spot (analysis.preflop_spots)
+    rfi           INTEGER NOT NULL DEFAULT 0, -- the Analysis v2 counts of the hand (preflop.hand_stats)
+    shove         INTEGER NOT NULL DEFAULT 0,
+    threebet      INTEGER NOT NULL DEFAULT 0,
+    fold3         INTEGER NOT NULL DEFAULT 0,
+    all_in        INTEGER NOT NULL DEFAULT 0, -- Hero went all-in on any street
+    showdown      INTEGER NOT NULL DEFAULT 0, -- Hero reached showdown
+    net_bb        NUMERIC NOT NULL,
+    adj_bb        NUMERIC NOT NULL,          -- by EV: the all-in EV in place of the result
+    PRIMARY KEY (site, hand_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_hands_tournament ON hands (site, tournament_id, played_at);
+CREATE INDEX IF NOT EXISTS idx_facts_time       ON hand_facts (site, played_at);
+CREATE INDEX IF NOT EXISTS idx_facts_class      ON hand_facts (site, hand_class, played_at);
+CREATE INDEX IF NOT EXISTS idx_facts_position   ON hand_facts (site, position, played_at);
+CREATE INDEX IF NOT EXISTS idx_facts_action     ON hand_facts (site, action, played_at);
+CREATE INDEX IF NOT EXISTS idx_facts_tournament ON hand_facts (site, tournament_id);
 CREATE INDEX IF NOT EXISTS idx_players_hero     ON hand_players (site, is_hero, hand_id);
 CREATE INDEX IF NOT EXISTS idx_actions_lookup   ON actions (site, hand_id, nick, street);

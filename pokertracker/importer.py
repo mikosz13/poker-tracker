@@ -508,6 +508,9 @@ def _refresh(db, hand_tids, all_tids):
         refresh_starting_stacks(db)
     for tid in sorted(all_tids):
         refresh_classification(db, SITE, tid)
+    if hand_tids or all_tids:                    # hand search: the hands, and the name / buy-in a summary brings
+        from .hand_search import refresh_hand_facts
+        refresh_hand_facts(db, set(hand_tids) | set(all_tids))
 
 
 def import_texts(db, items, equity=True) -> ImportStats:
