@@ -94,6 +94,13 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .sd-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;margin-top:6px}.sd-legend span{display:inline-flex;gap:6px;align-items:center;cursor:help}
 .sd-legend i{width:16px;height:3px;border-radius:2px;display:inline-block}.sd-legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)!important}
+.hs-filters{display:grid;gap:8px}.hs-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.hs-row select,.hs-row input{font:inherit;font-size:.88rem;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
+.hs-row input[type=number]{width:5.5em}.hs-filters details summary{cursor:pointer;color:var(--blue);font-size:.9rem}
+.hs-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;max-width:480px;user-select:none;touch-action:none}
+.hs-grid button{aspect-ratio:1;padding:0;font-size:.6rem;border-radius:3px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;min-width:0}
+.hs-grid button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+td.hs-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.hslist th:nth-child(2){text-align:left}
 .sess-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;align-items:center}
 .sess-nums{display:flex;gap:18px}.sess-nums div{font-size:.78rem;color:var(--muted)}.sess-nums b{display:block;font-size:1.1rem;color:var(--fg)}
 @media (max-width:620px){.sess-card{grid-template-columns:1fr}}
@@ -178,7 +185,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 </head>
 <body>
 <header><nav id="nav">
-  <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
+  <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/hands" data-i18n="nav.hands"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
   <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
   <a href="#/settings" class="gear" data-i18n-title="nav.settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
@@ -893,7 +900,7 @@ function renderHand() {
         <span class="m" id="cnt"></span>
         <label class="m" title="${t("replay.deckTip")}"><input type="checkbox" id="deck4" ${document.body.classList.contains("two-color") ? "" : "checked"}> ${t("replay.deck")}</label>
       </div>
-      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">${t("replay.prev")}</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">${t("replay.next")}</a>` : ""}</p>
+      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">${t("replay.prev")}</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">${t("replay.next")}</a>` : ""}</p>${hsNav(r.hand_id || location.hash.split("/").pop())}
     </div><div class="log" id="log">${log}</div></div>`;
   const go = k => { step = Math.max(0, Math.min(r.steps.length - 1, k)); drawStep(); };
   replay.go = go;
@@ -1007,12 +1014,26 @@ function findingCard(x, good) {
   return `<div class="box finding ${good ? "good" : "likely"}"><h3>${esc(x.title)} <span class="conf">${chip}</span></h3>
     <div class="card-row"><div class="big">${good ? esc(x.text) : findingNumber(x)}</div>${spark(x.spark, good)}</div>
     ${good ? "" : `<p style="margin:6px 0 0">${esc(x.tip)}</p><p class="m" style="margin:4px 0 0">${x.sample === "small" ? t("an.smallSample") + " " : ""}${t("an.about", {bb: num(x.cost_bb, 0)})}</p>`}
-    ${!good && x.worst && x.worst.length ? worstList(x.worst) : ""}</div>`;
+    ${!good && x.worst && x.worst.length ? worstList(x.worst) : ""}
+    ${leakQuery(x.key) != null ? `<p style="margin:6px 0 0"><a href="#/hands?${leakQuery(x.key)}">${t("card.showHands")}</a></p>` : ""}</div>`;
+}
+// a finding's hands in the Hands tab: the same filters as the spot it tests
+function leakQuery(key) {
+  const lines = {line_open: "action=open_raise", line_3bet: "action=threebet", line_4bet_cold: "action=cold_4bet",
+    line_open_shove: "action=open_shove", line_3bet_shove: "action=3bet_shove", bb_defence: "position=BB&action=call_vs_open",
+    sb_complete: "position=SB&action=limp", sb_flat: "position=SB&action=call_vs_open", fold_to_3bet: "period=30d&action=fold_to_3bet",
+    allin_ev: "all_in=1"};
+  if (key in lines) return lines[key];
+  if (key.startsWith("hand_")) return "cards=" + encodeURIComponent(key.slice(5));
+  if (key.startsWith("position_")) return "position=" + encodeURIComponent(key.slice(9));
+  const d = key.startsWith("depth_") && key.slice(6).match(/^(?:<(\d+)|(\d+)-(\d+)|(\d+)\+) BB$/);
+  if (d) return d[1] ? "stack_max=" + d[1] : d[2] ? "stack_min=" + d[2] + "&stack_max=" + d[3] : "stack_min=" + d[4];
+  return null;
 }
 function nearList(near, tested) {
   if (!near || !near.length) return "";
   return `<details class="more"><summary>${t("near.title", {n: near.length})}</summary><p class="m">${t("near.intro", {tested})}</p>
-    ${table([t("col.spot"), t("col.hands"), t("col.result"), "q"], near.map(x => `<tr><td>${esc(x.title)}</td><td>${num(x.hands, 0)}</td>
+    ${table([t("col.spot"), t("col.hands"), t("col.result"), "q"], near.map(x => `<tr><td>${leakQuery(x.key) != null ? `<a href="#/hands?${leakQuery(x.key)}">${esc(x.title)}</a>` : esc(x.title)}</td><td>${num(x.hands, 0)}</td>
       <td>${x.kind === "bb_per_100" ? sgn(x.value, 1) + " bb/100" : x.kind === "frequency" ? pct(x.value) : sgn(-x.cost_bb, 0) + " BB"}</td><td>${num(x.q, 2)}</td></tr>`))}</details>`;
 }
 // the 13x13 grid: result per hand by EV against folding; colours mix into the card colour, so both themes work
@@ -1029,7 +1050,7 @@ function heatGrid(heat, min) {
 }
 async function heatPick(k, heat, min) {
   const c = heat[k] || {n: 0, ev: 0}, box = document.getElementById("heat-pick");
-  box.innerHTML = `<b>${k}</b><p class="m">${t("heat.hands", {hand: k, n: t("common.handsN", {n: c.n}), ev: sgn(c.ev, 2), total: sgn(c.ev * c.n, 0)})}</p>
+  box.innerHTML = `<b>${k}</b> <a class="m" href="#/hands?cards=${encodeURIComponent(k)}">${t("heat.search")}</a><p class="m">${t("heat.hands", {hand: k, n: t("common.handsN", {n: c.n}), ev: sgn(c.ev, 2), total: sgn(c.ev * c.n, 0)})}</p>
     ${c.n < min ? `<p class="m">${t("heat.few")}</p>` : ""}`;
   if (!c.n) return;
   const r = await api(`/api/hands?cards=${encodeURIComponent(k)}`);
@@ -1182,6 +1203,101 @@ async function viewAnalysis(tab) {
     b.classList.add("on");
     heatPick(b.dataset.k, a.heat, a.min_heat);
   };
+}
+
+// ---- Hands: search every hand by spot, hand, stack and result -------------------------------------------------
+const HS_ACTIONS = ["rfi", "open_raise", "open_shove", "limp", "call_vs_open", "threebet", "3bet_shove", "fold_vs_open",
+                    "fold_to_3bet", "cold_4bet", "bb_check", "fold_unopened"];                          // labels: act.<key>
+const HS_POS = ["UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB", "BB", "BTN/SB"];
+const HS_PAGE = 100;
+const hsQuery = f => Object.entries(f).filter(([, v]) => v !== "" && v != null).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+function hsNav(id) {                                     // next / previous across the last search, in the replayer
+  let s = null;
+  try { s = JSON.parse(sessionStorage.getItem("hsNav") || "null"); } catch (e) { /* storage blocked: no search nav */ }
+  const i = s ? s.ids.indexOf(id) : -1;
+  if (i < 0) return "";
+  return `<p class="ctl m">${t("hs.nav", {i: i + 1, n: num(s.count, 0)})} · ${i > 0 ? `<a href="#/hand/${s.ids[i - 1]}">${t("hs.prev")}</a> ` : ""}${
+    i < s.ids.length - 1 ? `<a href="#/hand/${s.ids[i + 1]}">${t("hs.next")}</a> ` : ""}· <a href="${s.back}">${t("hs.back")}</a></p>`;
+}
+async function viewHands(qs) {
+  const mine = routeSeq, f = Object.fromEntries(new URLSearchParams(qs));
+  const tl = await api("/api/tournaments");
+  if (mine !== routeSeq) return;
+  const opt = (vals, cur, label, show) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
+    .sort((a, b) => a < b ? -1 : 1).map(v => `<option value="${esc(v)}" ${String(v) === (cur || "") ? "selected" : ""}>${show(v)}</option>`).join("");
+  const sel = (id, opts) => `<select id="${id}">${opts}</select>`;
+  const yn = (id, label) => sel(id, [["", `${label}: ${t("hs.any")}`], ["1", `${label}: ${t("hs.yes")}`], ["0", `${label}: ${t("hs.no")}`]]
+    .map(([v, l]) => `<option value="${v}" ${(f[id] || "") === v ? "selected" : ""}>${l}</option>`).join(""));
+  const picked = new Set((f.cards || "").split(",").filter(Boolean)), pos = new Set((f.position || "").split(",").filter(Boolean));
+  const R = "AKQJT98765432", grid = [];
+  for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
+    const k = i === j ? R[i] + R[j] : i < j ? R[i] + R[j] + "s" : R[j] + R[i] + "o";
+    grid.push(`<button data-k="${k}" class="${picked.has(k) ? "on" : ""}">${k}</button>`);
+  }
+  app.innerHTML = `<h1>${t("hs.title")}</h1><div class="box hs-filters">
+    <div class="hs-row">${sel("period", PERIODS.filter(k => k !== "custom").map(k => `<option value="${k === "max" ? "" : k}" ${(f.period || "") === (k === "max" ? "" : k) ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join(""))}
+      ${sel("buyin", opt(tl.map(x => x.buyin_total), f.buyin, t("hs.anyBuyin"), money))}
+      ${sel("format", opt(tl.map(x => x.format), f.format, t("hs.anyFormat"), v => t("format." + v)))}
+      ${sel("action", `<option value="">${t("hs.anyAction")}</option>` + HS_ACTIONS.map(k => `<option value="${k}" ${f.action === k ? "selected" : ""}>${t("act." + k)}</option>`).join(""))}</div>
+    <div class="hs-row"><span class="m">${t("hs.positions")}</span><span class="seg" id="hs-pos" style="margin:0">${HS_POS.map(p => `<button data-p="${p}" class="${pos.has(p) ? "on" : ""}">${p}</button>`).join("")}</span></div>
+    <div class="hs-row">${yn("all_in", t("hs.allIn"))}${yn("showdown", t("hs.showdown"))}
+      ${sel("result", [["", t("hs.anyResult")], ["won", t("hs.won")], ["lost", t("hs.lost")]].map(([v, l]) => `<option value="${v}" ${(f.result || "") === v ? "selected" : ""}>${l}</option>`).join(""))}
+      <label class="m">${t("hs.minBb")} <input id="min_bb" type="number" min="0" step="1" value="${esc(f.min_bb || "")}"></label>
+      <label class="m"><input id="ev" type="checkbox" ${f.ev === "1" ? "checked" : ""}> ${t("hs.byEv")}</label>
+      <label class="m">${t("hs.stack")} ${t("hs.from")} <input id="stack_min" type="number" min="0" step="1" value="${esc(f.stack_min || "")}"></label>
+      <label class="m">${t("hs.to")} <input id="stack_max" type="number" min="0" step="1" value="${esc(f.stack_max || "")}"></label>
+      <button id="hs-clear">${t("hs.clear")}</button></div>
+    <details ${picked.size ? "open" : ""}><summary>${t("hs.cards")} <span class="m" id="hs-picked">${picked.size ? t("hs.picked", {n: picked.size}) : ""}</span></summary>
+      <p class="m" style="margin:4px 0">${t("hs.cardsTip")}</p><div class="hs-grid" id="hs-grid">${grid.join("")}</div></details></div>
+    <p class="m" id="hs-sum"></p><div id="hs-list"></div><p><button id="hs-more" hidden></button></p>`;
+  let rows = [], last = null;
+  const read = () => {
+    const g = id => document.getElementById(id);
+    return {period: g("period").value, buyin: g("buyin").value, format: g("format").value, action: g("action").value,
+            position: [...pos].join(","), cards: [...picked].join(","), all_in: g("all_in").value, showdown: g("showdown").value,
+            result: g("result").value, min_bb: g("min_bb").value, ev: g("ev").checked ? "1" : "", stack_min: g("stack_min").value,
+            stack_max: g("stack_max").value};
+  };
+  const row = h => `<tr class="click" data-id="${h.hand_id}"><td>${dateTime(h.played_at)}</td><td class="hs-name" title="${esc(h.name || "")}">${esc(h.name || "")}</td>
+    <td>${esc(h.position || "")}</td><td>${h.cards ? cards(h.cards) : "–"}</td><td>${bbUnit(h.stack_bb, 0)}</td><td>${h.action ? t("spot." + h.action) : "–"}</td>
+    <td>${sgn(h.net_bb)}</td><td>${sgn(h.adj_bb)}</td></tr>`;
+  const draw = () => {
+    document.getElementById("hs-sum").innerHTML = last.count ? t("hs.summary", {hands: t("common.handsN", {n: last.count}), net: sgn(last.net_bb, 1), adj: sgn(last.adj_bb, 1)}) : "";
+    document.getElementById("hs-list").innerHTML = last.count ? table([t("col.when"), t("col.tournament"), t("col.pos"), t("col.cards"), t("col.stack"), t("col.action"), "BB", t("col.bbEvAdj")],
+      rows.map(row), "wrap1 hslist") : `<p class="m">${t("hs.none")}</p>`;
+    const more = document.getElementById("hs-more"), left = last.count - rows.length;
+    more.hidden = left <= 0;
+    more.textContent = t("hs.more", {n: num(left, 0)});
+  };
+  const run = async (append = false) => {
+    const q = hsQuery(read()), seq = routeSeq;
+    history.replaceState(null, "", "#/hands" + (q ? "?" + q : ""));
+    const r = await api(`/api/search?${q}${q ? "&" : ""}offset=${append ? rows.length : 0}&limit=${HS_PAGE}`);
+    if (seq !== routeSeq) return;
+    rows = append ? rows.concat(r.hands) : r.hands;
+    last = r;
+    draw();
+  };
+  let timer = null;
+  const later = () => { clearTimeout(timer); timer = setTimeout(() => run(), 250); };
+  app.querySelectorAll(".hs-filters select, .hs-filters input").forEach(el => el.addEventListener(el.type === "number" ? "input" : "change", later));
+  document.getElementById("hs-pos").onclick = e => { const b = e.target.closest("button[data-p]"); if (!b) return;
+    pos.has(b.dataset.p) ? pos.delete(b.dataset.p) : pos.add(b.dataset.p); b.classList.toggle("on"); later(); };
+  // the grid: click a cell to pick it, drag across cells to pick or drop several at once
+  let painting = null;
+  const paint = b => { if (!b || painting === null) return; painting ? picked.add(b.dataset.k) : picked.delete(b.dataset.k);
+    b.classList.toggle("on", painting); document.getElementById("hs-picked").textContent = picked.size ? t("hs.picked", {n: picked.size}) : ""; };
+  const gridEl = document.getElementById("hs-grid");
+  gridEl.addEventListener("pointerdown", e => { const b = e.target.closest("button[data-k]"); if (!b) return; e.preventDefault();
+    painting = !picked.has(b.dataset.k); paint(b); });
+  gridEl.addEventListener("pointerover", e => paint(e.target.closest("button[data-k]")));
+  document.addEventListener("pointerup", () => { if (painting !== null) { painting = null; later(); } }, {once: false});
+  document.getElementById("hs-clear").onclick = () => { location.hash = "#/hands"; };
+  document.getElementById("hs-more").onclick = () => run(true);
+  document.getElementById("hs-list").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (!tr) return;
+    try { sessionStorage.setItem("hsNav", JSON.stringify({ids: last.ids, count: last.count, back: location.hash})); } catch (err) { /* no search nav */ }
+    location.hash = "#/hand/" + tr.dataset.id; };
+  await run();
 }
 
 // ---- Import -----------------------------------------------------------------
@@ -1386,6 +1502,7 @@ async function route(keepScroll) {
     else if (h === "#/analysis" || h.startsWith("#/analysis?")) await viewAnalysis(new URLSearchParams(h.split("?")[1] || "").get("tab"));
     else if (h === "#/import") await viewImport();
     else if (h === "#/session") await viewSession();
+    else if (h === "#/hands" || h.startsWith("#/hands?")) await viewHands(h.split("?")[1] || "");
     else if (h === "#/luck") viewLuck();
     else if (h === "#/review") await viewReview();
     else if (h === "#/settings") await viewSettings();
