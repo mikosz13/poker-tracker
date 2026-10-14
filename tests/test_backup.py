@@ -1,6 +1,7 @@
 """Backup and restore of the SQLite database (pokertracker/backup.py)."""
 import sqlite3
 import tempfile
+from contextlib import closing
 import unittest
 from pathlib import Path
 
@@ -41,7 +42,7 @@ class BackupTests(unittest.TestCase):
 
     def test_an_older_backup_is_upgraded(self):
         path = make_backup(self.url, self.dir)
-        with sqlite3.connect(path) as c:
+        with closing(sqlite3.connect(path)) as c, c:
             c.execute("UPDATE schema_version SET version = 7")
             c.execute("DELETE FROM hand_facts")
         restore(self.url, path)
@@ -53,10 +54,10 @@ class BackupTests(unittest.TestCase):
         text = self.dir / "notes.db"
         text.write_text("not a database")
         other = self.dir / "other.db"
-        with sqlite3.connect(other) as c:
+        with closing(sqlite3.connect(other)) as c, c:
             c.execute("CREATE TABLE x (a)")
         newer = Path(make_backup(self.url, self.dir))
-        with sqlite3.connect(newer) as c:
+        with closing(sqlite3.connect(newer)) as c, c:
             c.execute(f"UPDATE schema_version SET version = {LATEST + 1}")
         for path, code in ((text, "unreadable"), (other, "not_ours"), (newer, "too_new"), (self.dir / "missing.db", "not_found")):
             with self.assertRaises(BackupError) as e:
