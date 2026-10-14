@@ -96,6 +96,17 @@ class ServerTests(unittest.TestCase):
             self.assertTrue(Path(done["saved"]).exists())
             self.assertEqual(self.post("/api/backup/check", {"path": out + "/nope.db"})[1]["code"], "not_found")
         self.assertEqual(self.post("/api/backup", {}, token=False)[0], 403)
+        # export: a hand as text, a CSV saved where POKERTRACKER_EXPORT_DIR says (Downloads otherwise)
+        text = json.loads(self.get("/api/text/hand/TM1000000002?lang=en")[1])["text"]
+        self.assertIn("Hero's result:", text)
+        import os
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as out, mock.patch.dict(os.environ, {"POKERTRACKER_EXPORT_DIR": out}):
+            status, r = self.post("/api/export", {"kind": "hands", "query": "cards=KK", "lang": "pl"})
+            self.assertEqual((status, r["rows"], Path(r["path"]).parent), (200, 2, Path(out)))   # KK vs AA, the 3-way KK
+            self.assertTrue(Path(r["path"]).read_text(encoding="utf-8").startswith("\ufeffdata;"))
+        self.assertEqual(self.post("/api/export", {"kind": "nope"})[0], 400)
+        self.assertEqual(self.post("/api/export", {"kind": "hands"}, token=False)[0], 403)
 
         t = json.loads(self.get("/api/tournament/900001")[1])
         self.assertEqual(len(t["hand_list"]), 3)

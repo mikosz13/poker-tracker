@@ -5,6 +5,10 @@
   overwritten). "Restore from a backup" checks the file first (a Poker Tracker database this version can open; an older
   one is upgraded, a newer one or a foreign file is refused), keeps the current database next to itself, then replaces
   it. In the app window a system file dialog picks the file. PostgreSQL users back up with pg_dump.
+- Export: "Copy the hand" in the replayer and "Copy the result" on a tournament give plain text for forums and chats
+  (positions instead of opponent ids, stacks in BB, every street and the board, shown cards, the result and the result
+  by EV; a provisional result says so). "Export CSV" on the tournament list and in Hands saves what is shown (with the
+  filters) into Downloads: UTF-8 for Excel, decimal commas and ';' in Polish, a "provisional" column; never overwrites.
 - New tab Hands: filter every hand by period, buy-in, format, positions, starting hands (click or drag across the
   13×13 grid), stack, preflop action (the Analysis v2 definitions), all-in, showdown and result (actual or by EV);
   newest first with totals and "show more". A hand opens in the replayer with next / previous across the results and

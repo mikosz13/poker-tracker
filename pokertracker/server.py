@@ -333,6 +333,15 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 if path == "/api/period":                             # the same bounds, for the tournament list
                     period, start, end, (since, until) = chosen_period(db, query)
                     return self._send(200, {"period": period, "since": since, "until": until})
+                if path.startswith("/api/text/"):                     # /api/text/hand/<id>, /api/text/tournament/<id>
+                    from .export import hand_text, tournament_text
+                    kind, _, key = path[len("/api/text/"):].partition("/")
+                    try:
+                        text = hand_text(db, key, lang) if kind == "hand" else tournament_text(db, int(key), lang) \
+                            if kind == "tournament" else None
+                    except ValueError:
+                        text = None
+                    return self._send(200 if text else 404, {"text": text})
                 if path == "/api/search":                             # the Hands tab (hand_search.build_where)
                     from .hand_search import search
                     f = {k: v[0] for k, v in query.items()}
@@ -421,6 +430,21 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 except BackupError as e:
                     return self._send(400, {"error": str(e), "code": e.code})
                 return self._send(404, {"error": "not found"})
+            if self.path == "/api/export":                        # a CSV into Downloads: {kind, query, lang}
+                from urllib.parse import parse_qs as qs
+                from .export import hands_csv, save, tournaments_csv
+                query = qs(str(body.get("query") or ""))
+                f = {k: v[0] for k, v in query.items()}
+                kind, lang = body.get("kind"), pick(body.get("lang"))
+                if kind not in ("tournaments", "hands"):
+                    return self._send(400, {"error": "unknown export", "code": "bad_export"})
+                with Database(url) as db:
+                    if f.get("period"):
+                        _, _, _, (f["since"], f["until"]) = chosen_period(db, query)
+                    text, rows = (tournaments_csv if kind == "tournaments" else hands_csv)(db, f, lang)
+                    stem = "poker-tracker-" + ("turnieje" if lang == "pl" else "tournaments") if kind == "tournaments" \
+                        else "poker-tracker-" + ("rece" if lang == "pl" else "hands")
+                    return self._send(200, {"path": save(text, stem, os.environ.get("POKERTRACKER_EXPORT_DIR")), "rows": rows})
             if self.path == "/api/display":                       # deck colours, period, language, theme
                 with Database(url) as db:
                     if body.get("lang") in LANGS:
