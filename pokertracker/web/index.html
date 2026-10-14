@@ -110,6 +110,17 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .pc2.worst{background:var(--neg);border-color:var(--neg);color:#fff}
 .finding{border-left:4px solid var(--line);margin:10px 0}.finding.likely{border-left-color:var(--neg)}
 .finding.possible{border-left-color:var(--orange)}.finding.good{border-left-color:var(--pos)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:10px}.cards .finding{margin:0}
+.card-row{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.spark{display:inline-flex;flex-direction:column;align-items:flex-end;font-size:.72rem}
+.heatwrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:860px){.heatwrap{grid-template-columns:1fr}}
+.heat{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;max-width:560px}
+.heat .hc{aspect-ratio:1;padding:0;border:0;border-radius:4px;font-size:.66rem;font-weight:700;color:var(--fg);cursor:pointer;min-width:0}
+.heat .hc.p{background:color-mix(in srgb,var(--pos) var(--mix),var(--card))}.heat .hc.n{background:color-mix(in srgb,var(--neg) var(--mix),var(--card))}
+.heat .hc.few{background:var(--card);color:var(--muted);font-weight:500}.heat .hc.on{outline:2px solid var(--blue)}
+.heat-legend{display:flex;gap:8px;align-items:center;margin-top:6px;font-size:.8rem}
+.heat-legend .hg{width:150px;height:9px;border-radius:5px;background:linear-gradient(90deg,var(--neg),var(--card) 50%,var(--pos))}
 .finding h3{margin:0 0 4px;font-size:1rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .conf{display:inline-block;font-size:.72rem;font-weight:700;border-radius:6px;padding:1px 6px;background:var(--bg);border:1px solid var(--line)}
 .finding .big{font-size:1.05rem;font-weight:700;margin:2px 0}.finding details{margin-top:6px}
@@ -949,6 +960,50 @@ const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.le
 
 const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money"];   // labels: an.tab.<key>
 
+// Analysis v2 stage 2: a finding as a card (cards only at q <= 0.05), with a mini-trend of the cumulative result by EV
+function spark(values, good) {
+  if (!values || values.length < 2) return "";
+  const w = 130, hh = 34, lo = Math.min(0, ...values), hi = Math.max(0, ...values), y = v => (hh - 3 - (v - lo) / ((hi - lo) || 1) * (hh - 6)).toFixed(1);
+  return `<span class="spark" title="${esc(t("card.trend"))}"><svg width="${w}" height="${hh}" viewBox="0 0 ${w} ${hh}"><line x1="0" x2="${w}" y1="${y(0)}" y2="${y(0)}" style="stroke:var(--line)"/>
+    <polyline fill="none" style="stroke:${good ? "var(--pos)" : "var(--neg)"};stroke-width:2" points="${values.map((v, k) => `${(k * w / (values.length - 1)).toFixed(1)},${y(v)}`).join(" ")}"/></svg>
+    <span class="m">${t("card.trend")}</span></span>`;
+}
+function findingCard(x, good) {
+  const chip = x.q == null ? t("card.fact") : `${t("conf.likely")} · q = ${num(x.q, 3)}`;     // the all-in EV card is a fact, not a test
+  return `<div class="box finding ${good ? "good" : "likely"}"><h3>${esc(x.title)} <span class="conf">${chip}</span></h3>
+    <div class="card-row"><div class="big">${good ? esc(x.text) : findingNumber(x)}</div>${spark(x.spark, good)}</div>
+    ${good ? "" : `<p style="margin:6px 0 0">${esc(x.tip)}</p><p class="m" style="margin:4px 0 0">${x.sample === "small" ? t("an.smallSample") + " " : ""}${t("an.about", {bb: num(x.cost_bb, 0)})}</p>`}
+    ${!good && x.worst && x.worst.length ? worstList(x.worst) : ""}</div>`;
+}
+function nearList(near, tested) {
+  if (!near || !near.length) return "";
+  return `<details class="more"><summary>${t("near.title", {n: near.length})}</summary><p class="m">${t("near.intro", {tested})}</p>
+    ${table([t("col.spot"), t("col.hands"), t("col.result"), "q"], near.map(x => `<tr><td>${esc(x.title)}</td><td>${num(x.hands, 0)}</td>
+      <td>${x.kind === "bb_per_100" ? sgn(x.value, 1) + " bb/100" : x.kind === "frequency" ? pct(x.value) : sgn(-x.cost_bb, 0) + " BB"}</td><td>${num(x.q, 2)}</td></tr>`))}</details>`;
+}
+// the 13x13 grid: result per hand by EV against folding; colours mix into the card colour, so both themes work
+function heatGrid(heat, min) {
+  const R = "AKQJT98765432", cells = [];
+  for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
+    const k = i === j ? R[i] + R[j] : i < j ? R[i] + R[j] + "s" : R[j] + R[i] + "o", c = heat[k] || {n: 0, ev: 0};
+    const few = c.n < min, v = Math.max(-1, Math.min(1, c.ev)), mix = Math.round(Math.abs(v) * 85);
+    cells.push(`<button class="hc ${few ? "few" : v >= 0 ? "p" : "n"}" data-k="${k}" style="--mix:${mix}%" title="${esc(t("heat.tip", {hand: k, n: t("common.handsN", {n: c.n}), ev: sgn(c.ev, 2)}))}">${k}</button>`);
+  }
+  return `<div class="heatwrap"><div><div class="heat" id="heat">${cells.join("")}</div>
+    <div class="heat-legend"><span class="hg"></span><span class="m">${t("heat.legend")}</span></div></div>
+    <div class="box" id="heat-pick"><p class="m" style="margin:0">${t("heat.pick")}</p></div></div>`;
+}
+async function heatPick(k, heat, min) {
+  const c = heat[k] || {n: 0, ev: 0}, box = document.getElementById("heat-pick");
+  box.innerHTML = `<b>${k}</b><p class="m">${t("heat.hands", {hand: k, n: t("common.handsN", {n: c.n}), ev: sgn(c.ev, 2), total: sgn(c.ev * c.n, 0)})}</p>
+    ${c.n < min ? `<p class="m">${t("heat.few")}</p>` : ""}`;
+  if (!c.n) return;
+  const r = await api(`/api/hands?cards=${encodeURIComponent(k)}`);
+  box.innerHTML += table([t("col.when"), t("col.pos"), t("col.stack"), t("col.vsFold"), "BB"], r.hands.map(x =>
+    `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'" title="${esc(x.name || "")}"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
+     <td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.vs_fold)}</td><td>${sgn(x.net_bb)}</td></tr>`), "scrollbox");
+}
+
 // Analysis v2: a rate over its opportunities, "31,1%" with n under it; greyed below the minimum; definitions in tooltips
 const defHead = (label, key) => `<span class="def" title="${esc(t("def." + key))}">${label}</span>`;
 function rateCell(r, key, title) {
@@ -1044,16 +1099,12 @@ async function viewAnalysis(tab) {
 
   if (tab === "leaks") {
     h += `<p class="m">${t("an.leaksIntro", {tested: a.tested})}</p><h2>${t("an.leaks")}</h2>`;
-    h += a.leaks.length ? a.leaks.map(l => `<div class="box finding ${l.confidence}">
-        <h3>${esc(l.title)} <span class="conf">${conf(l.confidence)}</span></h3>
-        <div class="big">${findingNumber(l)}</div><p style="margin:6px 0 0">${esc(l.tip)}</p>
-        <p class="m" style="margin:4px 0 0">${l.sample === "small" ? t("an.smallSample") + " " : ""}${t("an.about", {bb: num(l.cost_bb, 0)})}</p>
-        ${l.worst && l.worst.length ? worstList(l.worst) : ""}</div>`).join("")
-      : `<p class="m">${t("an.noLeaks", {tested: a.tested})}</p>`;
+    h += a.leaks.length ? `<div class="cards">${a.leaks.map(l => findingCard(l, false)).join("")}</div>`
+      : `<div class="box">${t("an.noLeaks", {tested: a.tested})}</div>${nearList(a.near, a.tested)}`;
     h += `<h2>${t("an.strengths")}</h2>`;
-    h += a.strengths.length ? a.strengths.map(x => `<div class="box finding good"><h3>${esc(x.title)}
-        ${x.confidence ? `<span class="conf">${conf(x.confidence)}</span>` : ""}</h3><p style="margin:0">${esc(x.text)}</p></div>`).join("")
+    h += a.strengths.length ? `<div class="cards">${a.strengths.map(x => findingCard(x, true)).join("")}</div>`
       : `<p class="m">${t("an.noStrengths")}</p>`;
+    h += `<h2>${t("heat.title")}</h2><p class="m">${t("heat.intro", {min: a.min_heat})}</p>${heatGrid(a.heat, a.min_heat)}`;
   }
 
   if (tab === "money") {
@@ -1088,6 +1139,13 @@ async function viewAnalysis(tab) {
   app.innerHTML = h;
   charts = [];
   if (tab === "overview") showdownChart(a.showdown);
+  if (tab === "leaks") document.getElementById("heat").onclick = e => {
+    const b = e.target.closest("button[data-k]");
+    if (!b) return;
+    document.querySelectorAll("#heat .hc.on").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    heatPick(b.dataset.k, a.heat, a.min_heat);
+  };
 }
 
 // ---- Import -----------------------------------------------------------------
