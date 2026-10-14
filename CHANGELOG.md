@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- New tab Hands: filter every hand by period, buy-in, format, positions, starting hands (click or drag across the
+  13×13 grid), stack, preflop action (the Analysis v2 definitions), all-in, showdown and result (actual or by EV);
+  newest first with totals and "show more". A hand opens in the replayer with next / previous across the results and
+  a way back. Leak and strength cards, the "closest to the line" list and the starting-hand grid link to their hands.
 - Hand search, data and API: every Hero hand gets a row in `hand_facts` (position, hand type, stack in BB, the
   preflop action by the Analysis v2 definitions, all-in, showdown, result and result by EV), rebuilt after each import
   and filled by database schema 8. `/api/search` filters by period, buy-in, format, position, hands, stack, preflop
