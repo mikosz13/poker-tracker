@@ -4,6 +4,15 @@
 - Tournament stack chart: every all-in is a dot (green won, red lost, grey split on the real board), with a legend.
   The tooltip adds Hero's cards against the opponents', the street, Hero's equity when the money went in, the result
   and the luck in BB; a click opens the hand in the replayer, as for any point.
+- Analysis v2, stage 2 (Leaks and strengths):
+  - A leak or strength card only at q <= 0.05 after the correction for every spot; the "possible" level is gone.
+    When no leak passes, a message and a folded list of the five spots closest to the line (spot, hands, result, q).
+  - Cards show a mini-trend (the cumulative result by EV over time), the hands behind a leak with links to the
+    replayer, and "a fact (by EV)" for the all-in EV card.
+  - Folding to 3-bets is compared with your own history (the last 30 days against the rest, 30+ spots a side) instead
+    of a 70 % reference range.
+  - Starting hands: a 13×13 grid of the result per hand by EV against folding the same hand; fewer than 30 hands
+    greyed, n and the meaning of the colour in the tooltip, a click lists the hands with links to the replayer.
 - Test: importing a Day 2 summary after a provisional amount leaves one record with the amount from the file.
 - The ROI tile in Analysis says in its tooltip why it has no interval and links to the 95 % interval in Money;
   "How luck works" explains the interval and the verdicts built on it. Money keeps the interval.

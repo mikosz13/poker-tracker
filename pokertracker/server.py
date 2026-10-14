@@ -137,6 +137,19 @@ def play_trend(db, site=SITE):
     return _TREND_CACHE[key]
 
 
+def hands_of_class(db, cards, site=SITE, limit=300):
+    """Every hand of one starting-hand type (AKs, 72o, QQ), newest first, with its result by EV against folding."""
+    from .analysis import load_hands
+    from .dashboard import hand_class
+    rows = [h for h in load_hands(db, site) if hand_class(h["cards"]) == cards]
+    names = {r["tournament_id"]: r["name"] for r in db.query("SELECT tournament_id, name FROM tournaments WHERE site = ?",
+                                                             (site,))}
+    return {"cards": cards, "n": len(rows), "hands": [
+        {"hand_id": h["hand_id"], "at": h["at"], "name": names.get(h["tournament_id"]), "position": h["position"],
+         "cards": h["cards"], "stack_bb": round(h["stack_bb"], 1), "vs_fold": round(h["adj_bb"] + h["posted_bb"], 2),
+         "net_bb": round(h["net_bb"], 1)} for h in reversed(rows[-limit:])]}
+
+
 def session_bounds(s):
     """(since, until) of a session from last_session: from the earliest start (a late registration starts before its
     first hand) to the last hand."""
@@ -319,6 +332,8 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 if path == "/api/period":                             # the same bounds, for the tournament list
                     period, start, end, (since, until) = chosen_period(db, query)
                     return self._send(200, {"period": period, "since": since, "until": until})
+                if path == "/api/hands":                              # ?cards=AKs: the hands of one grid cell
+                    return self._send(200, hands_of_class(db, (query.get("cards") or [""])[0]))
                 if path == "/api/analysis":                           # always the whole history
                     return self._send(200, analysis_data(db, lang=lang))
                 if path == "/api/tournaments":

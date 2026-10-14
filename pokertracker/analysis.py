@@ -4,13 +4,16 @@ How a finding is made:
 - Results are EV-adjusted: in a hand where Hero was all-in with cards to come, the all-in EV replaces the actual
   result, so a single lost or won coinflip does not create a "leak" or a "strength".
 - Leaks are measured against a baseline, never as raw sums: a call from the blinds is compared with folding in the
-  same hand, which loses exactly the blind and ante Hero posted; folding to 3-bets is a frequency.
+  same hand, which loses exactly the blind and ante Hero posted; folding to 3-bets is compared with Hero's own
+  history (the last 30 days against the rest), not with a reference range.
 - Every spot that is checked is one test. Their p-values are corrected together for multiple comparisons
-  (Benjamini-Hochberg): "likely" at q <= 0.05, "possible" at q <= 0.20, otherwise nothing is shown.
-- Every number carries its sample; reference ranges are rough guides, nothing comes from solvers.
+  (Benjamini-Hochberg): a leak or strength card only at q <= 0.05 (decision 2026-10-13); the spots closest to that
+  threshold are listed apart, as still within chance.
+- Every number carries its sample; nothing comes from solvers.
 """
 import math
 from collections import defaultdict
+from datetime import datetime, timedelta
 
 import numpy as np
 
@@ -25,9 +28,9 @@ HIDE_BELOW = 30          # fewer hands than this: the spot is not tested
 SMALL_BELOW = 100        # fewer hands than this: shown as a small sample
 MIN_GROUP = 300          # stack depths and positions need this many hands to be tested
 DEPTHS = ((0, 10, "<10 BB"), (10, 15, "10-15 BB"), (15, 25, "15-25 BB"), (25, 40, "25-40 BB"), (40, 10 ** 9, "40+ BB"))
-FOLD_TO_3BET_DEPTHS = ((0, 20, "<20 BB"), (20, 40, "20-40 BB"), (40, 10 ** 9, "40+ BB"))
-FOLD_TO_3BET_HIGH = 0.70  # above this, opponents can 3-bet you with anything (rough guide)
-FOLD_TO_3BET_GUIDE = 0.55  # roughly where solid players are; used only to size the leak
+FOLD3_DAYS = 30          # fold to 3-bet: the last 30 days against the rest of the history
+NEAR_SHOWN = 5           # spots closest to the threshold, listed when they are not cards
+SPARK_POINTS = 40        # points of a card's mini-trend
 UNRANKED_POSITIONS = ("SB", "BB", "BTN/SB")
 Q_LIKELY, Q_POSSIBLE = 0.05, 0.20
 BOOTSTRAP_SAMPLES, BOOTSTRAP_SEED = 10_000, 20261011
@@ -190,22 +193,56 @@ DEPTH_TIPS = {"10-15 BB": "an.tip.depth10", "25-40 BB": "an.tip.depth25", "40+ B
 LINES = ("open", "3bet", "4bet_cold", "open_shove", "3bet_shove")    # titles: an.line.<spot>
 
 
+def _spark(values, points=SPARK_POINTS):
+    """Cumulative sum over time (the hands are in time order), thinned to a few points for a card's mini-trend."""
+    out, run = [], 0.0
+    for v in values:
+        run += v
+        out.append(run)
+    if len(out) > points:
+        out = [out[round(i * (len(out) - 1) / (points - 1))] for i in range(points)]
+    return [round(v, 1) for v in out]
+
+
 def _versus_fold(key, played, lang):
     """A decision from a blind compared with folding in the same hand, which would have lost exactly the blind and
     ante Hero posted. The difference per hand is (EV-adjusted result + posted chips)."""
     if len(played) < HIDE_BELOW:
         return None
-    mean, se = _mean_se([h["adj_bb"] + h["posted_bb"] for h in played])
+    values = [h["adj_bb"] + h["posted_bb"] for h in played]
+    mean, se = _mean_se(values)
     played_mean = sum(h["adj_bb"] for h in played) / len(played)
     fold_mean = -sum(h["posted_bb"] for h in played) / len(played)
     return {"key": key, "title": t(lang, f"an.t.{key}"), "kind": "vs_fold", "hands": len(played),
             "value": round(mean, 2), "z": mean / se if se else None, "played": round(played_mean, 2),
             "folded": round(fold_mean, 2), "cost_bb": round(-mean * len(played), 0),
-            "gain_bb": round(mean * len(played), 0), "tip": t(lang, f"an.tip.{key}"), "worst": _worst(played)}
+            "gain_bb": round(mean * len(played), 0), "tip": t(lang, f"an.tip.{key}"), "worst": _worst(played),
+            "spark": _spark(values)}
 
 
-def spot_tests(hands, lang="en"):
-    """Every spot checked, with its z score (negative = worse than the baseline). One family of tests."""
+def _fold_to_3bet_trend(hands, lang, now=None):
+    """Folding after Hero's own open was re-raised, in the last 30 days against the rest of the history (decision
+    2026-10-13: no reference range). A leak only when Hero folds more than before, beyond chance; 30+ spots a side."""
+    since = ((now or datetime.now()) - timedelta(days=FOLD3_DAYS)).strftime("%Y-%m-%d %H:%M")
+    faced = [h for h in hands if h["spot"] == "open" and h["after_3bet"]]
+    recent = [h for h in faced if h["at"] >= since]
+    older = [h for h in faced if h["at"] < since]
+    if min(len(recent), len(older)) < HIDE_BELOW:
+        return None
+    folds = [h for h in recent if h["after_3bet"] == "fold"]
+    fr, fo = len(folds) / len(recent), sum(1 for h in older if h["after_3bet"] == "fold") / len(older)
+    z = preflop.two_proportions(len(folds), len(recent), round(fo * len(older)), len(older))   # > 0: folding more now
+    lost = -sum(h["adj_bb"] for h in folds) / len(folds) if folds else 0.0
+    return {"key": "fold_to_3bet", "title": t(lang, "an.t.fold_to_3bet"), "kind": "frequency", "hands": len(recent),
+            "value": round(100 * fr, 1), "z": -z,                        # folding more than before is the bad side
+            "guide": t(lang, "an.guide.fold_to_3bet", older=num(lang, 100 * fo, 1), n=len(older)),
+            "cost_bb": round(max(0.0, fr - fo) * len(recent) * lost, 0), "gain_bb": 0,
+            "tip": t(lang, "an.tip.fold_to_3bet"), "side": "leak", "worst": _worst(folds)}
+
+
+def spot_tests(hands, lang="en", now=None):
+    """Every spot checked, with its z score (negative = worse than the baseline). One family of tests.
+    now: the end of the 30-day window for fold to 3-bet (default: now)."""
     tests = []
     by = defaultdict(list)
     for h in hands:
@@ -214,23 +251,7 @@ def spot_tests(hands, lang="en"):
     tests.append(_versus_fold("sb_complete", by[("SB", "limp")], lang))
     tests.append(_versus_fold("sb_flat", by[("SB", "call_vs_open")], lang))
 
-    # folding after your own open was 3-bet: a frequency against a rough guide, by stack depth
-    for lo, hi, label in FOLD_TO_3BET_DEPTHS:
-        faced = [h for h in hands if h["spot"] == "open" and h["after_3bet"] and lo <= h["stack_bb"] < hi]
-        if len(faced) < HIDE_BELOW:
-            continue
-        folds = [h for h in faced if h["after_3bet"] == "fold"]
-        freq = len(folds) / len(faced)
-        se = (FOLD_TO_3BET_HIGH * (1 - FOLD_TO_3BET_HIGH) / len(faced)) ** 0.5
-        lost = -sum(h["adj_bb"] for h in folds) / len(folds) if folds else 0.0
-        tests.append({"key": f"fold_to_3bet_{label}", "title": t(lang, "an.t.fold_to_3bet", depth=label),
-                      "kind": "frequency", "hands": len(faced), "value": round(100 * freq, 1),
-                      "z": -(freq - FOLD_TO_3BET_HIGH) / se,          # folding more than the guide is the bad side
-                      "guide": t(lang, "an.guide.fold_to_3bet"),
-                      "cost_bb": round(max(0.0, freq - FOLD_TO_3BET_GUIDE) * len(faced) * lost, 0), "gain_bb": 0,
-                      "tip": t(lang, "an.tip.fold_to_3bet"),
-                      # one-sided: folding rarely is not praise (it can mean calling too much)
-                      "side": "leak", "worst": _worst(folds)})
+    tests.append(_fold_to_3bet_trend(hands, lang, now))
 
     def group_test(key, title, g, tip, kind="bb_per_100", vs_fold=False, side="two"):
         """vs_fold: measure against folding in the same hands (result + posted blind and ante), e.g. for hand types,
@@ -241,7 +262,7 @@ def spot_tests(hands, lang="en"):
         return {"key": key, "title": title, "kind": "vs_fold_total" if vs_fold else kind, "hands": len(g),
                 "value": round(100 * mean, 1) if kind == "bb_per_100" else round(total, 1),
                 "z": mean / se if se else None, "cost_bb": round(-total, 0), "gain_bb": round(total, 0),
-                "tip": tip, "worst": _worst(g), "side": side}
+                "tip": tip, "worst": _worst(g), "side": side, "spark": _spark(values)}
 
     for label in [d[2] for d in DEPTHS]:
         g = [h for h in hands if depth_label(h["stack_bb"]) == label]
@@ -273,12 +294,16 @@ def spot_tests(hands, lang="en"):
 
 
 def classify(tests, lang="en"):
-    """Correct the whole family for multiple comparisons and split it into leaks and strengths."""
+    """Correct the whole family for multiple comparisons and split it into leaks and strengths (cards only at
+    q <= 0.05), plus the leak-side spots closest to that threshold, which stay within chance."""
     q = benjamini_hochberg([p_value(x["z"], x.get("side", "two")) for x in tests])
-    leaks, strengths = [], []
+    leaks, strengths, near = [], [], []
     for x, qi in zip(tests, q):
-        conf = confidence_from_q(qi)
+        conf = "likely" if qi <= Q_LIKELY else None
         if not conf:
+            if x["z"] < 0 and x.get("side", "two") != "strength":
+                near.append({"key": x["key"], "title": x["title"], "hands": x["hands"], "kind": x["kind"],
+                             "value": x["value"], "cost_bb": x["cost_bb"], "q": round(qi, 2)})
             continue
         x = dict(x, q=round(qi, 4), z=round(x["z"], 2), confidence=conf, sample=_sample(x["hands"]))
         side = x.get("side", "two")
@@ -288,10 +313,12 @@ def classify(tests, lang="en"):
             text = x.get("praise") or t(lang, "an.strengthPer100", n=x["hands"],
                                         value=num(lang, x["value"], 1, sign=True))
             strengths.append({"key": x["key"], "title": x["title"], "hands": x["hands"], "sample": x["sample"],
-                              "confidence": conf, "z": x["z"], "q": x["q"], "text": text, "value": x["gain_bb"]})
-    leaks.sort(key=lambda x: (x["confidence"] != "likely", -x["cost_bb"]))
-    strengths.sort(key=lambda x: (x["confidence"] != "likely", -x["value"]))
-    return leaks, strengths
+                              "confidence": conf, "z": x["z"], "q": x["q"], "text": text, "value": x["gain_bb"],
+                              "spark": x.get("spark"), "worst": x.get("worst")})
+    leaks.sort(key=lambda x: -x["cost_bb"])
+    strengths.sort(key=lambda x: -x["value"])
+    near.sort(key=lambda x: x["q"])
+    return leaks, strengths, near[:NEAR_SHOWN]
 
 
 # ---- money -------------------------------------------------------------------------------------------------------
@@ -475,6 +502,17 @@ def overview(hands, db, site=SITE):
                                               (site,)))}
 
 
+def starting_hands(hands):
+    """The 13x13 grid: per hand type, how many hands and the result per hand by EV against folding the same hand
+    (adding back the blind and ante posted, so hands that are usually folded are not red just for the blinds)."""
+    groups = defaultdict(lambda: [0, 0.0])
+    for h in hands:
+        if k := hand_class(h["cards"]):
+            groups[k][0] += 1
+            groups[k][1] += h["adj_bb"] + h["posted_bb"]
+    return {k: {"n": n, "ev": round(total / n, 2)} for k, (n, total) in groups.items()}
+
+
 SHOWDOWN_POINTS = 300    # the chart's points at most; the last hand is always one of them
 
 
@@ -515,10 +553,11 @@ def analysis_data(db, site=SITE, lang="en"):
     """The Analysis view: always the whole history. lang: the language of titles, tips and facts."""
     hands = load_hands(db, site)
     tests = spot_tests(hands, lang)
-    leaks, strengths = classify(tests, lang)
+    leaks, strengths, near = classify(tests, lang)
     if (a := all_in_strength(db, site, lang)) is not None:
         strengths.insert(0, a)
-    return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths,
+    return {"overview": overview(hands, db, site), "leaks": leaks, "strengths": strengths, "near": near,
+            "heat": starting_hands(hands), "min_heat": HIDE_BELOW,
             # Analysis v2: PT4-style rates over their opportunities, by position and stack depth, and the trend
             "showdown": showdown_lines(hands),
             "preflop": {"total": preflop.summarise(hands), "positions": preflop.by_position(hands),
