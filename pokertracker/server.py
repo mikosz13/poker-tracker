@@ -1,5 +1,6 @@
 """Local HTTP server for the desktop app: JSON API + the single-page UI. Binds to 127.0.0.1 only."""
 import json
+import os
 import secrets
 import threading
 from datetime import date, datetime, timedelta
@@ -405,6 +406,21 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
+            if self.path.startswith("/api/backup"):               # /api/backup, /api/backup/check, /api/backup/restore
+                from .backup import BackupError, check_backup, make_backup, restore
+                try:
+                    if self.path == "/api/backup":
+                        return self._send(200, {"path": make_backup(url, os.environ.get("POKERTRACKER_EXPORT_DIR"))})
+                    if self.path == "/api/backup/check":
+                        return self._send(200, check_backup(str(body.get("path") or "")))
+                    if self.path == "/api/backup/restore":
+                        if job.state.get("running"):
+                            return self._send(409, {"error": "An import is running.", "code": "import_running"})
+                        info, saved = restore(url, str(body.get("path") or ""))
+                        return self._send(200, {**info, "saved": saved})
+                except BackupError as e:
+                    return self._send(400, {"error": str(e), "code": e.code})
+                return self._send(404, {"error": "not found"})
             if self.path == "/api/display":                       # deck colours, period, language, theme
                 with Database(url) as db:
                     if body.get("lang") in LANGS:

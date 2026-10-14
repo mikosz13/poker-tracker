@@ -83,6 +83,20 @@ class ServerTests(unittest.TestCase):
                          {"period": "custom", "since": "2026-01-02 00:00:00", "until": "2026-01-02 23:59:59"})
         self.post("/api/display", {"dashboard_period": "max"})
 
+        # backup into a temporary folder, check it, restore it (token required)
+        import os
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as out, mock.patch.dict(os.environ, {"POKERTRACKER_EXPORT_DIR": out}):
+            status, r = self.post("/api/backup", {})
+            self.assertEqual((status, Path(r["path"]).parent), (200, Path(out)))
+            status, info = self.post("/api/backup/check", {"path": r["path"]})
+            self.assertEqual((status, info["hands"]), (200, 4))
+            status, done = self.post("/api/backup/restore", {"path": r["path"]})
+            self.assertEqual(status, 200)
+            self.assertTrue(Path(done["saved"]).exists())
+            self.assertEqual(self.post("/api/backup/check", {"path": out + "/nope.db"})[1]["code"], "not_found")
+        self.assertEqual(self.post("/api/backup", {}, token=False)[0], 403)
+
         t = json.loads(self.get("/api/tournament/900001")[1])
         self.assertEqual(len(t["hand_list"]), 3)
         hand = json.loads(self.get("/api/hand/" + t["hand_list"][1]["hand_id"])[1])

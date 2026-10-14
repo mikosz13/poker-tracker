@@ -20,6 +20,7 @@ flowchart LR
 | `hands.py`, `summary.py` | Regex parsers for GGPoker hand histories and tournament summaries; chip conservation per hand |
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
+| `backup.py` | Backup (SQLite online backup into Downloads, dated, never overwritten) and restore (checks the file is ours and not newer, keeps the current database aside, copies in, then upgrades it with the migrations) |
 | `hand_search.py` | Hand search: `hand_facts` (one row per Hero hand: position, hand type, stack, Hero's first preflop spot and the Analysis v2 counts, all-in, showdown, result and result by EV) rebuilt after each import and by migration 8; `search` runs one parameterised query (fixed SQL per filter, values as parameters). `tools/bench_hand_search.py` checks 500k synthetic hands answer in under 1 s |
 | `summary.py` (multi-day) | Prize split into cash and ticket face value; `stage`, `advanced_to`; `importer.refresh_stages` sets `event_id`: every flight that went through joins its later day in `tournament_results`. A later day without a summary takes its stage from the name in its hands and is flagged (`summary_missing`); `provisional_prize` (CLI `provisional`) counts until the summary replaces it |
 | `places.py` | Final place as a share of the field: top 10% / 15% with a bootstrap interval, and bands for the place chart |

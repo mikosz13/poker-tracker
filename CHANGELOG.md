@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+- Settings → Backup: "Make a backup" copies the whole database into Downloads (`poker-tracker-2026-10-14.db`, never
+  overwritten). "Restore from a backup" checks the file first (a Poker Tracker database this version can open; an older
+  one is upgraded, a newer one or a foreign file is refused), keeps the current database next to itself, then replaces
+  it. In the app window a system file dialog picks the file. PostgreSQL users back up with pg_dump.
 - New tab Hands: filter every hand by period, buy-in, format, positions, starting hands (click or drag across the
   13×13 grid), stack, preflop action (the Analysis v2 definitions), all-in, showdown and result (actual or by EV);
   newest first with totals and "show more". A hand opens in the replayer with next / previous across the results and
