@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Hand search, data and API: every Hero hand gets a row in `hand_facts` (position, hand type, stack in BB, the
+  preflop action by the Analysis v2 definitions, all-in, showdown, result and result by EV), rebuilt after each import
+  and filled by database schema 8. `/api/search` filters by period, buy-in, format, position, hands, stack, preflop
+  action, all-in, showdown and result, newest first with paging. On 500,000 synthetic hands every tested combination
+  answers in under 0.15 s (`python tools/bench_hand_search.py`).
 - Dashboard v3: about 1.5 screens instead of 3. The last session as a short card with a link to its own screen (the
   full session and the hands to review); four tiles (profit, ROI, tournaments, luck) and one line of smaller numbers;
   one chart with a $ / BB switch; "Worth knowing" (best tournament, tickets, whether your play changed beyond noise);

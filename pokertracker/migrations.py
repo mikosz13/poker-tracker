@@ -6,7 +6,7 @@ step above its stored version, in order, each one committed together with the ne
 from .hands import position_labels
 from .scope import tournament_reason
 
-LATEST = 7
+LATEST = 8
 
 
 def repair_positions(db):
@@ -61,7 +61,7 @@ def remove_tournaments(db, keys):
         hands = "(SELECT hand_id FROM hands WHERE site = ? AND tournament_id = ?)"
         for table in ("allin_ev", "actions", "hand_players"):
             db.execute(f"DELETE FROM {table} WHERE site = ? AND hand_id IN {hands}", (site, site, tid))
-        for table in ("hands", "entries", "tournament_tags", "tournament_structure", "tournaments"):
+        for table in ("hand_facts", "hands", "entries", "tournament_tags", "tournament_structure", "tournaments"):
             db.execute(f"DELETE FROM {table} WHERE site = ? AND tournament_id = ?", (site, tid))
     return len(keys)
 
@@ -124,9 +124,17 @@ def _v7_later_days_without_summary(db):
         refresh_classification(db, site, tid)
 
 
+def _v8_hand_search(db):
+    """Hand search: fill hand_facts from the hands already stored (schema.sql has created the empty table)."""
+    from .db import SQL_DIR
+    from .hand_search import refresh_hand_facts                      # here, to avoid an import cycle
+    db.script((SQL_DIR / "views.sql").read_text())                   # it reads hero_hands: the views of this version
+    refresh_hand_facts(db)
+
+
 MIGRATIONS = {1: _v1_button_seat, 2: _v2_scope_and_entries, 3: _v3_entries_found_and_shown_cards,
               4: _v4_ticket_apart_from_cash, 5: _v5_satellites_by_name, 6: _v6_multi_day_events,
-              7: _v7_later_days_without_summary}
+              7: _v7_later_days_without_summary, 8: _v8_hand_search}
 
 
 # Every column added after 0.2.0. The steps below recompute data with the current importer code, which writes all of
