@@ -104,11 +104,11 @@ td.hs-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:no
 .sess-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;align-items:center}
 .sess-nums{display:flex;gap:18px}.sess-nums div{font-size:.78rem;color:var(--muted)}.sess-nums b{display:block;font-size:1.1rem;color:var(--fg)}
 @media (max-width:620px){.sess-card{grid-template-columns:1fr}}
-.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
-.hero>div{background:var(--card);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted)}
-.hero b{font-size:1.55rem;color:var(--fg);font-variant-numeric:tabular-nums}.hero b.lucklv{font-size:1.15rem;padding:5px 0}
-.hero b.lucklv.up{color:var(--pos)}.hero b.lucklv.down{color:var(--neg)}
-@media (max-width:760px){.hero{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:10px}
+.kpis>div{background:var(--card);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;font-size:.8rem;color:var(--muted)}
+.kpis b{font-size:1.55rem;color:var(--fg);font-variant-numeric:tabular-nums}.kpis b.lucklv{font-size:1.15rem;padding:5px 0}
+.kpis b.lucklv.up{color:var(--pos)}.kpis b.lucklv.down{color:var(--neg)}
+@media (max-width:760px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .chips{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 2px 0;font-size:.86rem;color:var(--muted)}.chips b{color:var(--fg)}
 .chart-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
 .cols{display:grid;grid-template-columns:1fr;gap:4px 14px;align-items:start}@media (min-width:980px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}}
@@ -429,7 +429,7 @@ async function viewDashboard(period, from, to) {
     return;
   }
   const lb = d.luck_badge, lv = LEVELS.find(l => l[0] === lb.level), top15 = d.places && d.places.all && d.places.all.n ? d.places.all.top15 : null;
-  h += `<div class="hero">
+  h += `<div class="kpis">
     <div><span>${t("common.profit")}</span><b>${sgn(d.profit, 0, " $")}</b><span class="m">${d.tickets ? t("money.inclCash", {x: sgn(d.cash_profit, 0, " $")}) : "&nbsp;"}</span></div>
     <div><span>ROI</span><b>${d.roi_pct == null ? "–" : sgn(d.roi_pct, 0, "%")}</b><span class="m">${t("d3.cost", {x: money(d.cost, 0)})}</span></div>
     <div><span>${t("common.tournamentsTitle")}</span><b>${d.tournaments}</b><span class="m">${t("common.handsN", {n: d.hands})}</span></div>

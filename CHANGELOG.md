@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Replayer: Hero's hole cards sit side by side above Hero's box again instead of one above the other over the
+  replay buttons. The Dashboard's tile row shared Hero's seat class and turned the seat into a four-column grid; the
+  tiles have their own class now.
 - New tab Hands: filter every hand by period, buy-in, format, positions, starting hands (click or drag across the
   13×13 grid), stack, preflop action (the Analysis v2 definitions), all-in, showdown and result (actual or by EV);
   newest first with totals and "show more". A hand opens in the replayer with next / previous across the results and
