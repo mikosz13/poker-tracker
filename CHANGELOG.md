@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Dashboard v3: about 1.5 screens instead of 3. The last session as a short card with a link to its own screen (the
+  full session and the hands to review); four tiles (profit, ROI, tournaments, luck) and one line of smaller numbers;
+  one chart with a $ / BB switch; "Worth knowing" (best tournament, tickets, whether your play changed beyond noise);
+  five recent tournaments. Starting hands and positions live in Analysis; late registration against the start moved
+  to Money (whole history).
 - Tournament stack chart: every all-in is a dot (green won, red lost, grey split on the real board), with a legend.
   The tooltip adds Hero's cards against the opponents', the street, Hero's equity when the money went in, the result
   and the luck in BB; a click opens the hand in the replayer, as for any point.

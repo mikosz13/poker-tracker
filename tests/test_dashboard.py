@@ -29,6 +29,9 @@ class DashboardTests(unittest.TestCase):
         self.assertEqual(d["hands"], 3)
         self.assertEqual([(b["buyin"], b["n"]) for b in d["by_buyin"]], [(5.0, 1), (10.0, 1)])
         self.assertEqual([p["position"] for p in d["positions"]], ["BB"])
+        # dashboard v3: the best result of the period and links from the recent list
+        self.assertEqual((d["best"]["tournament_id"], d["best"]["profit"]), (900002, 45.0))     # the $50 seat for $5
+        self.assertEqual({r["tournament_id"] for r in d["recent"]}, {900001, 900002})
 
     def test_html(self):
         import_texts(self.db, [("h", HISTORY), ("b", SUMMARY_BOUNTY), ("s", SUMMARY_SATELLITE)])

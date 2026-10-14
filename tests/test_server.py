@@ -63,6 +63,7 @@ class ServerTests(unittest.TestCase):
 
         dash = json.loads(self.get("/api/dashboard")[1])
         self.assertEqual(dash["dashboard"]["tournaments"], 2)
+        self.assertEqual(set(dash["dashboard"]["trend"]), {"arrow", "compared"})   # "Worth knowing" (few hands: none)
         self.assertIsNotNone(dash["session"])
 
         ts = json.loads(self.get("/api/tournaments")[1])

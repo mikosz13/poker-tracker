@@ -104,7 +104,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 @media (max-width:760px){.hero{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .chips{display:flex;flex-wrap:wrap;gap:4px 16px;margin:10px 2px 0;font-size:.86rem;color:var(--muted)}.chips b{color:var(--fg)}
 .chart-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
-.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px;align-items:start}
+.cols{display:grid;grid-template-columns:1fr;gap:4px 14px;align-items:start}@media (min-width:980px){.cols{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr)}}
 .facts{margin:0;padding:0;list-style:none;display:grid;gap:6px}.facts li{background:var(--card);border-radius:10px;padding:8px 12px;font-size:.92rem}
 .trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:10px;margin:14px 0}
 .trio .box h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
@@ -446,7 +446,7 @@ async function viewDashboard(period, from, to) {
   h += `<div class="cols">${facts.length ? `<div><h2>${t("d3.facts")}</h2><ul class="facts">${facts.slice(0, 3).map(f => `<li>${f}</li>`).join("")}</ul></div>` : ""}
     <div><h2>${t("d3.recent")} <a class="m" style="font-weight:400" href="#/tournaments${periodQuery(d.period, (d.custom || {}).from, (d.custom || {}).to)}">${t("d3.all")}</a></h2>
       ${table([t("col.tournament"), t("col.place"), t("col.profitUsd")], d.recent.slice(0, 5).map(r => `<tr class="click" onclick="location.hash='#/t/${r.tournament_id}'">
-        <td class="wrap1">${esc(r.name)} <span class="m">${shortDate(r.date)}</span></td><td>${r.place ?? "–"}/${r.players ?? "–"}</td><td>${sgn(r.profit, 2)}</td></tr>`))}</div></div>`;
+        <td>${esc(r.name)} <span class="m">${shortDate(r.date)}</span></td><td>${r.place ?? "–"}/${r.players ?? "–"}</td><td>${sgn(r.profit, 2)}</td></tr>`), "wrap1")}</div></div>`;
   app.innerHTML = h;
   bindPeriods();
   dashChart(d);
@@ -515,39 +515,6 @@ function luckBox(b) {
   const rare = b.count && b.one_in ? `<p style="margin:8px 0 0;font-size:.9rem">${t(b.direction === "worse" ? "luck.rareWorse" : "luck.rareBetter", {n: b.one_in})}</p>` : "";
   return `<div class="box"><h3>${t("dash.luck")}</h3>${scale}${rare}<p class="m" style="margin:6px 0 0">${note} · ${luckLink()}</p></div>`;
 }
-function handsBox(sh) {
-  const kind = x => t(x.length === 2 ? "hand.pair" : x.endsWith("s") ? "hand.suited" : "hand.offsuit");
-  const card = (title, g) => g ? `<div><span class="m">${title}</span><div class="hc">${esc(g.hand.slice(0, 2))}</div>
-      <span class="m">${kind(g.hand)}</span><br>${sgn(g.ev_bb, 1, " BB")}<br><span class="m">${t("common.handsN", {n: g.hands})}</span></div>`
-    : `<div><span class="m">${title}</span><div class="hc">–</div></div>`;
-  const body = sh.ranked ? `<div class="hcards">${card(t("hands.best"), sh.best)}${card(t("hands.worst"), sh.worst)}</div>`
-    : `<p class="m">${t("hands.noRanking", {hands: t("common.handsN", {n: sh.min_hands})})}</p>`;
-  return `<div class="box"><h3>${t("hands.title")}</h3>${body}
-    ${sh.ranked ? `<p class="m" style="margin:8px 0 0">${t("hands.rankedNote", {types: t("hands.types", {n: sh.ranked}), min: sh.min_hands})}</p>` : ""}</div>`;
-}
-const SEATS = ["BB", "UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB"];   // clockwise from the bottom, like the table
-const blinds = by => ["SB", "BB"].some(p => by[p]) ? `<p class="m" style="margin:4px 0 0">${["SB", "BB"].filter(p => by[p]).map(p =>
-    t("pos.blindLine", {blind: t(p === "SB" ? "pos.sb" : "pos.bb"), bb: sgn(by[p].bb_per_100_ev, 0), hands: t("common.handsN", {n: by[p].hands})})).join(" · ")}.
-    ${t("pos.blindsNote")}</p>` : "";
-function positionBox(list, rank) {
-  const by = Object.fromEntries(list.map(p => [p.position, p]));
-  const ring = SEATS.filter(p => by[p]);
-  const spot = (pos, k, n) => {
-    const a = Math.PI / 2 + (k + .5) * 2 * Math.PI / n, p = by[pos];
-    const cls = rank.best && rank.best.position === pos ? "best" : rank.worst && rank.worst.position === pos ? "worst"
-      : p.hands < rank.min_hands ? "few" : "";
-    return `<div class="pc2 ${cls}" style="left:${50 + 42 * Math.cos(a)}%;top:${50 + 38 * Math.sin(a)}%"
-      title="${esc(t("pos.tip", {pos, bb: sgn(p.bb_per_100_ev, 0).replace(/<[^>]+>/g, ""), hands: t("common.handsN", {n: p.hands})}))}">${esc(pos)}</div>`;
-  };
-  const line = (title, p) => p ? `${title} <b>${esc(p.position)}</b> ${sgn(p.bb_per_100_ev, 0)} bb/100 <span class="m">(${t("common.handsN", {n: p.hands})})</span>` : "";
-  const body = rank.ranked ? `<div class="ptable"><div class="felt"></div>${ring.map((p, k) => spot(p, k, ring.length)).join("")}</div>
-      <p style="margin:6px 0 0;font-size:.88rem">${line(t("pos.strongest"), rank.best)}${rank.worst ? "<br>" + line(t("pos.weakest"), rank.worst) : ""}</p>
-      ${blinds(by)}
-      ${by["BTN/SB"] ? `<p class="m" style="margin:4px 0 0">${t("pos.headsUp", {bb: sgn(by["BTN/SB"].bb_per_100_ev, 0), hands: t("common.handsN", {n: by["BTN/SB"].hands})})}</p>` : ""}`
-    : `<p class="m">${t("pos.noRanking", {hands: t("common.handsN", {n: rank.min_hands})})}</p>`;
-  return `<div class="box"><h3 title="${esc(t("pos.evNote"))}">${t("pos.title")}</h3>${body}</div>`;
-}
-
 // ---- Last session: luck, the session against your usual play, hands to review --------------------------------
 function sessionLuck(b) {
   const lv = LEVELS.find(l => l[0] === b.level), cls = lv?.[2] || "mid", sym = lv?.[1] || "";

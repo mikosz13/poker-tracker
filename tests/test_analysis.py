@@ -225,6 +225,8 @@ class AnalysisDataTests(unittest.TestCase):
         self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown", "near", "heat", "min_heat"})
         self.assertEqual((d["overview"]["hands"], d["overview"]["tournaments"]), (3, 2))
         re, first = d["money"]["re_entries"], d["money"]["first_entries"]
+        # late registration against the start, moved to Money: the bounty tournament's first entry was at level 1
+        self.assertEqual([(x["key"], x["n"]) for x in d["money"]["by_entry"]], [("entry:start", 1)])
         # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return
         self.assertEqual((re["tournaments"], re["cost"], re["returned"]), (1, 10.0, 20.0))
         # first entries: $10 + $5, and neither lasted to a cash prize (bounty re-entered, satellite paid a ticket)
