@@ -1490,7 +1490,33 @@ async function viewSettings(msg) {
     <h2>${t("set.ignored")}</h2><p class="m">${t("set.ignoredIntro")}</p>
     ${ign.length ? table([t("col.ignoredAt"), t("col.tournament"), ""], ign, "names") : `<p class="m">${t("set.none")}</p>`}
     <h2>${t("set.rules")}</h2><p class="m">${t("set.rulesIntro")}</p>
-    ${rules.length ? table([t("col.tournament"), t("col.reason")], rules) : `<p class="m">${t("set.rulesNone")}</p>`}`;
+    ${rules.length ? table([t("col.tournament"), t("col.reason")], rules) : `<p class="m">${t("set.rulesNone")}</p>`}
+    <h2>${t("bk.title")}</h2><p class="m">${t("bk.intro")}</p>
+    <p><button id="bk-make">${t("bk.make")}</button></p><div id="bk-made"></div>
+    <h3 style="font-size:.95rem">${t("bk.restoreTitle")}</h3>
+    <p class="hs-row"><input id="bk-path" type="text" placeholder="${esc(t("bk.path"))}" style="flex:1;min-width:260px">
+      ${window.pywebview && window.pywebview.api && window.pywebview.api.pick_db ? `<button id="bk-pick">${t("bk.pick")}</button>` : ""}
+      <button id="bk-check">${t("bk.check")}</button></p><div id="bk-info"></div>`;
+  // backup: a copy into Downloads; restore: check the file first, then confirm, then replace
+  const say = (where, html) => { document.getElementById(where).innerHTML = html; };
+  const fail = (where, e) => say(where, `<p class="warn">${esc(e.message)}</p>`);
+  document.getElementById("bk-make").onclick = async () => {
+    try { const r = await post("/api/backup", {}); say("bk-made", `<p class="m">${t("bk.made", {path: esc(r.path)})}</p>`); } catch (e) { fail("bk-made", e); }
+  };
+  const pick = document.getElementById("bk-pick");
+  if (pick) pick.onclick = async () => { const p = await window.pywebview.api.pick_db(); if (p) document.getElementById("bk-path").value = p; };
+  document.getElementById("bk-check").onclick = async () => {
+    const path = document.getElementById("bk-path").value.trim();
+    try {
+      const r = await post("/api/backup/check", {path});
+      say("bk-info", `<p class="box">${t("bk.info", {version: r.version, tournaments: t("common.tournaments", {n: r.tournaments}),
+        hands: t("common.handsN", {n: r.hands}), last: r.last_hand ? dateTime(r.last_hand) : "–"})}</p><p><button id="bk-restore">${t("bk.restore")}</button></p>`);
+      document.getElementById("bk-restore").onclick = async () => {
+        if (!confirm(t("bk.confirm"))) return;
+        try { const x = await post("/api/backup/restore", {path}); viewSettings(t("bk.restored", {saved: esc(x.saved)})); } catch (e) { fail("bk-info", e); }
+      };
+    } catch (e) { fail("bk-info", e); }
+  };
   app.querySelectorAll("[data-restore]").forEach(b => {
     b.onclick = async () => {
       const r = await post("/api/restore", {id: +b.dataset.restore});

@@ -4,6 +4,10 @@
 - Help: one page (the "?" in the header) with getting started, the dashboard, tournaments, hands and the replayer,
   every Analysis definition, money (ROI with tickets, the interval, ITM), backup and export, problems and a glossary,
   in Polish and English. A "?" next to each screen's title opens its section.
+- Settings → Backup: "Make a backup" copies the whole database into Downloads (`poker-tracker-2026-10-14.db`, never
+  overwritten). "Restore from a backup" checks the file first (a Poker Tracker database this version can open; an older
+  one is upgraded, a newer one or a foreign file is refused), keeps the current database next to itself, then replaces
+  it. In the app window a system file dialog picks the file. PostgreSQL users back up with pg_dump.
 - Export: "Copy the hand" in the replayer and "Copy the result" on a tournament give plain text for forums and chats
   (positions instead of opponent ids, stacks in BB, every street and the board, shown cards, the result and the result
   by EV; a provisional result says so). "Export CSV" on the tournament list and in Hands saves what is shown (with the

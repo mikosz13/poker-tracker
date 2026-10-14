@@ -45,6 +45,8 @@ python -m pokertracker tournament --html report.html   # latest tournament
 python -m pokertracker dashboard --html dashboard.html
 ```
 
+Back up and restore the SQLite database from Settings → Backup in the app (a dated copy in Downloads; restoring keeps the current database next to itself first).
+
 Re-importing the same files is safe: hands are deduplicated by hand id, summaries are upserted.
 Files can arrive in any order (summary before hands, one file per entry, ...).
 If PokerCraft offers the hands of a later day (Day 2) but not its summary, the event still counts, flagged as missing
