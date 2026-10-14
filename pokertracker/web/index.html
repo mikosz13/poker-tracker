@@ -94,6 +94,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .def{text-decoration:underline dotted;text-underline-offset:3px;cursor:help}
 .sd-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;margin-top:6px}.sd-legend span{display:inline-flex;gap:6px;align-items:center;cursor:help}
 .sd-legend i{width:16px;height:3px;border-radius:2px;display:inline-block}.sd-legend i.dash{background:repeating-linear-gradient(90deg,var(--muted) 0 4px,transparent 4px 7px)!important}
+.copybox{width:100%;font:13px/1.4 ui-monospace,Menlo,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:8px}
 .hs-filters{display:grid;gap:8px}.hs-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .hs-row select,.hs-row input{font:inherit;font-size:.88rem;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .hs-row input[type=number]{width:5.5em}.hs-filters details summary{cursor:pointer;color:var(--blue);font-size:.9rem}
@@ -715,7 +716,10 @@ async function viewTournaments() {
     <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
     <select id="ff">${opts(all.map(x => x.format), filters.format, t("filter.allFormats"), v => t("format." + v))}</select>
     <select id="fe"><option value="">${t("filter.anyEntry")}</option><option value="start" ${filters.entry === "start" ? "selected" : ""}>${t("filter.fromStart")}</option>
-      <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select></div><div id="list"></div>`;
+      <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select>
+    <button id="csv">${t("ex.csv")}</button></div><div id="csv-out"></div><div id="list"></div>`;
+  document.getElementById("csv").onclick = () => exportCsv("tournaments", hsQuery({period: filters.period === "max" ? "" : filters.period,
+    from: filters.from, to: filters.to, buyin: filters.buyin, format: filters.format, entry: filters.entry}), "csv-out");
   for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
     document.getElementById(id).onchange = async e => {
       filters[key] = e.target.value;
@@ -770,7 +774,8 @@ async function viewTournament(id) {
   const mine = routeSeq, d = await api(`/api/tournament/${id}`);
   if (mine !== routeSeq) return;
   let h = `<p style="display:flex;justify-content:space-between;align-items:center;gap:8px"><a href="#/tournaments">${t("tour.back")}</a>
-    <button id="ign">${t("ign.button")}</button></p><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
+    <span>${d.result ? `<button id="copy-t">${t("ex.copyTournament")}</button> ` : ""}<button id="ign">${t("ign.button")}</button></span></p>
+    <div id="copy-out"></div><div id="ign-ask"></div><h1>${esc(d.name)} <span class="m">#${d.tournament_id}</span></h1>`;
   const r = d.result;
   if (r) h += `<div class="k"><div>${t("col.place")}<b>${r.advanced_to ? advanced(r) : `${r.place ?? "–"}/${r.players ?? "–"}`}</b></div><div>${t("tour.prize")}<b>${r.ticket_value > 0 ? `${TICKET_ICON}${t("tk.won", {value: money(r.ticket_value)})}${r.prize > 0 ? " + " + money(r.prize) : ""}` : money(r.prize)}</b></div>
     <div>${t("tour.cost")}<b>${money(r.cost)}</b></div><div>${t("tour.roiCash")}<b>${sgn(r.roi_pct, 0, "%")}</b>${r.ticket_value > 0 && r.roi_cash_pct != null ? `<span class="m">${t("money.inclCash", {x: sgn(r.roi_cash_pct, 0, "%")})}</span>` : ""}</div></div>`;
@@ -809,6 +814,8 @@ async function viewTournament(id) {
      <td>${cards(x.hole_cards)}</td><td>${cards(x.board)}</td><td>${sgn(x.net_bb)}</td></tr>`));
   app.innerHTML = h;
   bindIgnore(d.tournament_id);
+  const ct = document.getElementById("copy-t");
+  if (ct) ct.onclick = () => copyFrom(`/api/text/tournament/${d.tournament_id}`, "copy-out");
   stackChart(d);
   const unitSwitch = document.getElementById("stack-unit");
   if (unitSwitch) unitSwitch.onclick = e => {
@@ -900,8 +907,9 @@ function renderHand() {
         <span class="m" id="cnt"></span>
         <label class="m" title="${t("replay.deckTip")}"><input type="checkbox" id="deck4" ${document.body.classList.contains("two-color") ? "" : "checked"}> ${t("replay.deck")}</label>
       </div>
-      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">${t("replay.prev")}</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">${t("replay.next")}</a>` : ""}</p>${hsNav(r.hand_id || location.hash.split("/").pop())}
+      <p class="ctl">${r.prev_id ? `<a href="#/hand/${r.prev_id}">${t("replay.prev")}</a>` : ""} &nbsp; ${r.next_id ? `<a href="#/hand/${r.next_id}">${t("replay.next")}</a>` : ""} &nbsp; <button id="copy-h">${t("ex.copyHand")}</button></p><div id="copy-out"></div>${hsNav(r.hand_id || location.hash.split("/").pop())}
     </div><div class="log" id="log">${log}</div></div>`;
+  document.getElementById("copy-h").onclick = () => copyFrom(`/api/text/hand/${r.hand_id}`, "copy-out");
   const go = k => { step = Math.max(0, Math.min(r.steps.length - 1, k)); drawStep(); };
   replay.go = go;
   document.getElementById("b0").onclick = () => { stopPlay(); go(0); };
@@ -1205,6 +1213,27 @@ async function viewAnalysis(tab) {
   };
 }
 
+// ---- Export: a hand or a result as text, CSV files into Downloads ---------------------------------------------
+async function copyText(text, where) {                   // the clipboard, or the text selected for a manual copy
+  const box = document.getElementById(where);
+  try {
+    await navigator.clipboard.writeText(text);
+    box.innerHTML = `<p class="m">${t("ex.copied")}</p>`;
+  } catch (e) {
+    box.innerHTML = `<p class="m">${t("ex.copyFail")}</p><textarea class="copybox" rows="8" readonly>${esc(text)}</textarea>`;
+    box.querySelector("textarea").select();
+  }
+}
+async function copyFrom(url, where) {
+  const r = await api(url + (url.includes("?") ? "&" : "?") + "lang=" + LANG);
+  if (r.text) await copyText(r.text, where);
+}
+async function exportCsv(kind, query, where) {
+  const r = await api("/api/export", {method: "POST", headers: {"Content-Type": "application/json", "X-Token": TOKEN},
+                                      body: JSON.stringify({kind, query, lang: LANG})});
+  document.getElementById(where).innerHTML = `<p class="m">${t("ex.saved", {n: t("ex.rows", {n: r.rows}), path: esc(r.path)})}</p>`;
+}
+
 // ---- Hands: search every hand by spot, hand, stack and result -------------------------------------------------
 const HS_ACTIONS = ["rfi", "open_raise", "open_shove", "limp", "call_vs_open", "threebet", "3bet_shove", "fold_vs_open",
                     "fold_to_3bet", "cold_4bet", "bb_check", "fold_unopened"];                          // labels: act.<key>
@@ -1246,7 +1275,7 @@ async function viewHands(qs) {
       <label class="m"><input id="ev" type="checkbox" ${f.ev === "1" ? "checked" : ""}> ${t("hs.byEv")}</label>
       <label class="m">${t("hs.stack")} ${t("hs.from")} <input id="stack_min" type="number" min="0" step="1" value="${esc(f.stack_min || "")}"></label>
       <label class="m">${t("hs.to")} <input id="stack_max" type="number" min="0" step="1" value="${esc(f.stack_max || "")}"></label>
-      <button id="hs-clear">${t("hs.clear")}</button></div>
+      <button id="hs-clear">${t("hs.clear")}</button><button id="hs-csv">${t("ex.csv")}</button></div><div id="hs-csv-out"></div>
     <details ${picked.size ? "open" : ""}><summary>${t("hs.cards")} <span class="m" id="hs-picked">${picked.size ? t("hs.picked", {n: picked.size}) : ""}</span></summary>
       <p class="m" style="margin:4px 0">${t("hs.cardsTip")}</p><div class="hs-grid" id="hs-grid">${grid.join("")}</div></details></div>
     <p class="m" id="hs-sum"></p><div id="hs-list"></div><p><button id="hs-more" hidden></button></p>`;
@@ -1294,6 +1323,7 @@ async function viewHands(qs) {
   document.addEventListener("pointerup", () => { if (painting !== null) { painting = null; later(); } }, {once: false});
   document.getElementById("hs-clear").onclick = () => { location.hash = "#/hands"; };
   document.getElementById("hs-more").onclick = () => run(true);
+  document.getElementById("hs-csv").onclick = () => exportCsv("hands", hsQuery(read()), "hs-csv-out");
   document.getElementById("hs-list").onclick = e => { const tr = e.target.closest("tr[data-id]"); if (!tr) return;
     try { sessionStorage.setItem("hsNav", JSON.stringify({ids: last.ids, count: last.count, back: location.hash})); } catch (err) { /* no search nav */ }
     location.hash = "#/hand/" + tr.dataset.id; };

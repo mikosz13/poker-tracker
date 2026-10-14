@@ -57,7 +57,8 @@ def hand_text(db, hand_id, lang="en", site=SITE):
         acts = [a for a in actions if a["street"] == street and not a["action_type"].startswith("posts")]
         if not acts:
             continue
-        cards = " " + " ".join(board[:BOARD_CARDS[street]]) if street in BOARD_CARDS else ""
+        cards = " ".join(board[:BOARD_CARDS[street]]) if street in BOARD_CARDS else ""
+        cards = " " + cards if cards else ""
         said = [f"{who.get(a['nick'], a['nick'])} {VERBS.get(a['action_type'], a['action_type'])}"
                 + (f" {_bb(lang, a['amount'], bb)}" if a["action_type"] in ("calls", "bets", "raises") else "")
                 + (" all-in" if a["all_in"] else "") for a in acts]
