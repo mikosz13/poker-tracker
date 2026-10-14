@@ -165,6 +165,16 @@ def tournament_data(db, tournament_id, site=SITE):
                      "board": a["board_at_lock"], "street": a["lock_street"], "equity": _f(a["equity"]),
                      "luck_bb": _f(a["luck_bb"]), "played_at": str(a["played_at"])[:16]}
                     for a in allins if a["bad_beat"] or a["suckout"]]}
+    # every all-in, for markers on the app's stack chart: result on the real board, Hero's equity when the money went
+    # in, luck in BB (actual minus EV) and the opponents' cards (the hand texts show them at showdown)
+    rivals = {}
+    for r in db.query("SELECT e.hand_id, e.hole_cards FROM allin_ev e JOIN hands h ON h.site = e.site AND h.hand_id = e.hand_id "
+                      "WHERE e.site = ? AND h.tournament_id = ? AND NOT e.is_hero ORDER BY e.nick", (site, tournament_id)):
+        rivals.setdefault(r["hand_id"], []).append(r["hole_cards"] or "")
+    data["allins"]["hands"] = [{"hand_id": a["hand_id"], "result": a["result"], "equity": _f(a["equity"]),
+                                "luck_bb": round(_f(a["luck_bb"]), 1), "net_bb": round(_f(a["net_bb"]), 1),
+                                "hole_cards": a["hole_cards"] or "", "rivals": rivals.get(a["hand_id"], []),
+                                "board": a["board_at_lock"] or "", "street": a["lock_street"]} for a in allins]
     return data
 
 
