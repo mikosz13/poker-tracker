@@ -120,6 +120,23 @@ def last_session(db, site=SITE, lang="en"):
             "insights": session_insights(db, session, site, lang)}
 
 
+_TREND_CACHE = {}
+
+
+def play_trend(db, site=SITE):
+    """VPIP, PFR and 3-bet: the last 30 days against the rest (the arrow only), for the dashboard's "Worth knowing".
+    Reading every hand takes about half a second, so the answer is kept until the hands or the day change."""
+    from .analysis import load_hands
+    from .preflop import trend
+    key = (db.url, site, db.scalar("SELECT COUNT(*) FROM hands WHERE site = ?", (site,)),
+           str(db.scalar("SELECT MAX(played_at) FROM hands WHERE site = ?", (site,))), datetime.now().date())
+    if key not in _TREND_CACHE:
+        tr = trend(load_hands(db, site))
+        _TREND_CACHE.clear()
+        _TREND_CACHE[key] = {"arrow": tr["arrow"], "compared": bool(tr["stats"])}
+    return _TREND_CACHE[key]
+
+
 def session_bounds(s):
     """(since, until) of a session from last_session: from the earliest start (a late registration starts before its
     first hand) to the last hand."""
@@ -297,6 +314,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     period, start, end, bounds = chosen_period(db, query)
                     d = dashboard_data(db, period=period, bounds=bounds)
                     d["custom"] = {"from": start, "to": end} if period == "custom" else None
+                    d["trend"] = play_trend(db)
                     return self._send(200, {"dashboard": d, "session": last_session(db, lang=lang)})
                 if path == "/api/period":                             # the same bounds, for the tournament list
                     period, start, end, (since, until) = chosen_period(db, query)

@@ -243,9 +243,14 @@ def dashboard_data(db, site=SITE, period="max", now=None, bounds=None):
         # blinds lose money for almost every player and heads-up (BTN/SB) is a different game: shown, not ranked
         "position_rank": best_and_worst([p for p in positions if p["position"] not in UNRANKED], "bb_per_100_ev"),
         "tickets_won": tickets_summary(db, site, since, until),  # this period; the whole history is in Money
-        "recent": [{"date": str(t["started_at"])[:10], "name": t["name"], "buyin": _f(t["buyin_total"]),
-                    "place": t["finish_place"], "players": t["players"], "cash": _f(t["cash_won"]),
-                    "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])} for t in reversed(trs[-10:])],
+        "recent": [{"tournament_id": t["tournament_id"], "date": str(t["started_at"])[:10], "name": t["name"],
+                    "buyin": _f(t["buyin_total"]), "place": t["finish_place"], "players": t["players"],
+                    "cash": _f(t["cash_won"]), "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])}
+                   for t in reversed(trs[-10:])],
+        # the best result of the period, for "Worth knowing" (tickets at face value)
+        "best": next(({"tournament_id": t["tournament_id"], "name": t["name"], "place": t["finish_place"],
+                       "players": t["players"], "profit": _f(t["profit"])}
+                      for t in sorted(trs, key=lambda t: -_f(t["profit"])) if _f(t["profit"]) > 0), None),
     }
 
 

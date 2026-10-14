@@ -15,7 +15,7 @@ from collections import defaultdict
 import numpy as np
 
 from . import preflop
-from .dashboard import hand_class, luck_badge, pending_results
+from .dashboard import INCOMPLETE, hand_class, luck_badge, pending_results
 from .i18n import num, t
 from .places import place_split
 from .tickets import tickets_summary
@@ -399,7 +399,18 @@ def money(db, site=SITE, lang="en"):
                                "SUM(r.profit) AS profit, SUM(r.in_the_money) AS itm, COUNT(r.in_the_money) AS itm_n FROM tournament_results r "
                                "JOIN tournament_tags g ON g.site = r.site AND g.tournament_id = r.tournament_id "
                                "WHERE r.site = ? AND g.tag NOT LIKE 'entry:%' GROUP BY g.tag ORDER BY g.tag"),
-            "tickets": tickets_summary(db, site)}
+            "tickets": tickets_summary(db, site),
+            # late registration against entries from the start (moved here from the dashboard, 14.10.2026); tournaments
+            # whose summary reports more entries than the hands show are left out, their first entry is unknown
+            "by_entry": _rows_by(db, site, "tag", "SELECT g.tag AS key, COUNT(*) AS n, SUM(r.total_cost) AS cost, "
+                                 "SUM(r.profit) AS profit, SUM(r.in_the_money) AS itm, COUNT(r.in_the_money) AS itm_n "
+                                 "FROM tournament_results r JOIN tournament_tags g ON g.site = r.site "
+                                 "AND g.tournament_id = r.tournament_id WHERE r.site = ? AND g.tag LIKE 'entry:%' "
+                                 f"AND NOT ({INCOMPLETE}) GROUP BY g.tag ORDER BY g.tag"),
+            "entry_incomplete": int(db.scalar(
+                "SELECT COUNT(DISTINCT r.tournament_id) FROM tournament_results r JOIN tournament_tags g "
+                "ON g.site = r.site AND g.tournament_id = r.tournament_id "
+                f"WHERE r.site = ? AND g.tag LIKE 'entry:%' AND {INCOMPLETE}", (site,)) or 0)}
 
 
 def _rows_by(db, site, _key, sql):
