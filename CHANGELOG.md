@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Tournament stack chart: every all-in is a dot (green won, red lost, grey split on the real board), with a legend.
+  The tooltip adds Hero's cards against the opponents', the street, Hero's equity when the money went in, the result
+  and the luck in BB; a click opens the hand in the replayer, as for any point.
 - Test: importing a Day 2 summary after a provisional amount leaves one record with the amount from the file.
 - The ROI tile in Analysis says in its tooltip why it has no interval and links to the 95 % interval in Money;
   "How luck works" explains the interval and the verdicts built on it. Money keeps the interval.

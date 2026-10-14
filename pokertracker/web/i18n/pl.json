@@ -723,5 +723,11 @@
  "an.roiTip": "ROI z biletami po wartości nominalnej po obu stronach. Tu bez przedziału, żeby kafelek był czytelny: przedział 95% (jak daleko od tej liczby może być Twoje długoterminowe ROI przy tej liczbie turniejów) jest w Finansach, obok werdyktów.",
  "an.roiLink": "przedział 95% w Finansach",
  "lp.roiTitle": "ROI i przedział 95%",
- "lp.roi": "W Finansach przy każdym ROI jest przedział 95%: zakres, w którym przy tak małej liczbie turniejów prawdopodobnie leży Twoje długoterminowe ROI (bootstrap po Twoich turniejach). Z niego biorą się werdykty „ponad przypadek”: grupa jest na plusie lub na minusie tylko wtedy, gdy cały przedział leży nad lub pod zerem. Kafelek ROI w Analizie pomija przedział, żeby był czytelny, i odsyła do Finansów."
+ "lp.roi": "W Finansach przy każdym ROI jest przedział 95%: zakres, w którym przy tak małej liczbie turniejów prawdopodobnie leży Twoje długoterminowe ROI (bootstrap po Twoich turniejach). Z niego biorą się werdykty „ponad przypadek”: grupa jest na plusie lub na minusie tylko wtedy, gdy cały przedział leży nad lub pod zerem. Kafelek ROI w Analizie pomija przedział, żeby był czytelny, i odsyła do Finansów.",
+ "allin.tip": "<b>All-in ({street})</b>: {hero} vs {rivals}<br>equity {equity} · {result} · szczęście {luck} BB",
+ "allin.win": "wygrany",
+ "allin.lose": "przegrany",
+ "allin.split": "podział",
+ "allin.unknown": "karty niepokazane",
+ "allin.legend": "{won} wygrany all-in · {lost} przegrany · {split} podział · najedź, żeby zobaczyć karty, kliknij, żeby odtworzyć rękę"
 }

@@ -44,6 +44,10 @@ class ReportTests(unittest.TestCase):
         self.assertEqual(d["strongest_showdown"]["hand"], "pair of Kings")
         self.assertEqual(d["allins"]["count"], 1)
         self.assertLess(d["allins"]["luck_bb"], 0)
+        # the all-in for the stack chart's marker: KK lost to AA, with the opponent's cards and Hero's equity
+        a = d["allins"]["hands"][0]
+        self.assertEqual((a["result"], a["hole_cards"].split()[0][0], len(a["rivals"])), ("lose", "K", 1))
+        self.assertTrue(0.15 < a["equity"] < 0.25 and a["luck_bb"] < 0)
         self.assertEqual(d["result"]["place"], 3)
 
     def test_small_samples_are_not_ranked(self):

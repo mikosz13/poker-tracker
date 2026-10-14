@@ -594,7 +594,9 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
     g += `<text x="${x(t)}" y="${H - 8}" text-anchor="${k === 0 ? "start" : k === nx ? "end" : "middle"}" style="fill:var(--muted);font-size:11px">${lab}</text>`;
   }
   // annotations: a dashed line and a label at the point they belong to; "dot" ones mark a single point (e.g. a bust)
-  const marks = (opts.markers || []).filter(m => m.dot).map(m => `<text x="${x(xs[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
+  const marks = (opts.markers || []).filter(m => m.dot).map(m => m.color
+      ? `<circle cx="${x(xs[m.i])}" cy="${y(pts[m.i][series[0].key])}" r="5" style="fill:${m.color};stroke:var(--bg);stroke-width:1.5"/>`
+      : `<text x="${x(xs[m.i])}" y="${y(pts[m.i][series[0].key]) + 4}"
       text-anchor="middle" style="fill:var(--neg);font-size:14px;font-weight:700">✕</text>`).join("") + placed.map(m => {
     const ly = 12 + m.row * 15;
     return `<line x1="${m.mx}" x2="${m.mx}" y1="${ly - 4}" y2="${T + ih}" style="stroke:var(--orange);stroke-dasharray:4 3"/>
@@ -698,6 +700,18 @@ function stackLine(d) {
   const path = [pts[0].before, ...pts.map(p => p.after)], k = path.reduce((b, v, i) => v > path[b] ? i : b, 0);
   return t("tour.stackLine", {start: chipsShort(path[0]), end: chipsShort(path[path.length - 1]), peak: chipsShort(path[k]), n: k});
 }
+// all-ins on the stack chart: green won, red lost, grey split (the main pot on the real board)
+const ALLIN_COLOR = {win: "var(--pos)", lose: "var(--neg)", split: "var(--muted)"};
+const allinTip = a => t("allin.tip", {street: esc(a.street || ""), hero: a.hole_cards ? cards(a.hole_cards) : "–",
+  rivals: a.rivals.length ? a.rivals.map(c => c ? cards(c) : `<span class="m">${t("allin.unknown")}</span>`).join(", ") : "–",
+  equity: pct(100 * a.equity), result: t("allin." + (a.result || "split")), luck: sgn(a.luck_bb, 1)});
+function allinLegend(d) {
+  const h = d.allins.hands || [], n = r => h.filter(a => a.result === r).length;
+  if (!h.length) return "";
+  const dot = c => `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${c};vertical-align:0"></span>`;
+  return `<p class="m" style="margin:4px 0 0">${t("allin.legend", {won: dot(ALLIN_COLOR.win) + " " + n("win"),
+    lost: dot(ALLIN_COLOR.lose) + " " + n("lose"), split: dot(ALLIN_COLOR.split) + " " + n("split")})}</p>`;
+}
 function stackChart(d) {
   const pts = d.stack.points, idx = Object.fromEntries(pts.map((p, i) => [p.hand_id, i])), chips = stackUnit === "chips";
   const markers = d.entries.filter(e => e.first_hand_id in idx).map(e => ({
@@ -705,12 +719,14 @@ function stackChart(d) {
     label: `${e.entry_no === 1 ? t(e.level > 1 ? "stack.lateReg" : "stack.start") : t("stack.reentry", {no: e.entry_no})} · L${e.level} · ${chips ? chipsShort(e.stack) : bbUnit(e.stack_bb, 0)}`,
     title: t("stack.entryTitle", {no: e.entry_no, level: e.level, chips: num(e.stack, 0), bb: num(e.stack_bb, 1)})
       + (d.starting_stack == null ? "" : Math.abs(e.stack - d.starting_stack) < 1 ? t("stack.full") : "")}));
+  const allins = Object.fromEntries((d.allins.hands || []).map(a => [a.hand_id, a]));
+  pts.forEach((p, i) => { const a = allins[p.hand_id]; if (a) markers.push({i, dot: true, color: ALLIN_COLOR[a.result] || "var(--muted)"}); });
   pts.forEach((p, i) => { if (p.after_bb <= 0) markers.push({i, dot: true}); });
   charts = [];
   addChart("c-stack", pts, [{key: chips ? "after" : "after_bb", color: "var(--blue)"}], v => chips ? chipsShort(v) : bbUnit(v, 0),
     p => t("stack.tip", {level: p.level, pos: esc(p.position || ""), cards: p.cards ? cards(p.cards) : "", net: sgn(p.net_bb),
                          before: num(p.before_bb, 0), after: num(p.after_bb, 0), beforeChips: num(p.before, 0),
-                         afterChips: num(p.after, 0), bb: num(p.big_blind, 0)}),
+                         afterChips: num(p.after, 0), bb: num(p.big_blind, 0)}) + (allins[p.hand_id] ? "<br>" + allinTip(allins[p.hand_id]) : ""),
     {markers, onPick: p => { location.hash = `#/hand/${p.hand_id}`; }});
 }
 
@@ -739,7 +755,7 @@ async function viewTournament(id) {
     <div>${t("dash.knockouts")}<b>${d.knockouts.sole}${d.knockouts.shared ? ` <span class="m">${t("tour.shared", {n: d.knockouts.shared})}</span>` : ""}</b></div></div>`;
   h += `<h2 style="display:flex;align-items:center;gap:10px">${t("tour.stackTitle")}<span class="seg" id="stack-unit" style="margin:0">${
     [["bb", "stack.unitBb"], ["chips", "stack.unitChips"]].map(([u, k]) => `<button data-u="${u}" class="${u === stackUnit ? "on" : ""}">${t(k)}</button>`).join("")}</span></h2>
-    <div class="tchart" id="c-stack"></div><p class="m" id="stack-line">${stackLine(d)}</p>`;
+    <div class="tchart" id="c-stack"></div>${allinLegend(d)}<p class="m" id="stack-line">${stackLine(d)}</p>`;
   h += `<h2>${t("tour.positions")}</h2>${table([t("col.position"), t("col.hands"), "BB", "bb/100"], d.positions.map(p => `<tr><td>${esc(p.position)}</td><td>${p.hands}</td><td>${sgn(p.net_bb)}</td><td>${sgn(p.bb_per_100, 0)}</td></tr>`))}`;
   if (!d.best_position) h += `<p class="m">${t("tour.tooFew")}</p>`;
   else h += `<p class="m">${t("tour.best", {pos: esc(d.best_position.position)})}${d.worst_position ? t("tour.worst", {pos: esc(d.worst_position.position)}) : ""}${t("tour.rankNote")}</p>`;
