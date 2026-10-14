@@ -63,6 +63,7 @@ class ServerTests(unittest.TestCase):
 
         dash = json.loads(self.get("/api/dashboard")[1])
         self.assertEqual(dash["dashboard"]["tournaments"], 2)
+        self.assertEqual(set(dash["dashboard"]["trend"]), {"arrow", "compared"})   # "Worth knowing" (few hands: none)
         self.assertIsNotNone(dash["session"])
 
         ts = json.loads(self.get("/api/tournaments")[1])
@@ -94,7 +95,7 @@ class ServerTests(unittest.TestCase):
     def test_analysis_endpoint(self):
         status, body = self.get("/api/analysis")
         self.assertEqual(status, 200)
-        self.assertEqual(set(json.loads(body)), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown"})
+        self.assertEqual(set(json.loads(body)), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown", "near", "heat", "min_heat"})
 
     def test_deck_colours_setting(self):
         four = lambda: json.loads(self.get("/api/settings")[1])["four_color"]

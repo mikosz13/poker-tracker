@@ -137,8 +137,9 @@ class LeakRuleTests(unittest.TestCase):
     def setUp(self):
         random.seed(1)
 
-    def classify(self, hands):
-        return A.classify(A.spot_tests(hands))
+    def classify(self, hands, now=None):
+        leaks, strengths, _ = A.classify(A.spot_tests(hands, now=now))
+        return leaks, strengths
 
     def test_big_blind_call_against_exactly_the_posted_blind_and_ante(self):
         calls = [hand(-3.0 + random.uniform(-0.3, 0.3), "call_vs_open", "BB", posted=1.125) for _ in range(200)]
@@ -172,13 +173,41 @@ class LeakRuleTests(unittest.TestCase):
         leaks, _ = self.classify(trash)
         self.assertFalse([l for l in leaks if l["key"] == "hand_72o"])
 
-    def test_folding_to_3bets_often_is_a_leak_rarely_is_not_praise(self):
-        often = [hand(-2.5, after="fold") for _ in range(90)] + [hand(5.0, after="call") for _ in range(10)]
-        leaks, strengths = self.classify(often)
-        self.assertTrue([l for l in leaks if l["key"].startswith("fold_to_3bet")])
-        rarely = [hand(-2.5, after="fold") for _ in range(20)] + [hand(5.0, after="call") for _ in range(80)]
-        leaks, strengths = self.classify(rarely)
-        self.assertFalse([x for x in leaks + strengths if x["key"].startswith("fold_to_3bet")])
+    def test_folding_to_3bets_more_than_before_is_a_leak(self):
+        # against Hero's own history (decision 2026-10-13): 90 % of 3-bets folded in the last 30 days, 40 % before
+        from datetime import datetime
+        now = datetime(2026, 3, 1)
+        def faced(at, folds, n):
+            return [dict(hand(-2.5 if k < folds else 5.0, after="fold" if k < folds else "call"), at=at) for k in range(n)]
+        more = faced("2026-02-20 10:00", 90, 100) + faced("2026-01-01 10:00", 40, 100)
+        leaks, _ = self.classify(more, now)
+        leak = next(l for l in leaks if l["key"] == "fold_to_3bet")
+        self.assertEqual((leak["value"], leak["hands"]), (90.0, 100))
+        self.assertGreater(leak["cost_bb"], 0)
+        same = faced("2026-02-20 10:00", 45, 100) + faced("2026-01-01 10:00", 40, 100)
+        leaks, strengths = self.classify(same, now)
+        self.assertFalse([x for x in leaks + strengths if x["key"] == "fold_to_3bet"])     # within chance
+        less = faced("2026-02-20 10:00", 10, 100) + faced("2026-01-01 10:00", 60, 100)
+        leaks, strengths = self.classify(less, now)
+        self.assertFalse([x for x in leaks + strengths if x["key"] == "fold_to_3bet"])     # folding less is no praise
+        few = faced("2026-02-20 10:00", 25, 25) + faced("2026-01-01 10:00", 0, 100)
+        self.assertNotIn("fold_to_3bet", [x["key"] for x in A.spot_tests(few, now=now)])  # under 30 on one side
+
+    def test_cards_only_at_q_005_the_rest_closest_to_the_line(self):
+        # a weak effect (q between 0.05 and 0.20 used to be a "possible" card): now only in the list near the line
+        calls = [hand(-1.125 - 0.25 + random.uniform(-1.5, 1.5), "call_vs_open", "BB", posted=1.125) for _ in range(120)]
+        leaks, strengths, near = A.classify(A.spot_tests(calls))
+        self.assertTrue(all(l["q"] <= A.Q_LIKELY and l["confidence"] == "likely" for l in leaks + strengths))
+        if not [l for l in leaks if l["key"] == "bb_defence"]:
+            self.assertIn("bb_defence", [x["key"] for x in near])
+        self.assertLessEqual(len(near), A.NEAR_SHOWN)
+
+    def test_cards_carry_a_mini_trend(self):
+        shoves = [hand(1.5 + random.uniform(-0.5, 0.5), "open_shove") for _ in range(150)]
+        _, strengths = self.classify(shoves)
+        sp = next(s for s in strengths if s["key"] == "line_open_shove")["spark"]
+        self.assertEqual(len(sp), A.SPARK_POINTS)
+        self.assertGreater(sp[-1], sp[0])                                   # cumulative EV of a winning line rises
 
     def test_profitable_line_is_a_strength(self):
         shoves = [hand(1.5 + random.uniform(-0.5, 0.5), "open_shove") for _ in range(150)]
@@ -193,9 +222,11 @@ class AnalysisDataTests(unittest.TestCase):
         db.init_schema()
         import_texts(db, [("h", HISTORY), ("b", SUMMARY_BOUNTY), ("s", SUMMARY_SATELLITE)])
         d = A.analysis_data(db)
-        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown"})
+        self.assertEqual(set(d), {"overview", "leaks", "strengths", "money", "tested", "thresholds", "preflop", "showdown", "near", "heat", "min_heat"})
         self.assertEqual((d["overview"]["hands"], d["overview"]["tournaments"]), (3, 2))
         re, first = d["money"]["re_entries"], d["money"]["first_entries"]
+        # late registration against the start, moved to Money: the bounty tournament's first entry was at level 1
+        self.assertEqual([(x["key"], x["n"]) for x in d["money"]["by_entry"]], [("entry:start", 1)])
         # the bounty tournament ($10) had one re-entry and won $20: all of it is the re-entry's return
         self.assertEqual((re["tournaments"], re["cost"], re["returned"]), (1, 10.0, 20.0))
         # first entries: $10 + $5, and neither lasted to a cash prize (bounty re-entered, satellite paid a ticket)
