@@ -15,6 +15,8 @@ COLUMNS = ("site", "hand_id", "tournament_id", "played_at", "name", "buyin_total
 # preflop action filters: key -> SQL (no values), the Analysis v2 counts or Hero's first spot
 ACTIONS = {
     "rfi": "rfi = 1",                                     # raise first in (no limpers), all-in included
+    "open_raise": "action = 'open'",                      # Hero's first raise in an unraised pot, limpers or not
+    "3bet_shove": "action = '3bet_shove'",
     "open_shove": "shove = 1",
     "limp": "action = 'limp'",                            # complete from the small blind included
     "call_vs_open": "action = 'call_vs_open'",
