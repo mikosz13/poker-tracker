@@ -159,7 +159,11 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs{margin-left:auto;display:flex;flex:none;align-items:center}.langs button{padding:4px 8px;font-size:.8rem;border-radius:0}
 .langs button:first-child{border-radius:8px 0 0 8px}.langs button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .langs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-.langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}
+.langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}nav a.helpq{font-weight:700;font-size:1rem;line-height:17px;padding:4px 9px}
+.help-q{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
+  font-size:.75rem;font-weight:700;text-decoration:none;color:var(--muted);vertical-align:middle;margin-left:6px}.help-q:hover{color:var(--blue);border-color:var(--blue)}
+.help-toc{display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0 10px;font-size:.92rem}.help-sec{max-width:820px;margin-top:6px;scroll-margin-top:60px}
+.help-sec h2{border-top:1px solid var(--line);padding-top:14px}.help-sec li{margin:4px 0}.help-sec dt{font-weight:700;margin-top:8px}.help-sec dd{margin:2px 0 0 0;color:var(--muted)}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #notice .notice button{margin-left:auto;padding:0 8px;border:0;background:none;font-size:1.1rem;color:var(--muted)}
 .picks th:nth-child(3),.picks th:last-child,.names th:nth-child(2),.tickets th:nth-child(3),.tickets th:last-child{text-align:left}tr.off td{opacity:.5}tr.few td{color:var(--muted)}tr.few td span{color:inherit!important}.k div.few b{color:var(--muted)}
@@ -189,6 +193,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
   <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/hands" data-i18n="nav.hands"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
   <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
+  <a href="#/help" class="gear helpq" data-i18n-title="nav.help">?</a>
   <a href="#/settings" class="gear" data-i18n-title="nav.settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
 </nav><div id="notice"></div></header>
 <main id="app"></main>
@@ -411,7 +416,7 @@ async function viewDashboard(period, from, to) {
     return;
   }
   // Dashboard v3 (14.10.2026): about 1.5 screens; the details live in the session screen, Analysis and Money
-  let h = `<h1>${t("nav.dashboard")}</h1>` + banner;
+  let h = `<h1>${t("nav.dashboard")}${helpLink("dashboard")}</h1>` + banner;
   if (s) {
     const si = s.insights || {}, review = si.busts ? si.busts.length + si.beats.length + si.pots.lost.length + si.pots.won.length : 0;
     const first = si.summary ? si.summary.split(/(?<=\.)\s/)[0] : "";
@@ -710,7 +715,7 @@ async function viewTournaments() {
           : `<span class="wide">${sgn(x.profit, 2)}</span><span class="narrow">${sgn(x.profit, 0)}</span>${pendingMark(x)}`}</td>
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
-  app.innerHTML = `<h1>${t("nav.tournaments")}</h1><div class="filters">
+  app.innerHTML = `<h1>${t("nav.tournaments")}${helpLink("tournaments")}</h1><div class="filters">
     <select id="fp">${PERIODS.filter(k => k !== "custom" || (filters.period === "custom" && filters.from)).map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${
       k === "max" ? t("filter.anyTime") : k === "custom" ? `${t("period.custom")}: ${dateTime(filters.from)} – ${dateTime(filters.to)}` : t(`period.${k}.last`)}</option>`).join("")}</select>
     <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
@@ -1140,7 +1145,7 @@ async function viewAnalysis(tab) {
   if (mine !== routeSeq) return;
   tab = ANALYSIS_TABS.includes(tab) ? tab : "overview";
   const o = a.overview, m = a.money, ri = m.roi_interval;
-  let h = `<h1>${t("nav.analysis")}</h1><p class="m">${t("an.intro", {tournaments: t("common.tournaments", {n: o.tournaments}), hands: t("common.handsN", {n: o.hands})})}</p>
+  let h = `<h1>${t("nav.analysis")}${helpLink(tab === "money" ? "money" : "analysis")}</h1><p class="m">${t("an.intro", {tournaments: t("common.tournaments", {n: o.tournaments}), hands: t("common.handsN", {n: o.hands})})}</p>
     <div class="seg">${ANALYSIS_TABS.map(k => `<a href="#/analysis?tab=${k}"><button class="${k === tab ? "on" : ""}">${t("an.tab." + k)}</button></a>`).join("")}</div>`;
 
   const pf = a.preflop, tr = pf.trend, T = pf.total;
@@ -1213,6 +1218,17 @@ async function viewAnalysis(tab) {
   };
 }
 
+// ---- Help: one page, a section per screen; "?" next to a screen's title opens its section -----------------------
+const HELP = ["start", "dashboard", "tournaments", "hands", "analysis", "money", "backup", "problems", "glossary"];   // help.<key>.*
+const helpLink = k => `<a class="help-q" href="#/help/${k}" title="${esc(t("help.more"))}">?</a>`;
+function viewHelp(section) {
+  app.innerHTML = `<h1>${t("help.title")}</h1><nav class="help-toc"><b>${t("help.toc")}:</b>${HELP.map(k => `<a href="#/help/${k}">${t(`help.${k}.title`)}</a>`).join("")}
+      <a href="#/luck">${t("nav.luck")}</a></nav>`
+    + HELP.map(k => `<section class="help-sec" id="help-${k}"><h2>${t(`help.${k}.title`)}</h2>${t(`help.${k}.body`)}</section>`).join("");
+  const target = section && document.getElementById("help-" + section);
+  if (target) setTimeout(() => target.scrollIntoView(), 0);         // after the router's scroll to the top
+}
+
 // ---- Export: a hand or a result as text, CSV files into Downloads ---------------------------------------------
 async function copyText(text, where) {                   // the clipboard, or the text selected for a manual copy
   const box = document.getElementById(where);
@@ -1263,7 +1279,7 @@ async function viewHands(qs) {
     const k = i === j ? R[i] + R[j] : i < j ? R[i] + R[j] + "s" : R[j] + R[i] + "o";
     grid.push(`<button data-k="${k}" class="${picked.has(k) ? "on" : ""}">${k}</button>`);
   }
-  app.innerHTML = `<h1>${t("hs.title")}</h1><div class="box hs-filters">
+  app.innerHTML = `<h1>${t("hs.title")}${helpLink("hands")}</h1><div class="box hs-filters">
     <div class="hs-row">${sel("period", PERIODS.filter(k => k !== "custom").map(k => `<option value="${k === "max" ? "" : k}" ${(f.period || "") === (k === "max" ? "" : k) ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join(""))}
       ${sel("buyin", opt(tl.map(x => x.buyin_total), f.buyin, t("hs.anyBuyin"), money))}
       ${sel("format", opt(tl.map(x => x.format), f.format, t("hs.anyFormat"), v => t("format." + v)))}
@@ -1373,7 +1389,7 @@ let previewAsked = false;                               // a preview shows only 
 async function viewImport() {
   const mine = routeSeq, st = await api("/api/settings");
   if (mine !== routeSeq) return;
-  app.innerHTML = `<h1>${t("nav.import")}</h1>
+  app.innerHTML = `<h1>${t("nav.import")}${helpLink("start")}</h1>
     <p>${t("imp.intro")}</p>
     <div class="filters"><input id="folder" style="flex:1;min-width:240px" placeholder="${esc(t("imp.placeholder"))}" value="${esc(st.import_folder || "")}">
     <button id="go" class="primary">${t("imp.go")}</button></div>
@@ -1470,7 +1486,7 @@ async function viewSettings(msg) {
     <td style="text-align:left;white-space:normal">${esc(r.name || "#" + r.tournament_id)}</td>
     <td><button data-restore="${r.tournament_id}">${t("set.restore")}</button></td></tr>`);
   const rules = x.rules.map(r => `<tr><td style="white-space:normal">${esc(r.name || "#" + r.tournament_id)}</td><td>${reasonText(r.reason)}</td></tr>`);
-  app.innerHTML = `<h1>${t("nav.settings")}</h1>${msg ? `<p class="box">${msg}</p>` : ""}
+  app.innerHTML = `<h1>${t("nav.settings")}${helpLink("backup")}</h1>${msg ? `<p class="box">${msg}</p>` : ""}
     <h2>${t("set.ignored")}</h2><p class="m">${t("set.ignoredIntro")}</p>
     ${ign.length ? table([t("col.ignoredAt"), t("col.tournament"), ""], ign, "names") : `<p class="m">${t("set.none")}</p>`}
     <h2>${t("set.rules")}</h2><p class="m">${t("set.rulesIntro")}</p>
@@ -1532,6 +1548,7 @@ async function route(keepScroll) {
     else if (h === "#/analysis" || h.startsWith("#/analysis?")) await viewAnalysis(new URLSearchParams(h.split("?")[1] || "").get("tab"));
     else if (h === "#/import") await viewImport();
     else if (h === "#/session") await viewSession();
+    else if (h === "#/help" || h.startsWith("#/help/")) viewHelp(h.split("/")[2]);
     else if (h === "#/hands" || h.startsWith("#/hands?")) await viewHands(h.split("?")[1] || "");
     else if (h === "#/luck") viewLuck();
     else if (h === "#/review") await viewReview();

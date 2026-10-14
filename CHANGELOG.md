@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Help: one page (the "?" in the header) with getting started, the dashboard, tournaments, hands and the replayer,
+  every Analysis definition, money (ROI with tickets, the interval, ITM), backup and export, problems and a glossary,
+  in Polish and English. A "?" next to each screen's title opens its section.
 - Export: "Copy the hand" in the replayer and "Copy the result" on a tournament give plain text for forums and chats
   (positions instead of opponent ids, stacks in BB, every street and the board, shown cards, the result and the result
   by EV; a provisional result says so). "Export CSV" on the tournament list and in Hands saves what is shown (with the
