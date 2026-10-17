@@ -980,5 +980,6 @@
  "ctx.session.h2": "2–3 h",
  "ctx.session.h3": "3 h i dłużej",
  "ctx.how": "<p>Każdą grupę porównujemy z Twoimi pozostałymi rękami <b>przy tym samym stacku</b> (poniżej 10, 10–15, 15–25, 25–40, 40+ BB): późno w sesji albo w nocy stacki są krótsze, a sam krótki stack gra mniej rąk, więc proste porównanie zrzuciłoby na zegar to, co robi stack. „Oczekiwane” to wynik pozostałych rąk w każdym przedziale stacku, ważony liczbą rąk grupy w tym przedziale.</p><p>Ręce jednej sesji nie są niezależne (ten sam nastrój, stoły, turnieje), więc niepewność liczymy sesjami, nie rękami: jeden długi wieczór nie robi nawyku. Grupę porównujemy dopiero od {hands} rąk z {sessions} sesji; wszystkie porównania razem są korygowane na wielokrotne testowanie (Benjamini-Hochberg), jak przy leakach, a pokazujemy tylko różnice z q ≤ 0,05.</p><p>ROI grupy pokazujemy z przedziałem 95% i go nie oceniamy: turniejów jest dużo mniej niż rąk.</p>",
- "ctx.roiTip": "ROI turniejów grupy; pod nim przedział 95% (od 10 turniejów)."
+ "ctx.roiTip": "ROI turniejów grupy; pod nim przedział 95% (od 10 turniejów).",
+ "bk.postgres": "Kopia w aplikacji działa z bazą SQLite. Twoje dane są w PostgreSQL: zrób kopię narzędziami bazy, np. <code>pg_dump</code>."
 }

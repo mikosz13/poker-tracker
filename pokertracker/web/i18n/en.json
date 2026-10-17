@@ -960,5 +960,6 @@
  "ctx.session.h2": "2–3 h",
  "ctx.session.h3": "3 h and more",
  "ctx.how": "<p>Each group is compared with your other hands <b>at the same stack depth</b> (under 10, 10–15, 15–25, 25–40, 40+ BB): late in a session or at night stacks are shorter, and a short stack alone plays fewer hands, so a plain comparison would blame the clock for the stack. “Expected” is what the other hands did in each stack band, weighted by the group's hands in it.</p><p>Hands of one session are not independent (the same mood, tables and tournaments), so the uncertainty is counted by session, not by hand: one long evening cannot make a habit. A group is compared only with at least {hands} hands from {sessions} sessions; all comparisons together are corrected for testing many at once (Benjamini-Hochberg), as for the leaks, and only differences with q ≤ 0.05 are listed.</p><p>ROI per group is shown with its 95% interval and is not judged: there are far fewer tournaments than hands.</p>",
- "ctx.roiTip": "ROI of the group's tournaments; below it the 95% interval (shown from 10 tournaments)."
+ "ctx.roiTip": "ROI of the group's tournaments; below it the 95% interval (shown from 10 tournaments).",
+ "bk.postgres": "Backups in the app work with the SQLite database. Your data is in PostgreSQL: back it up with your database's own tools, e.g. <code>pg_dump</code>."
 }
