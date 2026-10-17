@@ -6,12 +6,12 @@ from pokertracker import server
 from pokertracker.db import Database
 from pokertracker.demo import build_demo
 from pokertracker.play_context import (MIN_TEST_SESSIONS, SESSION_GAP_HOURS, context_data, expected_test,
-                                       session_hours, tables_at_once, _bands)
+                                       session_hours, stratum, tables_at_once, tilt_windows, _bands)
 
 
-def hand(at, tid=1, stack=30.0, vpip=0, pfr=0, adj=0.0):
-    return {"hand_id": f"{tid}-{at}", "tournament_id": tid, "at": at, "stack_bb": stack, "decided": 1, "vpip": vpip,
-            "pfr": pfr, "adj_bb": adj}
+def hand(at, tid=1, stack=30.0, vpip=0, pfr=0, adj=0.0, net=0.0, level=1, hid=None):
+    return {"hand_id": hid or f"{tid}-{at}", "tournament_id": tid, "at": at, "stack_bb": stack, "decided": 1,
+            "vpip": vpip, "pfr": pfr, "adj_bb": adj, "net_bb": net, "level": level}
 
 
 class TimingTests(unittest.TestCase):
@@ -68,6 +68,29 @@ class ExpectedTests(unittest.TestCase):
         self.assertAlmostEqual(z, 0.0)
 
 
+class TiltTests(unittest.TestCase):
+    def test_hands_within_fifteen_minutes_after_a_moment_on_every_table(self):
+        hands = [hand("2026-10-01 10:00", 1, net=-25),                 # a big loss on table 1 ...
+                 hand("2026-10-01 10:05", 2), hand("2026-10-01 10:15", 1), hand("2026-10-01 10:16", 2),
+                 hand("2026-10-01 10:20", 2, stack=4, net=-4),        # ... a bust on table 2 ...
+                 hand("2026-10-01 10:30", 1, hid="AI"),               # ... an all-in lost as a favourite
+                 hand("2026-10-01 10:40", 1)]
+        w = tilt_windows(hands, coolers={"AI"})
+        self.assertEqual(w["big_loss"], ([1, 2], 1))                  # 10:05 and 10:15; 10:16 is past the window
+        self.assertEqual(w["bust"], ([5], 1))                         # the bust hand itself is not "after"
+        self.assertEqual(w["cooler"], ([6], 1))
+
+    def test_compared_at_the_same_stage_not_only_the_same_stack(self):
+        # the rest: early levels play 40 %, late levels 20 %, with the same stacks
+        rest = [hand(f"e{i}", stack=50, level=2, vpip=int(i % 10 < 4)) for i in range(1000)] + \
+               [hand(f"l{i}", stack=50, level=14, vpip=int(i % 10 < 2)) for i in range(1000)]
+        self.assertNotEqual(stratum(rest[0]), stratum(rest[-1]))
+        group = [hand(f"g{i}", stack=50, level=3, vpip=int(i % 10 < 4)) for i in range(500)]   # early, 40 %
+        z, value, expected, _ = expected_test("vpip", group, [i % 20 for i in range(500)], _bands(rest))
+        self.assertEqual((value, expected), (40.0, 40.0))             # not 40 % against 30 % overall
+        self.assertAlmostEqual(z, 0.0)
+
+
 class ContextDataTests(unittest.TestCase):
     def test_on_the_demo_tournaments(self):
         db = Database("sqlite:///:memory:")
@@ -75,9 +98,12 @@ class ContextDataTests(unittest.TestCase):
         db.init_schema()
         build_demo(db, n=20, equity=False)
         c = context_data(db)
-        self.assertEqual([d["key"] for d in c["dims"]], ["tables", "daypart", "session"])
+        self.assertEqual([d["key"] for d in c["dims"]], ["tables", "daypart", "session", "after"])
         hands = db.scalar("SELECT COUNT(*) FROM hero_hands")
-        for d in c["dims"]:
+        after = c["dims"][-1]
+        self.assertEqual(after["rows"][-1]["key"], "calm")
+        self.assertTrue(all(r["moments"] for r in after["rows"][:-1]))
+        for d in c["dims"][:3]:
             self.assertEqual(sum(r["hands"] for r in d["rows"]), hands)
             self.assertEqual(sum(r["tournaments"] for r in d["rows"]), 20)     # every tournament in one group
         for f in c["findings"]:
