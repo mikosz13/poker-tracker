@@ -18,7 +18,7 @@ The **trend** compares the last 30 days with the rest of your history (500+ hand
 
 **Variance**: 10,000 runs of the next 100, 500 or 1,000 tournaments drawn from your own (bootstrap, results in buy-ins). It shows the typical result and the spread, the chance of a loss, the largest drawdown and how many buy-ins keep the risk of a bigger one under 5%; the “what if my ROI were” slider scales the prizes. It cannot see changes in your play, fields or structures; under 100 tournaments it says so clearly.
 
-**Sessions**: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments at once, the time of day and the time since the session started (a session ends after a break of more than 3 hours, as on the dashboard). Each group is compared with your other hands at the same stack depth, with the uncertainty counted by session, not by hand; only differences beyond noise are listed.
+**Sessions**: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments at once, the time of day and the time since the session started (a session ends after a break of more than 3 hours, as on the dashboard), and **after a hard moment**: your hands on every table within 15 minutes after an all-in lost as a favourite (60%+ equity), a pot lost by 20+ BB or a bust, against the calm hands. Each group is compared with your other hands at the same stack depth and stage of the tournament (blind levels 1–5, 6–10, 11–15, 16+), with the uncertainty counted by session, not by hand; only differences beyond noise are listed. The tables show plain numbers; the box above them judges.
 
 ## Money {#money}
 

@@ -18,7 +18,7 @@ Każdy wskaźnik liczymy od jego własnych okazji, tak jak PokerTracker 4, a pod
 
 **Wariancja**: 10 000 symulacji następnych 100, 500 albo 1000 turniejów losowanych z Twoich własnych (bootstrap, wyniki w buy-inach). Pokazuje typowy wynik i rozrzut, szansę na stratę, największy dołek i ile buy-inów trzyma ryzyko większego dołka poniżej 5%; suwak „co jeśli ROI” skaluje nagrody. Nie widzi zmian w Twojej grze, polach ani strukturach; poniżej 100 turniejów jest wyraźna uwaga.
 
-**Sesje**: VPIP, PFR, bb/100 wg EV i ROI według liczby turniejów naraz, pory dnia i czasu od początku sesji (sesja kończy się po przerwie dłuższej niż 3 h, jak na Pulpicie). Każda grupa jest porównana z Twoimi pozostałymi rękami przy tym samym stacku, a niepewność liczona sesjami, nie rękami; pokazujemy tylko różnice ponad szum.
+**Sesje**: VPIP, PFR, bb/100 wg EV i ROI według liczby turniejów naraz, pory dnia i czasu od początku sesji (sesja kończy się po przerwie dłuższej niż 3 h, jak na Pulpicie), a także **po trudnym momencie**: ręce na wszystkich stołach w ciągu 15 minut po przegranym all-inie jako faworyt (equity 60%+), przegranej puli 20+ BB albo odpadnięciu, wobec spokojnych rąk. Każda grupa jest porównana z Twoimi pozostałymi rękami przy tym samym stacku i etapie turnieju (poziom blindów 1–5, 6–10, 11–15, 16+), a niepewność liczona sesjami, nie rękami; pokazujemy tylko różnice ponad szum. Tabele pokazują surowe liczby, ocenę daje ramka nad nimi.
 
 ## Finanse {#money}
 

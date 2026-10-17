@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Help → How we count → Sessions: "after a hard moment" and the comparison at the same stack and stage (#61).
 - README: "Known limitations" (what it reads, installing, what it can and cannot know, databases, out of scope).
 - Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems
   and solutions, FAQ, About), a search over all of Help (without case or Polish letters), the text as Markdown files
