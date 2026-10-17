@@ -35,6 +35,7 @@ flowchart LR
 | `migrations.py` | Upgrades an existing database in place on startup (schema version in the database) |
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |
 | `tournament_report.py`, `dashboard.py` | Report data + text/HTML rendering |
+| `web/help/<lang>/*.md` | Help v2 content as Markdown (six pages per language), rendered in the app by a small Markdown renderer; served by `/help/<lang>/<page>.md`, About's changes by `/api/about` from CHANGELOG.md |
 | `server.py`, `app.py`, `web/index.html` | Local-only HTTP API, background import job, folder watcher, desktop window |
 | `i18n.py`, `web/i18n/en.json`, `web/i18n/pl.json` | App texts in English and Polish: one key file per language for the page and the server, plural forms, number formats |
 

@@ -10,10 +10,12 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .analysis import analysis_data
+from .backup import supported as backup_supported
 from .session import session_insights
 from .tickets import ticket_entries, tickets_won
 from .dashboard import DAY, PERIODS, dashboard_data, normal_period, period_bounds
 from .db import Database
+from . import __version__
 from .i18n import I18N, LANGS, pick
 from .importer import (DAY2_WAIT_DAYS, changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
                        restore_tournament)
@@ -22,6 +24,8 @@ from .tournament_report import tournament_data
 
 SITE = "GGPoker"
 WEB = Path(__file__).resolve().parent / "web"
+HELP_PAGES = ("start", "how", "glossary", "problems", "faq", "about")     # web/help/<lang>/<page>.md
+CHANGELOG = Path(__file__).resolve().parent.parent / "CHANGELOG.md"    # the repository, or the packaged app's root
 SESSION_GAP_HOURS = 3        # tournaments closer together than this belong to the same session
 THEMES = ("light", "dark")   # without a saved theme the page follows the system
 WATCH_SECONDS = 20           # how often a watched folder is checked for new exports
@@ -104,6 +108,24 @@ def group_session(tournaments, gap_hours=SESSION_GAP_HOURS):
         session.append(t)
         start = min(start, _ts(t["first_hand"]))
     return session
+
+
+def changes_of(version, changelog=None):
+    """The CHANGELOG section of this version (Markdown, without its heading), or None when the file is not there
+    (an installed package without it) or has no such section."""
+    path = Path(changelog) if changelog else CHANGELOG
+    if not path.is_file():
+        return None
+    out, inside = [], False
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("## "):
+            if inside:
+                break
+            inside = line[3:].split(" ")[0] == version
+            continue
+        if inside:
+            out.append(line)
+    return "\n".join(out).strip() or None
 
 
 def last_session(db, site=SITE, lang="en"):
@@ -324,6 +346,13 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 return self._send(200, page.encode(), "text/html; charset=utf-8")
             if path.startswith("/i18n/") and path[6:-5] in LANGS and path.endswith(".json"):
                 return self._send(200, (I18N / path[6:]).read_bytes())
+            if path.startswith("/help/"):                             # /help/<lang>/<page>.md: Help, as Markdown
+                lang_, _, page_ = path[6:].partition("/")
+                if lang_ in LANGS and page_.endswith(".md") and page_[:-3] in HELP_PAGES:
+                    return self._send(200, (WEB / "help" / lang_ / page_).read_bytes(), "text/markdown; charset=utf-8")
+                return self._send(404, {"error": "no such help page"})
+            if path == "/api/about":                                  # Help → About: the version and its changes
+                return self._send(200, {"version": __version__, "changes": changes_of(__version__)})
             query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
             lang = pick((query.get("lang") or [None])[0])          # the language of texts made here
             if path in ("/api/settings", "/api/status"):
@@ -331,6 +360,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     if path == "/api/settings":
                         return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
                                                 "watch": get_setting(db, "watch") == "1", "demo": view["demo"],
+                                                "backup": backup_supported(url),
                                                 "four_color": get_setting(db, "four_color") != "0",
                                                 "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
                     return self._send(200, status_payload(db))

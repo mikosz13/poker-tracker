@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+- Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems
+  and solutions, FAQ, About), a search over all of Help (without case or Polish letters), the text as Markdown files
+  per language (`pokertracker/web/help/`). New FAQ: where the data is and that nothing leaves the computer, backup and
+  moving to another computer, updating, deleting data, working offline. About: the version, this version's changes,
+  GitHub, how to report a bug, the MIT license. The version has one source, `pokertracker/__init__.py`
+  (`pyproject.toml` reads it). "?" links open the right subpage and section; `#/luck` opens its section in Help.
+- Settings → Backup with PostgreSQL: no backup or restore buttons, only a note to use pg_dump (as planned in
+  docs/tasks/export.md; before, the button was there and answered with an error).
 - Docs: `docs/checks/import-668-files.md`, the check that a 668-file test import lost nothing (13.10).
 - CI: tests also on Python 3.14 (Linux, macOS, Windows); release builds stay on 3.12.
 - License: MIT (`LICENSE`), linked from the README.

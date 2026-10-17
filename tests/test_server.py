@@ -116,6 +116,7 @@ class ServerTests(unittest.TestCase):
 
         settings = json.loads(self.get("/api/settings")[1])
         self.assertEqual(settings["import_folder"], str(self.exports))
+        self.assertTrue(settings["backup"])                            # an SQLite file: the backup buttons are shown
 
     def test_analysis_endpoint(self):
         status, body = self.get("/api/analysis")
