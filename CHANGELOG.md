@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Replayer: Hero's hole cards sit side by side above Hero's box again instead of one above the other over the
+  replay buttons. The Dashboard's tile row shared Hero's seat class and turned the seat into a four-column grid; the
+  tiles have their own class now.
 - Release builds test the packaged app before uploading it (`tools/smoke_packaged.py`, macOS and Windows): a clean
   profile, the demo files imported twice (with all-in EV, so parallel equity inside the frozen binary), the main
   screens, backup and restore, sample data, and the upgrade of a 0.2.0 database. The packaged binary also runs the
