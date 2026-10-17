@@ -213,8 +213,6 @@ Domain details handled:
 
 **Databases**
 - Backup and restore in the app work with the SQLite database only; PostgreSQL users use `pg_dump`.
-- The hand search is benchmarked and tested on SQLite only (500,000 hands under 0.15 s); PostgreSQL has neither a
-  benchmark nor a test of it yet.
 
 **Out of scope by decision**
 - ICM / $EV, payout structures, HUD, solver / GTO analysis, cash games.
