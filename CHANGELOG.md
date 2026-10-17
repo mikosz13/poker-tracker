@@ -2,6 +2,21 @@
 
 ## Unreleased
 - README: "Known limitations" (what it reads, installing, what it can and cannot know, databases, out of scope).
+- Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems
+  and solutions, FAQ, About), a search over all of Help (without case or Polish letters), the text as Markdown files
+  per language (`pokertracker/web/help/`). New FAQ: where the data is and that nothing leaves the computer, backup and
+  moving to another computer, updating, deleting data, working offline. About: the version, this version's changes,
+  GitHub, how to report a bug, the MIT license. The version has one source, `pokertracker/__init__.py`
+  (`pyproject.toml` reads it). "?" links open the right subpage and section; `#/luck` opens its section in Help.
+- Settings → Backup with PostgreSQL: no backup or restore buttons, only a note to use pg_dump (as planned in
+  docs/tasks/export.md; before, the button was there and answered with an error).
+- Docs: `docs/checks/import-668-files.md`, the check that a 668-file test import lost nothing (13.10).
+- CI: tests also on Python 3.14 (Linux, macOS, Windows); release builds stay on 3.12.
+- License: MIT (`LICENSE`), linked from the README.
+- Analysis → Sessions, "After a hard moment": your hands on every table within 15 minutes after an all-in lost as a
+  favourite (60 %+ equity), a pot lost by 20 BB or more, or a bust, against the calm hands. All Sessions comparisons
+  now hold the stage of the tournament fixed as well as the stack (blind levels 1–5, 6–10, 11–15, 16+): after a bust
+  the next hands are often the early levels of a new entry, which looked like tilt and was not.
 - README: the Variance and Sessions tabs.
 - Analysis → Sessions: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments played at once (1 / 2 / 3+), the
   time of day and the time since the session started (first hour, 1–2 h, 2–3 h, 3 h+; a session ends after a break of

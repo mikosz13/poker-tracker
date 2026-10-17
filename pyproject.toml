@@ -1,6 +1,6 @@
 [project]
 name = "pokertracker"
-version = "0.7.0"
+dynamic = ["version"]                       # the one source: pokertracker/__init__.py
 description = "Tournament tracker for GGPoker: hand histories + summaries -> SQL database -> ROI and play statistics"
 requires-python = ">=3.10"
 dependencies = ["numpy>=1.24"]
@@ -22,5 +22,8 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 packages = ["pokertracker"]
 
+[tool.setuptools.dynamic]
+version = {attr = "pokertracker.__version__"}
+
 [tool.setuptools.package-data]
-pokertracker = ["sql/*.sql", "web/*", "web/i18n/*.json"]
+pokertracker = ["sql/*.sql", "web/*", "web/i18n/*.json", "web/help/*/*.md"]

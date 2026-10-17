@@ -34,3 +34,25 @@ asking. Short, plain texts (the luck page is the model), PL and EN, inside the a
 - Every number the app shows has its definition in Help, in the same words as its tooltip.
 - No more than a screen per section at 1100 px; PL and EN; both themes; 800 px without overflow.
 - Tests: every section exists in both languages, every "?" link points at an existing anchor, no hard-coded text.
+
+## Help v2 (Mik, 17.10.2026)
+
+Keeps everything of #54 and adds what Mik had decided earlier:
+
+- **Subpages with a side menu**: Pierwsze kroki (files and import, the dashboard, tournaments, hands and the replayer,
+  backup and export), Jak liczymy (Analysis, Money, and "Jak liczymy szczęście", which `#/luck` now opens),
+  Słowniczek, Problemy i rozwiązania, Najczęstsze pytania, O aplikacji. The nine sections of v1 keep their anchors on
+  these pages; nothing is dropped.
+- **Content as Markdown per language**: `pokertracker/web/help/<pl|en>/<page>.md`, served by `/help/<lang>/<page>.md`
+  and drawn by a small renderer (headings with `{#anchor}`, paragraphs, lists, bold, italic, code, links;
+  `{{luck}}`, `{{version}}`, `{{changes}}` filled in by the app). External links open outside the app window.
+- **Search** over all pages, cut at their `##` sections, without case or Polish letters ("otworz" finds "Otwórz").
+- **FAQ**: where the data is and that nothing leaves the computer, backup and moving to another computer, updating,
+  deleting data, working offline, the GGPoker password.
+- **O aplikacji**: the version from one source (`pokertracker/__init__.py`; `pyproject.toml` reads it, the
+  PyInstaller spec too), this version's section of CHANGELOG.md (bundled in the app), GitHub, how to report a bug,
+  the MIT license.
+- **"?" links** map the old section keys to `#/help/<page>/<anchor>`.
+- Tests: every page in both languages, the same anchors in PL and EN, every "?" and internal link points at an
+  existing page and anchor, the v1 sections and analysis definitions are there, FAQ and About hold their topics, the
+  server serves only the known pages, the version has one source.

@@ -21,7 +21,7 @@ flowchart LR
 | `importer.py` | Classifies files, idempotent loads (natural keys + `ON CONFLICT`), remembers imported files, progress callbacks |
 | `equity.py` | Vectorised 7-card evaluator, exact runout enumeration, side pots, all-in detection, parallel precompute |
 | `backup.py` | Backup (SQLite online backup into Downloads, dated, never overwritten) and restore (checks the file is ours and not newer, keeps the current database aside, copies in, then upgrades it with the migrations) |
-| `play_context.py` | Sessions: tournaments at once per hand (first to last hand of each, a sweep with bisect), time of day, hours since the session started (3 h breaks); each group against the rest at the same stack depth (expected per stack band), cluster-robust by session, BH-corrected |
+| `play_context.py` | Sessions: tournaments at once per hand (first to last hand of each, a sweep with bisect), time of day, hours since the session started (3 h breaks); hands within 15 minutes after a hard moment (all-in lost as a favourite, 20+ BB lost, bust) against the calm ones; each group against the rest at the same stack band and blind level band, cluster-robust by session, BH-corrected |
 | `variance.py` | Variance: every tournament as a result in buy-ins; seeded bootstrap of the next N (10,000 runs, in chunks) for the final result, the largest drawdown (from the highest point, the start included) and a percentile fan; "what if ROI" scales prizes by one factor; average buy-in by week or month |
 | `demo.py` | Sample data: made-up tournaments written as GG files (hands and summaries, late reg, re-entries, knockouts, satellite tickets) and imported through the normal importer into a separate `demo.db`; the server switches every data request to it and refuses imports and backups meanwhile |
 | `export.py` | A hand or a tournament as plain text (positions instead of opponent ids, stacks in BB, every street, result and result by EV; provisional results marked) and CSV for Excel (UTF-8 with BOM; Polish: decimal commas and ';'); files go to Downloads, never overwritten |
@@ -35,6 +35,7 @@ flowchart LR
 | `migrations.py` | Upgrades an existing database in place on startup (schema version in the database) |
 | `replay.py` | Hand replay as server-side snapshots, so poker accounting is tested in Python, not in the UI |
 | `tournament_report.py`, `dashboard.py` | Report data + text/HTML rendering |
+| `web/help/<lang>/*.md` | Help v2 content as Markdown (six pages per language), rendered in the app by a small Markdown renderer; served by `/help/<lang>/<page>.md`, About's changes by `/api/about` from CHANGELOG.md |
 | `server.py`, `app.py`, `web/index.html` | Local-only HTTP API, background import job, folder watcher, desktop window |
 | `i18n.py`, `web/i18n/en.json`, `web/i18n/pl.json` | App texts in English and Polish: one key file per language for the page and the server, plural forms, number formats |
 

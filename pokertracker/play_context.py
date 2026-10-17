@@ -7,10 +7,16 @@ the same time, the time of day and the time since the session started.
   the file names are in UTC, the hands and summaries two hours later, Polish summer time).
 - Session: hands with breaks of at most SESSION_GAP_HOURS, as for "Last session" on the dashboard.
 
-Every group is compared with the rest of the hands AT THE SAME STACK DEPTH (bb/100 by EV, VPIP, PFR): late in a
-session or at night the stacks are shorter, and a short stack alone plays fewer hands, so a plain comparison would
-blame the clock for the stack. The expected value of a group is what the rest did in each stack band, weighted by the
-group's hands per band. The family of tests is corrected with Benjamini-Hochberg and only differences with
+After a hard moment (tilt): the hands within TILT_MINUTES after an all-in lost as a favourite (equity >= COOLER_EQUITY),
+a pot lost by BIG_LOSS_BB or more, or a bust (Hero lost every chip), on every table, against the calm hands (outside
+every such window). The event hand itself is not "after".
+
+Every group is compared with the rest of the hands AT THE SAME STACK DEPTH AND STAGE (stack band x blind level band;
+bb/100 by EV, VPIP, PFR): late in a session or at night the stacks are shorter, and a short stack alone plays fewer
+hands; after a bust the next hands are often the early levels of a new entry. A plain comparison would blame the
+clock or the mood for the stack and the stage (on Mik's data: 12 "findings" plainly, 4 at the same stack, 1 at the
+same stack and stage). The expected value of a group is what the rest did in each stratum, weighted by the group's
+hands per stratum. The family of tests is corrected with Benjamini-Hochberg and only differences with
 q <= Q_SHOWN are reported, as for the leaks. ROI per group is
 descriptive, with its bootstrap interval; tournaments are placed by their own hands (the average number of
 tournaments at once, Hero's first hand for the time of day and the session).
@@ -28,9 +34,14 @@ TABLES = ("1", "2", "3+")
 DAYPARTS = ((0, 6, "night"), (6, 12, "morning"), (12, 18, "afternoon"), (18, 24, "evening"))
 SESSION_AGE = ((0, 1, "h0"), (1, 2, "h1"), (2, 3, "h2"), (3, math.inf, "h3"))
 MIN_TEST_HANDS = 300            # a group (and the rest) needs this many hands to be tested
+LEVEL_BANDS = 4                 # blind levels 1-5, 6-10, 11-15, 16+: the stage of a tournament, roughly (speeds differ)
 MIN_TEST_SESSIONS = 5           # ... and hands from this many sessions: one evening is not a habit
 Q_SHOWN = 0.05
 METRICS = ("ev100", "vpip", "pfr")
+TILT_MINUTES = 15               # decisions with Mik, 17.10.2026: a window in time on all tables, three kinds of moment
+COOLER_EQUITY = 0.6
+BIG_LOSS_BB = 20
+TILT_KINDS = ("cooler", "big_loss", "bust")
 
 
 def _t(at):
@@ -72,11 +83,16 @@ def _stats(group):
     return {"hands": s["hands"], "vpip": s["vpip"], "pfr": s["pfr"], "ev100": s["ev100"]}
 
 
+def stratum(h):
+    """(stack band, blind level band): hands compared only within the same one."""
+    return depth_label(h["stack_bb"]), min((h.get("level") or 1) - 1, 5 * LEVEL_BANDS - 1) // 5
+
+
 def _bands(rest):
-    """Per stack band of the rest: VPIP / PFR counts over decided hands, and the mean and variance of the EV result."""
+    """Per stratum of the rest: VPIP / PFR counts over decided hands, and the mean and variance of the EV result."""
     out = {}
     for h in rest:
-        b = out.setdefault(depth_label(h["stack_bb"]), {"decided": 0, "vpip": 0, "pfr": 0, "adj": []})
+        b = out.setdefault(stratum(h), {"decided": 0, "vpip": 0, "pfr": 0, "adj": []})
         b["decided"] += h["decided"]
         b["vpip"] += h["vpip"]
         b["pfr"] += h["pfr"]
@@ -89,11 +105,11 @@ def _bands(rest):
 
 
 def expected_test(metric, group, sessions, bands):
-    """(z, the group's value, the value expected from the rest at the group's stack depths, sessions), or None when the
-    group has fewer than MIN_TEST_SESSIONS sessions or a stack band without any rest to compare with.
+    """(z, the group's value, the value expected from the rest at the group's stack depths and stages, sessions), or
+    None when the group has fewer than MIN_TEST_SESSIONS sessions or a stratum without any rest to compare with.
 
-    Each hand gives observed minus expected: for VPIP / PFR the hand's 0 or 1 against the rest's rate in its stack band
-    (decided hands only), for bb/100 by EV its result against the rest's mean in its band. Hands of one session are
+    Each hand gives observed minus expected: for VPIP / PFR the hand's 0 or 1 against the rest's rate in its stratum
+    (decided hands only), for bb/100 by EV its result against the rest's mean in its stratum. Hands of one session are
     not independent (the same mood, tables, tournaments), so the variance of the total is counted by session
     (cluster-robust: the sum over sessions of their squared totals, times G / (G - 1)); for EV it also adds the
     uncertainty of the band means."""
@@ -101,7 +117,7 @@ def expected_test(metric, group, sessions, bands):
     obs = exp = 0.0
     n = 0
     for h, session in zip(group, sessions):
-        band = depth_label(h["stack_bb"])
+        band = stratum(h)
         b = bands.get(band)
         if metric == "ev100":
             if b is None or b["var"] is None:
@@ -125,6 +141,26 @@ def expected_test(metric, group, sessions, bands):
     if not var:
         return None
     return (obs - exp) / math.sqrt(var), round(100 * obs / n, 1), round(100 * exp / n, 1), g
+
+
+def tilt_windows(hands, coolers, minutes=TILT_MINUTES):
+    """{kind: (indexes of the hands within `minutes` after a moment of that kind, number of moments)} for hands in
+    time order; coolers: ids of the all-ins Hero lost as a favourite."""
+    out = {}
+    for kind in TILT_KINDS:
+        moments = [i for i, h in enumerate(hands) if
+                   (kind == "cooler" and h["hand_id"] in coolers) or
+                   (kind == "big_loss" and h["net_bb"] <= -BIG_LOSS_BB) or
+                   (kind == "bust" and h["stack_bb"] + h["net_bb"] <= 0.01)]
+        after = set()
+        for e in moments:
+            end = _t(hands[e]["at"]).timestamp() + minutes * 60
+            j = e + 1
+            while j < len(hands) and _t(hands[j]["at"]).timestamp() <= end:
+                after.add(j)
+                j += 1
+        out[kind] = (sorted(after - set(moments)), len(moments))
+    return out
 
 
 def context_data(db, site=SITE, hands=None):
@@ -156,32 +192,55 @@ def context_data(db, site=SITE, hands=None):
              "session": {e: keys["session"][p["first"]] for e, p in per_t.items()}}
 
     dims, family = [], []
+
+    def compare(dim, key, idx, rest_idx, row):
+        """Test the hands idx against the hands rest_idx at the same stack depth, by session."""
+        if len(idx) < MIN_TEST_HANDS or len(rest_idx) < MIN_TEST_HANDS:
+            return
+        group, bands = [hands[i] for i in idx], _bands([hands[i] for i in rest_idx])
+        for metric in METRICS:
+            t = expected_test(metric, group, [session_of[i] for i in idx], bands)
+            if t:
+                family.append({"dim": dim, "key": key, "metric": metric, "z": t[0], "p": p_value(t[0]),
+                               "value": t[1], "expected": t[2], "hands": len(idx), "sessions": t[3]})
+
+    def base_row(key, idx):
+        return {"key": key, **_stats([hands[i] for i in idx]), "share_pct": round(100 * len(idx) / len(hands), 1),
+                "sessions": len({session_of[i] for i in idx})}
+
     for dim in ("tables", "daypart", "session"):
         rows = []
         for key in order[dim]:
             idx = [i for i, k in enumerate(keys[dim]) if k == key]
             if not idx:
                 continue
-            group = [hands[i] for i in idx]
-            rest = [h for h, k in zip(hands, keys[dim]) if k != key]
-            g = _stats(group)
             pairs = [results[e] for e, k in sorted(t_key[dim].items()) if k == key and e in results]
             boot = bootstrap_roi(pairs) if len(pairs) >= MIN_TOURNAMENTS else None
             cost, won = sum(c for c, _ in pairs), sum(w for _, w in pairs)
-            row = {"key": key, **g,
-                   "share_pct": round(100 * len(group) / len(hands), 1), "tournaments": len(pairs),
-                   "sessions": len({session_of[i] for i in idx}),
+            row = {**base_row(key, idx), "tournaments": len(pairs),
                    "roi_pct": round(100 * (won - cost) / cost, 1) if cost else None,
                    "interval": {"low": boot["low"], "high": boot["high"], "level": 95} if boot else None}
-            if len(group) >= MIN_TEST_HANDS and len(rest) >= MIN_TEST_HANDS:
-                bands = _bands(rest)
-                for metric in METRICS:
-                    t = expected_test(metric, group, [session_of[i] for i in idx], bands)
-                    if t:
-                        family.append({"dim": dim, "key": key, "metric": metric, "z": t[0], "p": p_value(t[0]),
-                                       "value": t[1], "expected": t[2], "hands": len(group), "sessions": t[3]})
+            compare(dim, key, idx, [i for i, k in enumerate(keys[dim]) if k != key], row)
             rows.append(row)
         dims.append({"key": dim, "rows": rows})
+
+    # after a hard moment, against the calm hands
+    coolers = {r["hand_id"] for r in db.query("SELECT hand_id FROM allin_ev WHERE site = ? AND is_hero AND equity >= ? "
+                                              "AND result = 'lose'", (site, COOLER_EQUITY))}
+    windows = tilt_windows(hands, coolers)
+    touched = set().union(*(set(idx) for idx, _ in windows.values()))
+    calm = [i for i in range(len(hands)) if i not in touched]
+    rows = []
+    for kind in TILT_KINDS:
+        idx, moments = windows[kind]
+        if idx:
+            row = {**base_row(kind, idx), "moments": moments, "tournaments": None, "roi_pct": None, "interval": None}
+            compare("after", kind, idx, calm, row)
+            rows.append(row)
+    if rows and calm:
+        rows.append({**base_row("calm", calm), "moments": None, "tournaments": None, "roi_pct": None, "interval": None})
+        dims.append({"key": "after", "rows": rows, "minutes": TILT_MINUTES})
+
     for f, q in zip(family, benjamini_hochberg([f["p"] for f in family])):
         f["q"] = round(q, 4)
         f["z"] = round(f["z"], 2)
