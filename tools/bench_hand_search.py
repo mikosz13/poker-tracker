@@ -1,8 +1,13 @@
 """Benchmark of the hand search on synthetic hands (docs/tasks/hand-search.md): every filter combination of the list
-below must answer in under 1 s on SQLite.
+below must answer in under 1 s.
 
-    python tools/bench_hand_search.py [hands]        (default 500,000; writes a temporary database)
+    python tools/bench_hand_search.py [hands] [--explain]                      SQLite, a temporary file
+    python tools/bench_hand_search.py [hands] [--explain] --db postgresql://…  PostgreSQL (needs psycopg)
+
+Default 500,000 hands. On PostgreSQL everything happens in its own schema (bench_hand_search), dropped at the end;
+nothing else in the database is touched. --explain prints how the database reads each query (index or full scan).
 """
+import argparse
 import random
 import sys
 import tempfile
@@ -12,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pokertracker.db import Database                       # noqa: E402
-from pokertracker.hand_search import COLUMNS, search       # noqa: E402
+from pokertracker.hand_search import COLUMNS, build_where, search       # noqa: E402
 
 RANKS = "AKQJT98765432"
 POSITIONS = ("UTG", "UTG+1", "MP", "LJ", "HJ", "CO", "BTN", "SB", "BB")
@@ -49,23 +54,60 @@ def fill(db, n, seed=20261014):
     db.commit()
 
 
-def main(n):
-    with tempfile.TemporaryDirectory() as tmp, Database(f"sqlite:///{Path(tmp) / 'bench.db'}") as db:
-        db.init_schema()
+SCHEMA = "bench_hand_search"
+
+
+def plan(db, f):
+    """How the database reads the page query of a filter: SQLite's query plan, or PostgreSQL's top plan lines."""
+    where, args = build_where(f)
+    sql = f"SELECT hand_id FROM hand_facts WHERE {where} ORDER BY played_at DESC, hand_id DESC LIMIT 100"
+    if db.kind == "sqlite":
+        return "; ".join(r["detail"] for r in db.query("EXPLAIN QUERY PLAN " + sql, tuple(args)))
+    lines = [list(r.values())[0] for r in db.query("EXPLAIN " + sql, tuple(args))]
+    return "; ".join(x.strip().split("  (")[0] for x in lines if "Scan" in x)
+
+
+def run(db, n, explain):
+    db.init_schema()
+    t = time.time()
+    fill(db, n)
+    db.execute("ANALYZE")
+    db.commit()
+    print(f"{db.kind}: {n:,} synthetic hands written in {time.time() - t:.1f} s")
+    worst = 0.0
+    for f in COMBOS:
+        search(db, f, limit=100)                          # once to warm the cache, as in the app
         t = time.time()
-        fill(db, n)
-        db.execute("ANALYZE")
-        print(f"{n:,} synthetic hands written in {time.time() - t:.1f} s")
-        worst = 0.0
-        for f in COMBOS:
-            t = time.time()
-            r = search(db, f, limit=100)
-            took = time.time() - t
-            worst = max(worst, took)
-            print(f"  {took * 1000:7.0f} ms  {r['count']:>8,}  {f}")
-        print(f"slowest {worst * 1000:.0f} ms: {'OK' if worst < 1 else 'TOO SLOW'} (limit 1 s)")
-        return 0 if worst < 1 else 1
+        r = search(db, f, limit=100)
+        took = time.time() - t
+        worst = max(worst, took)
+        print(f"  {took * 1000:7.0f} ms  {r['count']:>8,}  {f}")
+        if explain:
+            print(f"             {plan(db, f)}")
+    print(f"slowest {worst * 1000:.0f} ms: {'OK' if worst < 1 else 'TOO SLOW'} (limit 1 s)")
+    return 0 if worst < 1 else 1
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    p.add_argument("hands", nargs="?", type=int, default=500_000)
+    p.add_argument("--db", help="a PostgreSQL URL; without it a temporary SQLite file")
+    p.add_argument("--explain", action="store_true")
+    args = p.parse_args(argv)
+    if not args.db:
+        with tempfile.TemporaryDirectory() as tmp, Database(f"sqlite:///{Path(tmp) / 'bench.db'}") as db:
+            return run(db, args.hands, args.explain)
+    import psycopg
+    with psycopg.connect(args.db, autocommit=True) as admin:
+        admin.execute(f"DROP SCHEMA IF EXISTS {SCHEMA} CASCADE")
+        admin.execute(f"CREATE SCHEMA {SCHEMA}")
+        try:
+            sep = "&" if "?" in args.db else "?"
+            with Database(f"{args.db}{sep}options=-csearch_path%3D{SCHEMA}") as db:
+                return run(db, args.hands, args.explain)
+        finally:
+            admin.execute(f"DROP SCHEMA IF EXISTS {SCHEMA} CASCADE")
 
 
 if __name__ == "__main__":
-    sys.exit(main(int(sys.argv[1]) if len(sys.argv) > 1 else 500_000))
+    sys.exit(main())

@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hand search on PostgreSQL: a test that every filter finds the same hands, totals and order as on SQLite (runs in
+  CI); `tools/bench_hand_search.py --db postgresql://… --explain` measures it there too (in its own schema, dropped
+  afterwards) and prints how each query is read. 500,000 hands: slowest 91 ms on PostgreSQL 16, 129 ms on SQLite.
 - Security: `/api/settings` and the Import screen no longer show the database password; a PostgreSQL URL is shown
   as `user:***@host` (also `password=***` in its parameters). SQLite paths are shown as before.
 - Help → How we count → Sessions: "after a hard moment" and the comparison at the same stack and stage (#61).

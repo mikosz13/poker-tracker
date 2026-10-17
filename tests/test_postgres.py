@@ -66,5 +66,33 @@ class PostgresTests(unittest.TestCase):
         self.assertIn("format:satellite", tags)
 
 
+    def test_hand_search_finds_the_same_hands_as_sqlite(self):
+        """Every hand-search filter, alone and combined, gives the same hands, totals and order on both databases."""
+        from pokertracker.db import Database
+        from pokertracker.demo import build_demo
+        from pokertracker.hand_search import ACTIONS, search
+        lite = Database("sqlite:///:memory:")
+        self.addCleanup(lite.close)
+        lite.init_schema()
+        for db in (self.db, lite):
+            build_demo(db, n=8, equity=False)
+            db.commit()
+        n = lite.scalar("SELECT COUNT(*) FROM hand_facts")
+        self.assertGreater(n, 400)
+        self.assertEqual(self.db.scalar("SELECT COUNT(*) FROM hand_facts"), n)
+        when = [str(r["played_at"])[:19] for r in lite.query("SELECT played_at FROM hand_facts ORDER BY played_at")]
+        filters = [{}, {"since": when[n // 3], "until": when[2 * n // 3]}, {"buyin": "21.6"}, {"format": "bounty"},
+                   {"position": "BTN,CO"}, {"cards": "AA,KK,AKs,72o"}, {"stack_min": "10", "stack_max": "25"},
+                   {"all_in": "1"}, {"showdown": "0"}, {"result": "won"}, {"result": "lost", "ev": "1", "min_bb": "5"},
+                   {"position": "SB", "action": "rfi", "result": "won"}, {"all_in": "1", "showdown": "1", "ev": "1"}]
+        filters += [{"action": a} for a in ACTIONS]
+        for f in filters:
+            a, b = search(self.db, f, limit=50), search(lite, f, limit=50)
+            self.assertEqual((a["count"], a["net_bb"], a["adj_bb"], a["ids"]), (b["count"], b["net_bb"], b["adj_bb"], b["ids"]), f)
+            self.assertEqual([h["hand_id"] for h in a["hands"]], [h["hand_id"] for h in b["hands"]], f)
+        page = search(self.db, {}, offset=50, limit=50)
+        self.assertEqual([h["hand_id"] for h in page["hands"]], search(lite, {}, offset=50, limit=50)["ids"][50:100][:50])
+
+
 if __name__ == "__main__":
     unittest.main()
