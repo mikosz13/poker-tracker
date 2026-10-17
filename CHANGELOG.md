@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Analysis → Variance: 10,000 runs of the next 100 / 500 / 1,000 tournaments drawn from your own (bootstrap; every
+  tournament as a result in buy-ins, re-entries and tickets included). The typical result with the half and 9-in-10
+  bands, the chance of a loss, the largest drawdown, and how many buy-ins keep the risk of a bigger drawdown under 5 %
+  (in $ at the average buy-in of the last 30 tournaments; at a losing ROI it says no roll is enough). A "what if my ROI
+  were" slider (−20 … +50 %) scales every prize by one factor, so tournaments without a prize still cost their buy-in.
+  The average buy-in by week or month. Fixed seed; a clear note under 100 tournaments; a day without its summary and
+  no prize typed in is left out. `/api/variance?n=&roi=`.
 - README for players first: what the app answers, screenshots on the made-up sample data (dashboard, tournament,
   Analysis, Hands, the replayer), getting started with the sample-data button; outdated lines fixed (tickets in ROI, the dashboard
   since v3). `python tools/screenshots.py` makes the screenshots again (headless Chrome, temporary database).

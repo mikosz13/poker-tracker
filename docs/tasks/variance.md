@@ -1,6 +1,8 @@
-# Task (sketch): Variance (1.x)
+# Task: Variance (1.x)
 
-Queue: after 1.0.
+Status: done 17.10.2026 (Analysis → Variance, pokertracker/variance.py). Decisions: horizons 100 / 500 / 1,000;
+slider −20 … +50 % scaling prizes (losers stay at their cost); $ at the average buy-in of the last 30 tournaments;
+at a losing ROI no bankroll number.
 
 ## What
 - A simulation from Mik's own results: bootstrap over tournaments (profit in buy-ins, so different buy-ins compare),
