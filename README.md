@@ -185,6 +185,40 @@ Domain details handled:
   with a ticket = its full buy-in), so the total matches the cash flow; the cash-only ROI is shown under it.
 - **Bounty formats**: buy-in split (prize + fee + bounty) kept; ROI uses the full cost including re-entries.
 
+## Known limitations
+
+**What it reads**
+- GGPoker only, No-Limit Hold'em tournaments in dollars. Cash games, Sit & Go, PLO and other games, other currencies
+  and freerolls are left out (the import says how many and why).
+- Only what PokerCraft gives: hand histories of the last 90 days, about 10 tournaments per download. PDF exports need
+  `pdftotext`.
+- One player ("Hero") on one site.
+
+**Installing**
+- macOS: Apple Silicon only (no Intel build). Windows 10/11.
+- The app is not signed: macOS asks for "Open Anyway", Windows SmartScreen for "Run anyway" (see the
+  [install guide](docs/INSTALL.md)).
+- Windows has not been checked by hand yet; the release build is smoke-tested on both systems in CI.
+
+**What it can and cannot know**
+- All-in EV and luck only for all-ins where every opponent's cards are known; others are left out, never guessed.
+- Bounties are not split from the prize for the place (the summary gives one total), so ITM is unknown in bounty
+  tournaments; knockouts in a split pot or a side pot count as shared.
+- A later day (Day 2) without its summary counts a prize typed in by hand, marked as provisional, with the place
+  unknown, until the summary is imported.
+- The starting stack of a late registration can be unknown.
+- Times are those in the GG files (the player's local time). Around a daylight-saving change the hour that repeats or
+  is skipped can mix up sessions, the 15-minute tilt window and "tournaments at once".
+- Sessions: the blind level stands in for the stage of a tournament, roughly (structures differ in speed).
+
+**Databases**
+- Backup and restore in the app work with the SQLite database only; PostgreSQL users use `pg_dump`.
+- The hand search is benchmarked and tested on SQLite only (500,000 hands under 0.15 s); PostgreSQL has neither a
+  benchmark nor a test of it yet.
+
+**Out of scope by decision**
+- ICM / $EV, payout structures, HUD, solver / GTO analysis, cash games.
+
 ## Status
 
 - Tested: parsers, importer, views, equity engine, classification, reports, replay, knockouts, background import and
@@ -192,7 +226,6 @@ Domain details handled:
 - Packaged app: every release build is tested before upload on macOS and Windows (`tools/smoke_packaged.py`: clean
   profile, demo import twice with all-in EV, backup / restore, sample data, upgrade of an old database). The native
   window was checked by hand on macOS; a hand check on Windows is pending.
-- Out of scope by decision: ICM / payout structures, cash games, solver analysis, HUD.
 
 ## Docs
 

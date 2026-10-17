@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- README: "Known limitations" (what it reads, installing, what it can and cannot know, databases, out of scope).
 - Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems
   and solutions, FAQ, About), a search over all of Help (without case or Polish letters), the text as Markdown files
   per language (`pokertracker/web/help/`). New FAQ: where the data is and that nothing leaves the computer, backup and
