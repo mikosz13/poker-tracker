@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+- Release builds test the packaged app before uploading it (`tools/smoke_packaged.py`, macOS and Windows): a clean
+  profile, the demo files imported twice (with all-in EV, so parallel equity inside the frozen binary), the main
+  screens, backup and restore, sample data, and the upgrade of a 0.2.0 database. The packaged binary also runs the
+  command line when given arguments (`PokerTracker serve --port 8790`, `PokerTracker import FOLDER`); new command
+  `serve`: the app's server without a window.
 - Sample data: "Look around on sample data" on the empty Dashboard (and in Settings) opens the app on 40 made-up
   tournaments (Bounty Hunters, a daily, a turbo, satellites with tickets, late registrations and re-entries, about
   2,500 hands) in a separate `demo.db` next to your database, which is never touched. A bar on every screen says it

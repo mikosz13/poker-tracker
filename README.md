@@ -150,15 +150,17 @@ Domain details handled:
   stack is the most common first-hand stack of entries in tournaments with the same name and buy-in, or unknown.
 - **Only No-Limit Hold'em tournaments in dollars**: Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games, tournaments
   in other currencies and cash-game hands are never imported; the import result says how many were left out and why.
-- **Satellites**: prizes that are tickets are stored with their face value and excluded from cash ROI.
+- **Satellites**: tickets count at face value on both sides (a satellite won = the ticket's value, a target entered
+  with a ticket = its full buy-in), so the total matches the cash flow; the cash-only ROI is shown under it.
 - **Bounty formats**: buy-in split (prize + fee + bounty) kept; ROI uses the full cost including re-entries.
 
 ## Status
 
 - Tested: parsers, importer, views, equity engine, classification, reports, replay, knockouts, background import and
   the HTTP API (unit tests + runs on real exports), on SQLite. PostgreSQL tests are included and run in CI.
-- Not run yet: the native window (pywebview) and the packaged .app/.exe; the same UI was tested in a headless
-  browser. The release workflow builds both on GitHub.
+- Packaged app: every release build is tested before upload on macOS and Windows (`tools/smoke_packaged.py`: clean
+  profile, demo import twice with all-in EV, backup / restore, sample data, upgrade of an old database). The native
+  window was checked by hand on macOS; a hand check on Windows is pending.
 - Out of scope by decision: ICM / payout structures, cash games, solver analysis, HUD.
 
 ## Docs
