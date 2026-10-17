@@ -124,7 +124,7 @@ class DemoServerTests(unittest.TestCase):
             self.assertTrue(self.get("/api/settings")["demo"])
             self.assertTrue(self.get("/api/status")["demo"])
             self.assertEqual(len(self.get("/api/tournaments")), 40)
-            for path, body in (("/api/import", {"folder": self.tmp.name}), ("/api/backup", {}), ("/api/ignore", {"ids": [1]})):
+            for path, body in (("/api/import", {"path": self.tmp.name}), ("/api/backup", {}), ("/api/ignore", {"ids": [1]})):
                 status, r = self.post(path, body)
                 self.assertEqual((status, r["code"]), (409, "demo_mode"), path)
             self.assertEqual(self.post("/api/display", {"lang": "pl", "dashboard_period": "7d"})[0], 200)
