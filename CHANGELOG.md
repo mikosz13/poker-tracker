@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+- Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems
+  and solutions, FAQ, About), a search over all of Help (without case or Polish letters), the text as Markdown files
+  per language (`pokertracker/web/help/`). New FAQ: where the data is and that nothing leaves the computer, backup and
+  moving to another computer, updating, deleting data, working offline. About: the version, this version's changes,
+  GitHub, how to report a bug, the MIT license. The version has one source, `pokertracker/__init__.py`
+  (`pyproject.toml` reads it). "?" links open the right subpage and section; `#/luck` opens its section in Help.
 - README: the Variance and Sessions tabs.
 - Analysis → Sessions: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments played at once (1 / 2 / 3+), the
   time of day and the time since the session started (first hour, 1–2 h, 2–3 h, 3 h+; a session ends after a break of
