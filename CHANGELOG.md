@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Security: `/api/settings` and the Import screen no longer show the database password; a PostgreSQL URL is shown
+  as `user:***@host` (also `password=***` in its parameters). SQLite paths are shown as before.
 - Help → How we count → Sessions: "after a hard moment" and the comparison at the same stack and stage (#61).
 - README: "Known limitations" (what it reads, installing, what it can and cannot know, databases, out of scope).
 - Help v2: subpages with a side menu (Getting started, How we count with "How luck is calculated", Glossary, Problems

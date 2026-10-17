@@ -4,9 +4,11 @@ SQL in this project is written with '?' placeholders and standard syntax
 (ON CONFLICT ... DO NOTHING/UPDATE), so the same statements run on both.
 """
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 SQL_DIR = Path(__file__).resolve().parent / "sql"
 
@@ -25,6 +27,22 @@ def data_dir() -> Path:
 
 def default_url() -> str:
     return f"sqlite:///{data_dir() / 'pokertracker.db'}"
+
+
+def redact_url(url: str) -> str:
+    """The database URL safe to show: a password (user:password@host, or password=... in the query) becomes ***.
+    SQLite paths have none and come back as they are."""
+    if not url or url.startswith("sqlite:"):
+        return url
+    parts = urlsplit(url)
+    netloc = parts.netloc
+    if "@" in netloc:
+        auth, _, host = netloc.rpartition("@")
+        if ":" in auth:
+            auth = auth.split(":", 1)[0] + ":***"
+        netloc = f"{auth}@{host}"
+    query = re.sub(r"(?i)(^|&)(password=)[^&]*", r"\1\2***", parts.query)
+    return urlunsplit((parts.scheme, netloc, parts.path, query, parts.fragment))
 
 
 class Database:
