@@ -1021,7 +1021,7 @@ const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.le
   hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
     <td>${x.cards ? cards(x.cards) : "–"}</td><td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
-const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money", "variance"];   // labels: an.tab.<key>
+const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money", "sessions", "variance"];   // labels: an.tab.<key>
 
 // Analysis v2 stage 2: a finding as a card (cards only at q <= 0.05), with a mini-trend of the cumulative result by EV
 function spark(values, good) {
@@ -1216,10 +1216,12 @@ async function viewAnalysis(tab) {
         + `<p class="m">${t("d3.lateTip")}${m.entry_incomplete ? " " + t("dash.incomplete", {tournaments: t("common.tournaments", {n: m.entry_incomplete})}) : ""}</p>` : ""}`;
   }
   if (tab === "variance") h += `<div id="var"><p class="m">${t("var.loading")}</p></div>`;
+  if (tab === "sessions") h += `<div id="ctx"><p class="m">${t("var.loading")}</p></div>`;
   app.innerHTML = h;
   charts = [];
   if (tab === "overview") showdownChart(a.showdown);
   if (tab === "variance") loadVariance(mine);
+  if (tab === "sessions") loadContext(mine);
   if (tab === "leaks") document.getElementById("heat").onclick = e => {
     const b = e.target.closest("button[data-k]");
     if (!b) return;
@@ -1227,6 +1229,37 @@ async function viewAnalysis(tab) {
     b.classList.add("on");
     heatPick(b.dataset.k, a.heat, a.min_heat);
   };
+}
+
+// ---- Sessions: tournaments at once, time of day, time in the session (pokertracker/play_context.py) -------------
+const CTX_HOURS = {night: "0–6", morning: "6–12", afternoon: "12–18", evening: "18–24"};
+const ctxLabel = (dim, key) => t(`ctx.${dim}.${key.replace("+", "plus")}`);
+const ctxValue = (metric, x) => metric === "ev100" ? sgn(x, 1) + NB + "bb/100" : pct(x);
+async function loadContext(seq) {
+  const box = document.getElementById("ctx");
+  const c = await api("/api/context");
+  if (seq !== routeSeq || !document.body.contains(box)) return;
+  if (!c.dims.length) { box.innerHTML = `<p class="m">${t("ctx.none")}</p>`; return; }
+  const find = f => `<li>${t("ctx.find." + f.metric, {group: ctxLabel(f.dim, f.key), value: ctxValue(f.metric, f.value),
+    expected: ctxValue(f.metric, f.expected), sessions: num(f.sessions, 0)})}</li>`;
+  const verdictBox = c.findings.length
+    ? `<div class="box"><b>${t("ctx.found", {n: c.findings.length, tested: c.tested})}</b><ul style="margin:6px 0 0 18px;padding:0">${c.findings.map(find).join("")}</ul>
+        <p class="m" style="margin:6px 0 0">${t("ctx.foundNote")}</p></div>`
+    : `<div class="box">${t("ctx.noise", {tested: c.tested})}${c.closest ? " " + t("ctx.closest", {group: ctxLabel(c.closest.dim, c.closest.key),
+        stat: c.closest.metric === "ev100" ? "bb/100 (EV)" : c.closest.metric.toUpperCase(),
+        value: ctxValue(c.closest.metric, c.closest.value), expected: ctxValue(c.closest.metric, c.closest.expected)}) : ""}</div>`;
+  const head = ["", t("col.hands"), t("ctx.col.sessions"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.ev100"), "ev100"),
+                t("ctx.col.tournaments"), `<span class="def" title="${esc(t("ctx.roiTip"))}">ROI</span>`];
+  const rows = dim => dim.rows.map(r => {
+    const few = r.hands < c.min_test_hands || r.sessions < c.min_test_sessions;
+    return `<tr class="${few ? "few" : ""}" title="${few ? esc(t("ctx.few", {hands: c.min_test_hands, sessions: c.min_test_sessions})) : ""}">
+      <td style="white-space:normal;text-align:left">${ctxLabel(dim.key, r.key)}${dim.key === "daypart" ? `<small>${CTX_HOURS[r.key]}</small>` : ""}</td><td>${num(r.hands, 0)}<small>${pct(r.share_pct)}</small></td><td>${num(r.sessions, 0)}</td>
+      ${rateCell(r.vpip, "vpip")}${rateCell(r.pfr, "pfr")}<td>${sgn(r.ev100, 1)}</td><td>${num(r.tournaments, 0)}</td>
+      <td>${r.roi_pct == null ? "–" : sgn(r.roi_pct, 0, "%")}${r.interval ? `<small>${num(r.interval.low, 0)}…${num(r.interval.high, 0)}%</small>` : ""}</td></tr>`;
+  });
+  box.innerHTML = `<p class="m">${t("ctx.intro", {gap: c.gap_hours})}</p>${verdictBox}
+    ${c.dims.map(d => `<h2>${t("ctx.title." + d.key)}</h2><p class="m">${t("ctx.intro." + d.key)}</p>${table(head, rows(d), "pf")}`).join("")}
+    <h2>${t("var.howTitle")}</h2><div class="box">${t("ctx.how", {hands: c.min_test_hands, sessions: c.min_test_sessions, gap: c.gap_hours})}</div>`;
 }
 
 // ---- Variance: the next N tournaments drawn from the ones played (pokertracker/variance.py) ----------------------
