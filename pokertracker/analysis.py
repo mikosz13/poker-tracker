@@ -102,7 +102,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
         "SELECT DISTINCT a.hand_id FROM actions a JOIN hands h ON h.site = a.site AND h.hand_id = a.hand_id "
         f"WHERE a.site = ? AND a.nick = 'Hero' AND a.action_type = 'folds'{where}", (site, *args))}
     hands = []
-    for r in db.query("SELECT hh.hand_id, hh.tournament_id, hh.played_at, hh.position, hh.stack_bb, hh.net_bb, "
+    for r in db.query("SELECT hh.hand_id, hh.tournament_id, hh.played_at, hh.position, hh.stack_bb, hh.net_bb, h.level, "
                       "hh.big_blind, hh.decided, hh.vpip, hh.pfr, hp.hole_cards, hp.stack, ae.ev_net, h.showdown FROM hero_hands hh "
                       "JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
                       "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
@@ -114,6 +114,7 @@ def load_hands(db, site=SITE, tournament_ids=None):
         posted = sum(_f(x["amount"]) for x in a if x["nick"] == "Hero" and x["action_type"].startswith("posts"))
         net = _f(r["net_bb"])
         hands.append({"hand_id": r["hand_id"], "tournament_id": r["tournament_id"], "at": str(r["played_at"])[:16],
+                      "level": int(r["level"] or 1),
                       "position": r["position"], "stack_bb": _f(r["stack_bb"]), "net_bb": net,
                       "adj_bb": _f(r["ev_net"]) / bb if r["ev_net"] is not None else net,
                       "posted_bb": posted / bb, "decided": int(r["decided"]), "vpip": int(r["vpip"]), "pfr": int(r["pfr"]),

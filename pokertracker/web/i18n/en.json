@@ -909,13 +909,13 @@
  "var.how": "<p>Each tournament becomes a result in buy-ins: what it returned (cash and tickets at face value) minus what it cost (re-entries included), divided by its buy-in. One run draws as many tournaments as you chose, at random and with replacement, from your own, and adds them up; 10,000 runs show what is typical and what is rare. This is the bootstrap.</p><p>The drawdown is the largest fall from the highest point of a run (the start included). “What if my ROI were” multiplies every prize by the same factor, so a tournament without a prize still costs its buy-in and the shape of your results stays the same.</p><p>What it cannot see: getting better or worse, softer or tougher fields, other structures, and results you never had (a deep run bigger than your best). The draws use a fixed seed, so the numbers stay the same until the next import.</p>",
  "an.tab.sessions": "Sessions",
  "ctx.none": "No hands yet.",
- "ctx.intro": "Does your play change with the number of tournaments at once, the time of day or the time already spent in a session? A session ends after a break of more than {gap} hours, as for “Last session” on the dashboard. Times are those in the GG files, your local time.",
+ "ctx.intro": "Does your play change with the number of tournaments at once, the time of day or the time already spent in a session? A session ends after a break of more than {gap} hours, as for “Last session” on the dashboard. Times are those in the GG files, your local time. The tables show the plain numbers; the box below judges them fairly, at the same stack and stage.",
  "ctx.found": {
-  "one": "One difference beyond noise ({tested} compared, each against your other hands at the same stack depth):",
-  "other": "{n} differences beyond noise ({tested} compared, each against your other hands at the same stack depth):"
+  "one": "One difference beyond noise ({tested} compared, each against your other hands at the same stack and stage):",
+  "other": "{n} differences beyond noise ({tested} compared, each against your other hands at the same stack and stage):"
  },
- "ctx.foundNote": "“Expected” is what your other hands did at the same stack sizes. Same stacks do not mean the same stage of a tournament, so read a difference as a pointer, not a verdict.",
- "ctx.noise": "Nothing beyond noise: {tested} comparisons, each group against your other hands at the same stack depth.",
+ "ctx.foundNote": "“Expected” is what your other hands did at the same stack size and blind level. The blind level is only a rough stage (structures differ in speed), so read a difference as a pointer, not a verdict.",
+ "ctx.noise": "Nothing beyond noise: {tested} comparisons, each group against your other hands at the same stack and stage.",
  "ctx.closest": "Closest: {group}, {stat} {value} against {expected} expected.",
  "ctx.find.vpip": "<b>{group}</b>: VPIP {value} against {expected} expected ({sessions} sessions).",
  "ctx.find.pfr": "<b>{group}</b>: PFR {value} against {expected} expected ({sessions} sessions).",
@@ -940,7 +940,7 @@
  "ctx.session.h1": "1–2 h",
  "ctx.session.h2": "2–3 h",
  "ctx.session.h3": "3 h and more",
- "ctx.how": "<p>Each group is compared with your other hands <b>at the same stack depth</b> (under 10, 10–15, 15–25, 25–40, 40+ BB): late in a session or at night stacks are shorter, and a short stack alone plays fewer hands, so a plain comparison would blame the clock for the stack. “Expected” is what the other hands did in each stack band, weighted by the group's hands in it.</p><p>Hands of one session are not independent (the same mood, tables and tournaments), so the uncertainty is counted by session, not by hand: one long evening cannot make a habit. A group is compared only with at least {hands} hands from {sessions} sessions; all comparisons together are corrected for testing many at once (Benjamini-Hochberg), as for the leaks, and only differences with q ≤ 0.05 are listed.</p><p>ROI per group is shown with its 95% interval and is not judged: there are far fewer tournaments than hands.</p>",
+ "ctx.how": "<p>Each group is compared with your other hands <b>at the same stack depth and stage of the tournament</b> (stack: under 10, 10–15, 15–25, 25–40, 40+ BB; blind level: 1–5, 6–10, 11–15, 16+). Late in a session or at night stacks are shorter, and a short stack alone plays fewer hands; after a bust the next hands are often the early levels of a new entry. A plain comparison would blame the clock or the mood for that. “Expected” is what the other hands did in each of these cells, weighted by the group's hands in it.</p><p>Hands of one session are not independent (the same mood, tables and tournaments), so the uncertainty is counted by session, not by hand: one long evening cannot make a habit. A group is compared only with at least {hands} hands from {sessions} sessions; all comparisons together are corrected for testing many at once (Benjamini-Hochberg), as for the leaks, and only differences with q ≤ 0.05 are listed.</p><p>ROI per group is shown with its 95% interval and is not judged: there are far fewer tournaments than hands.</p>",
  "ctx.roiTip": "ROI of the group's tournaments; below it the 95% interval (shown from 10 tournaments).",
  "help.search": "Search Help",
  "help.results": {
@@ -949,5 +949,13 @@
  },
  "help.noResults": "Nothing found. Try another word or fewer words.",
  "help.changesShow": "Show the changes",
- "help.changesNone": "The list of changes is on GitHub, under Releases."
+ "help.changesNone": "The list of changes is on GitHub, under Releases.",
+ "bk.postgres": "Backups in the app work with the SQLite database. Your data is in PostgreSQL: back it up with your database's own tools, e.g. <code>pg_dump</code>.",
+ "ctx.title.after": "After a hard moment",
+ "ctx.intro.after": "Your hands on every table within {minutes} minutes after an all-in lost as a favourite (60%+ equity), a pot lost by 20 BB or more, or a bust; compared with the calm hands, outside every such window. The hand of the moment itself is not counted.",
+ "ctx.after.cooler": "After an all-in lost as a favourite",
+ "ctx.after.big_loss": "After losing 20+ BB",
+ "ctx.after.bust": "After a bust",
+ "ctx.after.calm": "Calm hands",
+ "ctx.col.moments": "Moments"
 }

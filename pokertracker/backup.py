@@ -21,8 +21,13 @@ class BackupError(Exception):
         self.code = code
 
 
+def supported(db_url):
+    """Backup and restore work on an SQLite file; PostgreSQL users use pg_dump (the app does not offer them)."""
+    return db_url.startswith("sqlite:///") and not db_url.endswith(":memory:")
+
+
 def _sqlite_path(db_url):
-    if not db_url.startswith("sqlite:///") or db_url.endswith(":memory:"):
+    if not supported(db_url):
         raise BackupError("not_sqlite")
     return Path(db_url[len("sqlite:///"):])
 

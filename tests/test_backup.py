@@ -5,7 +5,7 @@ from contextlib import closing
 import unittest
 from pathlib import Path
 
-from pokertracker.backup import BackupError, check_backup, make_backup, restore
+from pokertracker.backup import BackupError, check_backup, make_backup, restore, supported
 from pokertracker.db import Database
 from pokertracker.importer import import_texts
 from pokertracker.migrations import LATEST
@@ -69,6 +69,14 @@ class BackupTests(unittest.TestCase):
         with self.assertRaises(BackupError) as e:
             make_backup("postgresql://x@localhost/db", self.dir)
         self.assertEqual(e.exception.code, "not_sqlite")
+
+
+
+class SupportedTests(unittest.TestCase):
+    def test_offered_only_for_an_sqlite_file(self):
+        self.assertTrue(supported("sqlite:////Users/x/pokertracker.db"))
+        self.assertFalse(supported("sqlite:///:memory:"))
+        self.assertFalse(supported("postgresql://poker:poker@localhost:5432/poker"))
 
 
 if __name__ == "__main__":

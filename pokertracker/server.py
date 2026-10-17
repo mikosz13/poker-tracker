@@ -10,6 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs
 
 from .analysis import analysis_data
+from .backup import supported as backup_supported
 from .session import session_insights
 from .tickets import ticket_entries, tickets_won
 from .dashboard import DAY, PERIODS, dashboard_data, normal_period, period_bounds
@@ -359,6 +360,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     if path == "/api/settings":
                         return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
                                                 "watch": get_setting(db, "watch") == "1", "demo": view["demo"],
+                                                "backup": backup_supported(url),
                                                 "four_color": get_setting(db, "four_color") != "0",
                                                 "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
                     return self._send(200, status_payload(db))
