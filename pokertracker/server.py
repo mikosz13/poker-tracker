@@ -14,7 +14,7 @@ from .backup import supported as backup_supported
 from .session import session_insights
 from .tickets import ticket_entries, tickets_won
 from .dashboard import DAY, PERIODS, dashboard_data, normal_period, period_bounds
-from .db import Database
+from .db import Database, redact_url
 from . import __version__
 from .i18n import I18N, LANGS, pick
 from .importer import (DAY2_WAIT_DAYS, changed_files, excluded_list, ignore_tournaments, import_files, list_files, preview_files,
@@ -358,7 +358,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             if path in ("/api/settings", "/api/status"):
                 with Database(url) as db:
                     if path == "/api/settings":
-                        return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
+                        return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": redact_url(url),
                                                 "watch": get_setting(db, "watch") == "1", "demo": view["demo"],
                                                 "backup": backup_supported(url),
                                                 "four_color": get_setting(db, "four_color") != "0",

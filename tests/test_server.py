@@ -5,7 +5,9 @@ import unittest
 import urllib.error
 import urllib.request
 from pathlib import Path
+from unittest import mock
 
+from pokertracker.db import redact_url
 from pokertracker.server import serve_in_background
 from tests.fixtures import HAND_3WAY, HISTORY, SUMMARY_BOUNTY, SUMMARY_SATELLITE
 
@@ -118,6 +120,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(settings["import_folder"], str(self.exports))
         self.assertTrue(settings["backup"])                            # an SQLite file: the backup buttons are shown
 
+    def test_settings_never_show_the_database_password(self):
+        # the server's own database is SQLite (no password); a PostgreSQL URL with one stands in for it here
+        secret = "postgresql://poker:hunter2@db.local:5432/poker?password=hunter2"
+        with mock.patch("pokertracker.server.redact_url", lambda url: redact_url(secret)):
+            text = self.get("/api/settings")[1].decode()
+        self.assertNotIn("hunter2", text)
+        self.assertEqual(json.loads(text)["database"], "postgresql://poker:***@db.local:5432/poker?password=***")
+        self.assertEqual(json.loads(self.get("/api/settings")[1])["database"][:10], "sqlite:///")   # a path is shown as it is
+
     def test_analysis_endpoint(self):
         status, body = self.get("/api/analysis")
         self.assertEqual(status, 200)
@@ -154,6 +165,19 @@ class ServerTests(unittest.TestCase):
             with self.assertRaises(urllib.error.HTTPError) as cm:
                 self.get(path)
             self.assertEqual(cm.exception.code, 404)
+
+
+
+class RedactUrlTests(unittest.TestCase):
+    def test_passwords_never_shown(self):
+        cases = {"postgresql://poker:s3cr:et@localhost:5432/poker": "postgresql://poker:***@localhost:5432/poker",
+                 "postgresql://u:p@ss@h/db": "postgresql://u:***@h/db",                       # an "@" in the password
+                 "postgresql://h/db?sslmode=require&password=abc": "postgresql://h/db?sslmode=require&password=***",
+                 "postgresql://:only@h/db": "postgresql://:***@h/db",
+                 "postgres://poker@db/poker": "postgres://poker@db/poker",                   # no password: as it is
+                 "sqlite:////Users/x/pokertracker.db": "sqlite:////Users/x/pokertracker.db"}
+        for url, shown in cases.items():
+            self.assertEqual(redact_url(url), shown, url)
 
 
 if __name__ == "__main__":
