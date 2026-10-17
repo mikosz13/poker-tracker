@@ -367,6 +367,9 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     return self._send(200, hands_of_class(db, (query.get("cards") or [""])[0]))
                 if path == "/api/analysis":                           # always the whole history
                     return self._send(200, analysis_data(db, lang=lang))
+                if path == "/api/context":                            # Analysis → Sessions (play_context.py)
+                    from .play_context import context_data
+                    return self._send(200, context_data(db))
                 if path == "/api/variance":                           # ?n=100|500|1000&roi=<what-if ROI %>
                     from .variance import DEFAULT_N, variance_data
                     try:
