@@ -22,6 +22,9 @@ def main(argv=None):
     app = sub.add_parser("app", help="open the desktop app")
     app.add_argument("--browser", action="store_true", help="use the default browser instead of a native window")
     app.add_argument("--port", type=int, default=0)
+    srv = sub.add_parser("serve", help="the app's local server without a window (open the printed address in a "
+                                       "browser on this machine; used by the packaged-app smoke test)")
+    srv.add_argument("--port", type=int, default=0)
     dash = sub.add_parser("dashboard", help="all-tournament overview (HTML, phone friendly)")
     dash.add_argument("--html", metavar="FILE", default="dashboard.html")
     tr = sub.add_parser("tournament", help="post-tournament report (latest tournament if no id is given)")
@@ -38,6 +41,18 @@ def main(argv=None):
     dm.add_argument("--count", type=int, default=40, help="tournaments (default 40)")
     dm.add_argument("--seed", type=int, default=None, help="another made-up player (default: the app's demo)")
     args = p.parse_args(argv)
+
+    if args.cmd == "serve":
+        import time
+        from .server import serve_in_background
+        server, url = serve_in_background(args.db, args.port)
+        print(f"Poker Tracker is running at {url}  (Ctrl+C to quit)", flush=True)
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            server.shutdown()
+        return 0
 
     if args.cmd == "demo-files":
         from pathlib import Path
