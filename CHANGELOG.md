@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- License: MIT (`LICENSE`), linked from the README.
 - Analysis → Sessions, "After a hard moment": your hands on every table within 15 minutes after an all-in lost as a
   favourite (60 %+ equity), a pot lost by 20 BB or more, or a bust, against the calm hands. All Sessions comparisons
   now hold the stage of the tournament fixed as well as the stack (blind levels 1–5, 6–10, 11–15, 16+): after a bust
