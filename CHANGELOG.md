@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- Docs: `docs/checks/import-668-files.md`, the check that a 668-file test import lost nothing (13.10).
 - CI: tests also on Python 3.14 (Linux, macOS, Windows); release builds stay on 3.12.
 - License: MIT (`LICENSE`), linked from the README.
 - Analysis → Sessions, "After a hard moment": your hands on every table within 15 minutes after an all-in lost as a
