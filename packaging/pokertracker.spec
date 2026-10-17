@@ -13,6 +13,7 @@ a = Analysis(
     datas=[
         (str(root / "pokertracker" / "sql"), "pokertracker/sql"),
         (str(root / "pokertracker" / "web"), "pokertracker/web"),
+        (str(root / "CHANGELOG.md"), "."),               # Help → About shows this version's changes
     ],
     hiddenimports=["webview"],
 )
