@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- README for players first: what the app answers, screenshots on the made-up sample data (dashboard, tournament,
+  Analysis, Hands, the replayer), getting started with the sample-data button; outdated lines fixed (tickets in ROI, the dashboard
+  since v3). `python tools/screenshots.py` makes the screenshots again (headless Chrome, temporary database).
 - Replayer: Hero's hole cards sit side by side above Hero's box again instead of one above the other over the
   replay buttons. The Dashboard's tile row shared Hero's seat class and turned the seat into a four-column grid; the
   tiles have their own class now.
