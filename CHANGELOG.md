@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- README for players first: what the app answers, screenshots on the made-up sample data (dashboard, tournament,
+  Analysis, Hands), getting started with the sample-data button; outdated lines fixed (tickets in ROI, the dashboard
+  since v3). `python tools/screenshots.py` makes the screenshots again (headless Chrome, temporary database).
 - Release builds test the packaged app before uploading it (`tools/smoke_packaged.py`, macOS and Windows): a clean
   profile, the demo files imported twice (with all-in EV, so parallel equity inside the frozen binary), the main
   screens, backup and restore, sample data, and the upgrade of a 0.2.0 database. The packaged binary also runs the

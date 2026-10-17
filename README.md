@@ -1,12 +1,38 @@
-# pokertracker
+# Poker Tracker
 
-Tournament tracker for GGPoker. Imports PokerCraft exports (hand histories and tournament summaries),
-stores them in SQL and answers the questions a player actually has: *what is my ROI, where do I win and lose,
-how do I play at different stack depths?*
+A free tournament tracker for GGPoker. It reads the files PokerCraft already gives you (hand histories and tournament
+summaries) and answers the questions a recreational player actually has: *am I winning, was it skill or luck, where do
+I lose chips, does late registration hurt me?* Everything stays on your computer; nothing is typed in by hand.
 
-**Players:** download the app from [Releases](https://github.com/mikosz13/poker-tracker/releases) and follow
-[Getting started / Jak zacząć](docs/INSTALL.md) (seven steps, English and Polish). The app speaks English and Polish and has a light and a
-dark theme (switches in the top right corner; it starts with your system's language and theme).
+![Dashboard on the made-up sample data](docs/img/dashboard.png)
+
+## Get it
+
+**Players:** download the app for macOS or Windows from [Releases](https://github.com/mikosz13/poker-tracker/releases)
+and follow [Getting started / Jak zacząć](docs/INSTALL.md) (seven steps, English and Polish). No exports at hand? The
+empty dashboard has a **Look around on sample data** button: 40 made-up tournaments in a separate database, so you can
+see every screen before your first import. The app speaks English and Polish and has a light and a dark theme.
+
+## What it shows
+
+- **Dashboard**: the last session, profit, ROI, luck and the cumulative result for any period.
+- **Tournament**: every entry (late reg, re-entries), the stack in BB or chips with each all-in marked (cards, equity,
+  luck; click to replay), positions, knockouts.
+- **Analysis**: VPIP, PFR, 3-bet and more by position and stack depth (PokerTracker 4 definitions); leaks and
+  strengths only when they stand out from chance; results with and without showdown; where you finish; money by
+  buy-in and entry.
+- **Hands**: filter every hand by period, buy-in, position, starting hand (13×13 grid), stack, preflop action, all-in,
+  showdown and result, then open it in the replayer.
+- Also: "copy the hand" as text for forums, CSV export for Excel, a backup of the whole database in one click, a help
+  page with every definition, and [how luck is calculated](#all-in-ev-exact-no-monte-carlo) written out in the app.
+
+<p>
+<img src="docs/img/tournament.png" alt="Tournament: the stack with every all-in marked" width="32%">
+<img src="docs/img/analysis.png" alt="Analysis: overview, results with and without showdown, luck" width="32%">
+<img src="docs/img/hands.png" alt="Hands: filters and results" width="32%">
+</p>
+
+Screenshots are made from the made-up sample data (`python tools/screenshots.py`).
 
 ## Why
 
@@ -23,7 +49,8 @@ What it cares about:
 
 - **Late registration and re-entries are part of the story.** Every entry is detected from your hands with the level
   you joined at, and the tournament's starting stack is worked out from your entries (or shown as unknown).
-- **A ticket is not cash.** Satellite seats are reported next to your ROI, never mixed into it.
+- **Tickets count at face value, on both sides.** A satellite won counts as the ticket's value and a tournament
+  entered with a ticket costs its full buy-in, so the total matches your cash flow; the cash-only ROI sits under it.
 - **Luck is measured, not felt.** All-in EV is computed exactly over every possible runout, so "I ran bad"
   becomes a number in big blinds.
 - **Trust, but verify.** Formulas are in plain code, data is in plain SQL, and the test suite checks the maths
@@ -33,7 +60,7 @@ What it cares about:
 What it is not: no HUD, no ICM, no solver, no cash games. If you need those, PokerTracker 4 is the
 right tool. If you just want to know how your tournaments really go, this is for you.
 
-## Quick start (SQLite, no database server needed)
+## For developers: quick start (SQLite, no database server needed)
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate     # Python 3.10+
@@ -65,9 +92,7 @@ python -m pokertracker app       # or: pokertracker-app
 python -m pokertracker app --browser   # same app in your default browser
 ```
 
-Screens: dashboard (last session, ROI, luck, late reg vs start, buy-in, positions), tournament list with
-filters, tournament details, a **hand replayer** on a table view (arrow keys, space for autoplay, clickable action log), import, and a page that explains
-how luck is calculated. The app runs a small server on `127.0.0.1` only; imports require a per-launch token.
+The app runs a small server on `127.0.0.1` only; imports require a per-launch token.
 Data lives in the per-user folder (`~/Library/Application Support/PokerTracker` on macOS,
 `%APPDATA%\PokerTracker` on Windows); `--db` or `DATABASE_URL` override it.
 
@@ -126,9 +151,9 @@ The **Analysis** view looks at the whole history and writes tips from clear rule
 baseline (e.g. calling from the big blind compared with folding there), strengths, and how much the ROI can still be
 noise. Findings that do not stand out from chance are not shown.
 
-In the app the dashboard can be limited to the last 24 hours, days, weeks or months. Besides the results it shows a luck
-badge (how far all-in luck is from zero in "typical swings"), the best and worst starting hand and position (only with 30+
-hands) and date-based charts of profit and luck.
+In the app the dashboard covers the last session, 24 hours, 7 / 14 / 30 days, 3 / 6 months, the whole history or any
+range: profit, ROI, the luck badge (how far all-in luck is from zero in "typical swings"), the cumulative result in $ or
+BB, and a few lines worth knowing (best tournament, tickets, whether your play changed beyond noise).
 
 `python -m pokertracker dashboard --html dashboard.html` writes a phone-friendly overview of all tournaments:
 cumulative cash profit, actual vs all-in-adjusted result in BB, results per tag and the latest tournaments.
