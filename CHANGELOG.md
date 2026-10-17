@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- CI: tests also on Python 3.14 (Linux, macOS, Windows); release builds stay on 3.12.
 - License: MIT (`LICENSE`), linked from the README.
 - Analysis → Sessions, "After a hard moment": your hands on every table within 15 minutes after an all-in lost as a
   favourite (60 %+ equity), a pot lost by 20 BB or more, or a bust, against the calm hands. All Sessions comparisons
