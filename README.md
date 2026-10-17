@@ -1,6 +1,6 @@
 # Poker Tracker
 
-A free tournament tracker for GGPoker. It reads the files PokerCraft already gives you (hand histories and tournament
+A free, open-source ([MIT](LICENSE)) tournament tracker for GGPoker. It reads the files PokerCraft already gives you (hand histories and tournament
 summaries) and answers the questions a recreational player actually has: *am I winning, was it skill or luck, where do
 I lose chips, does late registration hurt me?* Everything stays on your computer; nothing is typed in by hand.
 
@@ -200,3 +200,7 @@ Domain details handled:
 - [Architecture and decisions](docs/ARCHITECTURE.md)
 - [Checkpoint checklist](docs/CHECKPOINT.md)
 - [Changelog](CHANGELOG.md)
+
+## License
+
+[MIT](LICENSE) © 2026 Mikołaj Szcześniak. Free to use, change and share, with the copyright notice kept.
