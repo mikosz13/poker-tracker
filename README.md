@@ -21,6 +21,10 @@ see every screen before your first import. The app speaks English and Polish and
 - **Analysis**: VPIP, PFR, 3-bet and more by position and stack depth (PokerTracker 4 definitions); leaks and
   strengths only when they stand out from chance; results with and without showdown; where you finish; money by
   buy-in and entry.
+- **Variance**: 10,000 runs of your next 100 / 500 / 1,000 tournaments drawn from your own results: the typical
+  result and its spread, the largest drawdown, how many buy-ins keep its risk under 5 %, and "what if my ROI were".
+- **Sessions**: how you play with several tournaments at once, by time of day and as a session goes on, compared at
+  the same stack depth and counted by session, so one long evening does not make a habit.
 - **Hands**: filter every hand by period, buy-in, position, starting hand (13×13 grid), stack, preflop action, all-in,
   showdown and result, then open it in the replayer (a table view, step by step or autoplay, next / previous hand).
 - Also: "copy the hand" as text for forums, CSV export for Excel, a backup of the whole database in one click, a help

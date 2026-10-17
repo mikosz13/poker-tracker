@@ -1,6 +1,7 @@
 # Changelog
 
 ## Unreleased
+- README: the Variance and Sessions tabs.
 - Analysis → Sessions: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments played at once (1 / 2 / 3+), the
   time of day and the time since the session started (first hour, 1–2 h, 2–3 h, 3 h+; a session ends after a break of
   more than 3 hours, as for "Last session"). Each group is compared with the rest of the hands at the same stack depth
