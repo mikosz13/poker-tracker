@@ -1248,17 +1248,17 @@ async function loadContext(seq) {
     : `<div class="box">${t("ctx.noise", {tested: c.tested})}${c.closest ? " " + t("ctx.closest", {group: ctxLabel(c.closest.dim, c.closest.key),
         stat: c.closest.metric === "ev100" ? "bb/100 (EV)" : c.closest.metric.toUpperCase(),
         value: ctxValue(c.closest.metric, c.closest.value), expected: ctxValue(c.closest.metric, c.closest.expected)}) : ""}</div>`;
-  const head = ["", t("col.hands"), t("ctx.col.sessions"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.ev100"), "ev100"),
-                t("ctx.col.tournaments"), `<span class="def" title="${esc(t("ctx.roiTip"))}">ROI</span>`];
+  const head = dim => ["", t("col.hands"), t("ctx.col.sessions"), defHead("VPIP", "vpip"), defHead("PFR", "pfr"), defHead(t("col.ev100"), "ev100"),
+    ...(dim.key === "after" ? [t("ctx.col.moments")] : [t("ctx.col.tournaments"), `<span class="def" title="${esc(t("ctx.roiTip"))}">ROI</span>`])];
   const rows = dim => dim.rows.map(r => {
     const few = r.hands < c.min_test_hands || r.sessions < c.min_test_sessions;
     return `<tr class="${few ? "few" : ""}" title="${few ? esc(t("ctx.few", {hands: c.min_test_hands, sessions: c.min_test_sessions})) : ""}">
       <td style="white-space:normal;text-align:left">${ctxLabel(dim.key, r.key)}${dim.key === "daypart" ? `<small>${CTX_HOURS[r.key]}</small>` : ""}</td><td>${num(r.hands, 0)}<small>${pct(r.share_pct)}</small></td><td>${num(r.sessions, 0)}</td>
-      ${rateCell(r.vpip, "vpip")}${rateCell(r.pfr, "pfr")}<td>${sgn(r.ev100, 1)}</td><td>${num(r.tournaments, 0)}</td>
-      <td>${r.roi_pct == null ? "–" : sgn(r.roi_pct, 0, "%")}${r.interval ? `<small>${num(r.interval.low, 0)}…${num(r.interval.high, 0)}%</small>` : ""}</td></tr>`;
+      ${rateCell(r.vpip, "vpip")}${rateCell(r.pfr, "pfr")}<td>${sgn(r.ev100, 1)}</td>${dim.key === "after" ? `<td>${r.moments == null ? "–" : num(r.moments, 0)}</td>`
+      : `<td>${num(r.tournaments, 0)}</td><td>${r.roi_pct == null ? "–" : sgn(r.roi_pct, 0, "%")}${r.interval ? `<small>${num(r.interval.low, 0)}…${num(r.interval.high, 0)}%</small>` : ""}</td>`}</tr>`;
   });
   box.innerHTML = `<p class="m">${t("ctx.intro", {gap: c.gap_hours})}</p>${verdictBox}
-    ${c.dims.map(d => `<h2>${t("ctx.title." + d.key)}</h2><p class="m">${t("ctx.intro." + d.key)}</p>${table(head, rows(d), "pf")}`).join("")}
+    ${c.dims.map(d => `<h2>${t("ctx.title." + d.key)}</h2><p class="m">${t("ctx.intro." + d.key, {minutes: d.minutes})}</p>${table(head(d), rows(d), "pf")}`).join("")}
     <h2>${t("var.howTitle")}</h2><div class="box">${t("ctx.how", {hands: c.min_test_hands, sessions: c.min_test_sessions, gap: c.gap_hours})}</div>`;
 }
 
