@@ -32,7 +32,23 @@ def main(argv=None):
     pv.add_argument("tournament_id", type=int)
     pv.add_argument("amount", nargs="?", type=float, help="cash won that day in $; leave out with --clear")
     pv.add_argument("--clear", action="store_true", help="remove the amount typed in")
+    dm = sub.add_parser("demo-files", help="write made-up GG exports (tournaments named DEMO ...) into a folder, "
+                                           "for screenshots and tests; import them into a separate database")
+    dm.add_argument("folder")
+    dm.add_argument("--count", type=int, default=40, help="tournaments (default 40)")
+    dm.add_argument("--seed", type=int, default=None, help="another made-up player (default: the app's demo)")
     args = p.parse_args(argv)
+
+    if args.cmd == "demo-files":
+        from pathlib import Path
+        from .demo import demo_files
+        folder = Path(args.folder)
+        folder.mkdir(parents=True, exist_ok=True)
+        files = demo_files(args.count, **({} if args.seed is None else {"seed": args.seed}))
+        for name, text in files:
+            (folder / name).write_text(text, encoding="utf-8")
+        print(f"{len(files)} files written to {folder}")
+        return 0
 
     if args.cmd == "app":
         from .app import run
