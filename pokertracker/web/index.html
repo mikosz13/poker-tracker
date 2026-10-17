@@ -163,8 +163,15 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}nav a.helpq{font-weight:700;font-size:1rem;line-height:17px;padding:4px 9px}
 .help-q{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
   font-size:.75rem;font-weight:700;text-decoration:none;color:var(--muted);vertical-align:middle;margin-left:6px}.help-q:hover{color:var(--blue);border-color:var(--blue)}
-.help-toc{display:flex;flex-wrap:wrap;gap:4px 10px;margin:6px 0 10px;font-size:.92rem}.help-sec{max-width:820px;margin-top:6px;scroll-margin-top:60px}
-.help-sec h2{border-top:1px solid var(--line);padding-top:14px}.help-sec li{margin:4px 0}.help-sec dt{font-weight:700;margin-top:8px}.help-sec dd{margin:2px 0 0 0;color:var(--muted)}
+.help-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;align-items:start}
+.help-side{position:sticky;top:64px;display:flex;flex-direction:column;gap:10px}.help-side input{width:100%;box-sizing:border-box}
+.help-side nav{display:flex;flex-direction:column;gap:2px}.help-side nav a{padding:6px 10px;border-radius:8px;text-decoration:none;color:var(--fg)}
+.help-side nav a:hover{background:var(--card)}.help-side nav a.on{background:var(--blue);color:#fff}
+.help-main{max-width:760px;min-width:0}.help-main h1{margin-top:0}.help-main h2{border-top:1px solid var(--line);padding-top:14px;scroll-margin-top:64px}
+.help-main li{margin:4px 0}.help-main code{font-size:.88em;background:var(--card);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+.help-hits{list-style:none;padding:0}.help-hits li{margin:0 0 12px}.help-main mark{background:color-mix(in srgb,var(--orange) 35%,transparent);color:inherit}
+.help-changes summary{cursor:pointer;color:var(--blue)}
+@media (max-width:700px){.help-layout{grid-template-columns:1fr}.help-side{position:static}.help-side nav{flex-direction:row;flex-wrap:wrap}}
 #notice .notice{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--blue);border-radius:6px;display:flex;gap:12px;align-items:center}
 #demo-bar .demo{max-width:936px;margin:0 auto 8px;padding:6px 12px;background:var(--card);border-left:4px solid var(--orange);border-radius:6px;display:flex;gap:12px;align-items:center}
 #demo-bar .demo button{margin-left:auto}
@@ -1316,15 +1323,122 @@ async function loadVariance(seq) {
   if (reset) reset.onclick = () => { varState.roi = null; loadVariance(seq); };
 }
 
-// ---- Help: one page, a section per screen; "?" next to a screen's title opens its section -----------------------
-const HELP = ["start", "dashboard", "tournaments", "hands", "analysis", "money", "backup", "problems", "glossary"];   // help.<key>.*
-const helpLink = k => `<a class="help-q" href="#/help/${k}" title="${esc(t("help.more"))}">?</a>`;
-function viewHelp(section) {
-  app.innerHTML = `<h1>${t("help.title")}</h1><nav class="help-toc"><b>${t("help.toc")}:</b>${HELP.map(k => `<a href="#/help/${k}">${t(`help.${k}.title`)}</a>`).join("")}
-      <a href="#/luck">${t("nav.luck")}</a></nav>`
-    + HELP.map(k => `<section class="help-sec" id="help-${k}"><h2>${t(`help.${k}.title`)}</h2>${t(`help.${k}.body`)}</section>`).join("");
-  const target = section && document.getElementById("help-" + section);
+// ---- Help v2: subpages written in Markdown (web/help/<lang>/<page>.md), a side menu and a search ----------------
+const HELP_PAGES = ["start", "how", "glossary", "problems", "faq", "about"];
+// the "?" next to a screen's title: the old section keys, now a page and an anchor in it
+const HELP_TARGET = {start: "start/import", dashboard: "start/dashboard", tournaments: "start/tournaments", hands: "start/hands",
+  backup: "start/backup", analysis: "how/analysis", money: "how/money", luck: "how/luck", problems: "problems", glossary: "glossary"};
+const helpLink = k => `<a class="help-q" href="#/help/${HELP_TARGET[k] || k}" title="${esc(t("help.more"))}">?</a>`;
+const helpCache = {};
+async function helpPages() {                             // {page: Markdown} in the page's language, fetched once
+  if (!helpCache[LANG]) {
+    const texts = await Promise.all(HELP_PAGES.map(p => fetch(`/help/${LANG}/${p}.md`).then(r => r.ok ? r.text() : "")));
+    helpCache[LANG] = Object.fromEntries(HELP_PAGES.map((p, i) => [p, texts[i]]));
+  }
+  return helpCache[LANG];
+}
+let aboutInfo = null;
+// Markdown, the small part Help uses: # headings (with {#anchor}), paragraphs, "- " lists, **bold**, *italic*, `code`,
+// [links](…) and {{placeholders}} on a line of their own. The files are ours; the text is escaped all the same.
+function mdInline(x) {
+  return esc(x).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/\*([^*]+)\*/g, "<i>$1</i>")
+    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, text, href) => (/^https?:/).test(href)
+      ? `<a href="${href}" target="_blank" rel="noopener">${text}</a>` : `<a href="${href}">${text}</a>`);
+}
+function mdToHtml(md, slots = {}) {
+  const out = [];
+  let para = [], list = null;
+  const flush = () => {
+    if (para.length) out.push(`<p>${mdInline(para.join(" "))}</p>`);
+    if (list) out.push(`<${list.tag}>${list.items.map(i => `<li>${mdInline(i)}</li>`).join("")}</${list.tag}>`);
+    para = []; list = null;
+  };
+  for (const line of md.split("\n")) {
+    let m;
+    if (!line.trim()) { flush(); continue; }
+    if ((m = line.match(/^\{\{(\w+)\}\}$/))) { flush(); out.push(slots[m[1]] || ""); continue; }
+    if ((m = line.match(/^(#{1,3}) (.+?)(?: \{#([\w-]+)\})?$/))) {
+      flush();
+      const id = m[3] ? ' id="help-' + m[3] + '"' : "";
+      out.push(`<h${m[1].length}${id}>${mdInline(m[2])}</h${m[1].length}>`);
+      continue;
+    }
+    if ((m = line.match(/^(-|\d+\.) (.*)$/))) {
+      const tag = m[1] === "-" ? "ul" : "ol";
+      if (para.length || (list && list.tag !== tag)) flush();
+      list = list || {tag, items: []};
+      list.items.push(m[2]);
+      continue;
+    }
+    if (list && /^\s+\S/.test(line)) { list.items[list.items.length - 1] += " " + line.trim(); continue; }
+    if (list) flush();
+    para.push(line.trim());
+  }
+  flush();
+  return out.join("\n");
+}
+const helpTitle = md => ((md.match(/^# (.+)$/m) || [])[1] || "");
+function helpSlots(page) {
+  if (page === "how") return {luck: luckHtml(3)};
+  if (page !== "about") return {};
+  const changes = aboutInfo && aboutInfo.changes;
+  return {changes: changes ? `<details class="help-changes"><summary>${t("help.changesShow")}</summary>${mdToHtml(changes)}</details>`
+                           : `<p class="m">${t("help.changesNone")}</p>`};
+}
+const helpBody = (page, md) => mdToHtml(md.replace(/\{\{version\}\}/g, aboutInfo ? aboutInfo.version : ""), helpSlots(page));
+async function viewHelp(page, anchor) {
+  const mine = routeSeq;
+  const [pages, about] = await Promise.all([helpPages(), aboutInfo ? aboutInfo : api("/api/about").catch(() => null)]);
+  if (mine !== routeSeq) return;
+  aboutInfo = about;
+  page = HELP_PAGES.includes(page) ? page : "start";
+  app.innerHTML = `<div class="help-layout"><aside class="help-side">
+      <input id="help-q" type="search" placeholder="${esc(t("help.search"))}" aria-label="${esc(t("help.search"))}">
+      <nav>${HELP_PAGES.map(p => `<a href="#/help/${p}" class="${p === page ? "on" : ""}">${esc(helpTitle(pages[p]))}</a>`).join("")}</nav></aside>
+    <article class="help-main" id="help-main">${helpBody(page, pages[page])}</article></div>`;
+  const main = document.getElementById("help-main"), q = document.getElementById("help-q");
+  const target = anchor && document.getElementById("help-" + anchor);
   if (target) setTimeout(() => target.scrollIntoView(), 0);         // after the router's scroll to the top
+  let timer = null;
+  q.oninput = () => { clearTimeout(timer); timer = setTimeout(() => helpSearch(q.value, pages, main, page), 150); };
+}
+// the search: every page cut at its ## headings, matched without case or Polish letters (zolw finds żółw)
+const fold = x => x.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/ł/g, "l").replace(/Ł/g, "L").toLowerCase();
+function helpSearch(query, pages, main, page) {
+  const words = fold(query).split(/\s+/).filter(w => w.length > 1);
+  if (!words.length) { main.innerHTML = helpBody(page, pages[page]); return; }
+  const hits = [];
+  for (const p of HELP_PAGES) {
+    const box = document.createElement("div");
+    box.innerHTML = helpBody(p, pages[p]);
+    let section = {anchor: null, title: helpTitle(pages[p]), text: ""};
+    const sections = [section];
+    for (const el of box.children) {
+      if (el.tagName === "H2") { section = {anchor: el.id.replace(/^help-/, ""), title: el.textContent, text: ""}; sections.push(section); }
+      else if (el.tagName !== "H1") section.text += " " + (/^(UL|OL)$/.test(el.tagName) ? [...el.children].map(li => li.textContent).join(" ") : el.textContent);
+    }
+    for (const sec of sections) {
+      const hay = fold(sec.title + " " + sec.text);
+      if (!words.every(w => hay.includes(w))) continue;
+      const text = sec.text.replace(/\s+/g, " ").trim(), at = Math.max(0, fold(text).indexOf(words[0]) - 60);
+      hits.push({page: p, pageTitle: helpTitle(pages[p]), ...sec, snippet: (at ? "…" : "") + text.slice(at, at + 180) + (text.length > at + 180 ? "…" : "")});
+    }
+  }
+  // the matches are found in the folded text, which keeps one letter per letter, so the same places are marked
+  const mark = x => {
+    const f = fold(x), on = new Array(x.length).fill(false);
+    if (f.length !== x.length) return esc(x);
+    for (const w of words) for (let i = f.indexOf(w); i >= 0; i = f.indexOf(w, i + 1)) on.fill(true, i, i + w.length);
+    let h = "", open = false;
+    for (let i = 0; i < x.length; i++) {
+      if (on[i] !== open) { h += on[i] ? "<mark>" : "</mark>"; open = on[i]; }
+      h += esc(x[i]);
+    }
+    return h + (open ? "</mark>" : "");
+  };
+  main.innerHTML = `<h1>${t("help.results", {n: hits.length})}</h1>` + (hits.length ? `<ul class="help-hits">${hits.map(x =>
+      `<li><a href="#/help/${x.page}${x.anchor ? "/" + x.anchor : ""}"><b>${esc(x.pageTitle)}</b>${x.anchor ? " › " + esc(x.title) : ""}</a><div class="m">${mark(x.snippet)}</div></li>`).join("")}</ul>`
+    : `<p class="m">${t("help.noResults")}</p>`);
 }
 
 // ---- Export: a hand or a result as text, CSV files into Downloads ---------------------------------------------
@@ -1654,9 +1768,8 @@ async function viewSettings(msg) {
 }
 
 // ---- How luck works ------------------------------------------------------------
-function viewLuck() {
-  app.innerHTML = `<h1>${t("lp.title")}</h1>
-  <p>${t("lp.allin")}</p>
+function luckHtml(h = 2) {                               // h: the level of its headings (3 inside Help)
+  return `<p>${t("lp.allin")}</p>
   <div class="box"><p>${t("lp.equity")}</p>
   <p>${t("lp.ev")}</p>
   <p>${t("lp.actual")}</p>
@@ -1677,7 +1790,7 @@ function viewLuck() {
   <p>${t("lp.exampleMath")}</p>
   <h2>${t("lp.readingTitle")}</h2>
   <p>${t("lp.reading")}</p>
-  <p class="m">${t("lp.limits")}</p>`;
+  <p class="m">${t("lp.limits")}</p>`.replace(/<(\/?)h2>/g, `<$1h${h}>`);
 }
 
 // ---- Router -----------------------------------------------------------------
@@ -1702,9 +1815,9 @@ async function route(keepScroll) {
     else if (h === "#/analysis" || h.startsWith("#/analysis?")) await viewAnalysis(new URLSearchParams(h.split("?")[1] || "").get("tab"));
     else if (h === "#/import") await viewImport();
     else if (h === "#/session") await viewSession();
-    else if (h === "#/help" || h.startsWith("#/help/")) viewHelp(h.split("/")[2]);
+    else if (h === "#/help" || h.startsWith("#/help/")) await viewHelp(h.split("/")[2], h.split("/")[3]);
     else if (h === "#/hands" || h.startsWith("#/hands?")) await viewHands(h.split("?")[1] || "");
-    else if (h === "#/luck") viewLuck();
+    else if (h === "#/luck") await viewHelp("how", "luck");          // How luck is calculated: now part of Help
     else if (h === "#/review") await viewReview();
     else if (h === "#/settings") await viewSettings();
     else app.innerHTML = `<p>${t("common.notFound")}</p>`;
