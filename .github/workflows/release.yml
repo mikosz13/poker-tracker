@@ -29,6 +29,11 @@ jobs:
       - run: pip install -e ".[app]" pyinstaller
       - run: python -m unittest discover -s tests -t .
       - run: pyinstaller --noconfirm packaging/pokertracker.spec
+      # the built app itself, before anything is uploaded: clean profile, demo import twice, backup / restore, sample
+      # data, upgrade of an old database (tools/smoke_packaged.py)
+      - name: Smoke test of the packaged app
+        shell: bash
+        run: python tools/smoke_packaged.py "${{ runner.os == 'Windows' && 'dist/PokerTracker/PokerTracker.exe' || 'dist/PokerTracker.app/Contents/MacOS/PokerTracker' }}" "${{ runner.temp }}/smoke"
       - name: Zip (macOS)
         if: runner.os == 'macOS'
         run: ditto -c -k --keepParent dist/PokerTracker.app ${{ matrix.artifact }}

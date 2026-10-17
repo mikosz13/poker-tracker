@@ -45,6 +45,12 @@ python -m pokertracker tournament --html report.html   # latest tournament
 python -m pokertracker dashboard --html dashboard.html
 ```
 
+No exports yet? `python -m pokertracker demo-files demo/` writes 40 made-up tournaments (names start with "DEMO") in
+GG's format; import them into a separate database with `python -m pokertracker --db sqlite:///demo.db import demo/`.
+The app offers the same sample data from its empty dashboard, in its own `demo.db`.
+
+Back up and restore the SQLite database from Settings → Backup in the app (a dated copy in Downloads; restoring keeps the current database next to itself first).
+
 Re-importing the same files is safe: hands are deduplicated by hand id, summaries are upserted.
 Files can arrive in any order (summary before hands, one file per entry, ...).
 If PokerCraft offers the hands of a later day (Day 2) but not its summary, the event still counts, flagged as missing
@@ -144,15 +150,17 @@ Domain details handled:
   stack is the most common first-hand stack of entries in tournaments with the same name and buy-in, or unknown.
 - **Only No-Limit Hold'em tournaments in dollars**: Sit & Go (AoF, FlipNGo ...), PLO/Omaha and other games, tournaments
   in other currencies and cash-game hands are never imported; the import result says how many were left out and why.
-- **Satellites**: prizes that are tickets are stored with their face value and excluded from cash ROI.
+- **Satellites**: tickets count at face value on both sides (a satellite won = the ticket's value, a target entered
+  with a ticket = its full buy-in), so the total matches the cash flow; the cash-only ROI is shown under it.
 - **Bounty formats**: buy-in split (prize + fee + bounty) kept; ROI uses the full cost including re-entries.
 
 ## Status
 
 - Tested: parsers, importer, views, equity engine, classification, reports, replay, knockouts, background import and
   the HTTP API (unit tests + runs on real exports), on SQLite. PostgreSQL tests are included and run in CI.
-- Not run yet: the native window (pywebview) and the packaged .app/.exe; the same UI was tested in a headless
-  browser. The release workflow builds both on GitHub.
+- Packaged app: every release build is tested before upload on macOS and Windows (`tools/smoke_packaged.py`: clean
+  profile, demo import twice with all-in EV, backup / restore, sample data, upgrade of an old database). The native
+  window was checked by hand on macOS; a hand check on Windows is pending.
 - Out of scope by decision: ICM / payout structures, cash games, solver analysis, HUD.
 
 ## Docs

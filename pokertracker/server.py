@@ -289,12 +289,15 @@ def make_server(db_url=None, port=0, watch_seconds=None):
         db.init_schema()
         url = db.url
     job = ImportJob(url)
+    # demo mode: the data (and the dashboard period) come from a separate demo database; display settings, imports,
+    # the ignore list and backups always stay with the player's own database
+    view = {"url": url, "demo": False}
     stop = threading.Event()
     threading.Thread(target=_watch_loop, args=(job, url, stop, watch_seconds or WATCH_SECONDS), daemon=True).start()
 
     def status_payload(db):
         last = get_setting(db, "last_import")
-        return {**job.status(), "watch": get_setting(db, "watch") == "1", "import_seen": get_setting(db, "import_seen"),
+        return {**job.status(), "demo": view["demo"], "watch": get_setting(db, "watch") == "1", "import_seen": get_setting(db, "import_seen"),
                 "import_folder": get_setting(db, "import_folder"), "last_import": json.loads(last) if last else None}
 
     class Handler(BaseHTTPRequestHandler):
@@ -323,7 +326,15 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 return self._send(200, (I18N / path[6:]).read_bytes())
             query = parse_qs(self.path.split("?", 1)[1] if "?" in self.path else "")
             lang = pick((query.get("lang") or [None])[0])          # the language of texts made here
-            with Database(url) as db:
+            if path in ("/api/settings", "/api/status"):
+                with Database(url) as db:
+                    if path == "/api/settings":
+                        return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
+                                                "watch": get_setting(db, "watch") == "1", "demo": view["demo"],
+                                                "four_color": get_setting(db, "four_color") != "0",
+                                                "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
+                    return self._send(200, status_payload(db))
+            with Database(view["url"]) as db:
                 if path == "/api/dashboard":     # ?period=session|24h|7d|14d|30d|3m|6m|max|custom (&from=&to= days)
                     period, start, end, bounds = chosen_period(db, query)
                     d = dashboard_data(db, period=period, bounds=bounds)
@@ -367,13 +378,6 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 if path.startswith("/api/hand/"):
                     d = hand_detail(db, path.rsplit("/", 1)[1])
                     return self._send(200 if d else 404, d or {"error": "hand not found"})
-                if path == "/api/settings":
-                    return self._send(200, {"import_folder": get_setting(db, "import_folder"), "database": url,
-                                            "watch": get_setting(db, "watch") == "1",
-                                            "four_color": get_setting(db, "four_color") != "0",
-                                            "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
-                if path == "/api/status":
-                    return self._send(200, status_payload(db))
                 if path == "/api/excluded":                           # the ignore list and what the rules left out
                     return self._send(200, excluded_list(db))
                 if path == "/api/review":                             # tournaments of the last import, to untick
@@ -389,6 +393,16 @@ def make_server(db_url=None, port=0, watch_seconds=None):
             if self.headers.get("X-Token") != token:              # only our own page may trigger imports
                 return self._send(403, {"error": "forbidden"})
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
+            if self.path == "/api/demo":                           # {on: true|false}
+                if body.get("on"):
+                    from .demo import ensure_demo
+                    view["url"], view["demo"] = ensure_demo(url), True
+                else:
+                    view["url"], view["demo"] = url, False
+                return self._send(200, {"demo": view["demo"]})
+            if view["demo"] and (self.path.startswith(("/api/import", "/api/backup"))
+                                 or self.path in ("/api/ignore", "/api/restore")):
+                return self._send(409, {"error": "Showing the demo data.", "code": "demo_mode"})
             if self.path in ("/api/import", "/api/import/preview"):
                 folder = (body.get("path") or "").strip()
                 if not folder or not Path(folder).expanduser().exists():
@@ -415,6 +429,21 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 with Database(url) as db:
                     set_setting(db, "watch", "1" if body.get("enabled") else "0")
                     return self._send(200, status_payload(db))
+            if self.path.startswith("/api/backup"):               # /api/backup, /api/backup/check, /api/backup/restore
+                from .backup import BackupError, check_backup, make_backup, restore
+                try:
+                    if self.path == "/api/backup":
+                        return self._send(200, {"path": make_backup(url, os.environ.get("POKERTRACKER_EXPORT_DIR"))})
+                    if self.path == "/api/backup/check":
+                        return self._send(200, check_backup(str(body.get("path") or "")))
+                    if self.path == "/api/backup/restore":
+                        if job.state.get("running"):
+                            return self._send(409, {"error": "An import is running.", "code": "import_running"})
+                        info, saved = restore(url, str(body.get("path") or ""))
+                        return self._send(200, {**info, "saved": saved})
+                except BackupError as e:
+                    return self._send(400, {"error": str(e), "code": e.code})
+                return self._send(404, {"error": "not found"})
             if self.path == "/api/export":                        # a CSV into Downloads: {kind, query, lang}
                 from urllib.parse import parse_qs as qs
                 from .export import hands_csv, save, tournaments_csv
@@ -423,7 +452,7 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                 kind, lang = body.get("kind"), pick(body.get("lang"))
                 if kind not in ("tournaments", "hands"):
                     return self._send(400, {"error": "unknown export", "code": "bad_export"})
-                with Database(url) as db:
+                with Database(view["url"]) as db:
                     if f.get("period"):
                         _, _, _, (f["since"], f["until"]) = chosen_period(db, query)
                     text, rows = (tournaments_csv if kind == "tournaments" else hands_csv)(db, f, lang)
@@ -440,14 +469,17 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                         set_setting(db, "import_seen", str(body["import_seen"]))
                     if "four_color" in body:
                         set_setting(db, "four_color", "1" if body["four_color"] else "0")
+                    db.commit()
+                with Database(view["url"]) as vdb:                # the period belongs to the data it is read with
                     if body.get("dashboard_period") in PERIODS:
-                        set_setting(db, "dashboard_period", body["dashboard_period"])
+                        set_setting(vdb, "dashboard_period", body["dashboard_period"])
                     for key in ("dashboard_from", "dashboard_to"):          # the days of a custom range
                         if DAY.match(str(body.get(key) or "")):
-                            set_setting(db, key, body[key])
-                    db.commit()
+                            set_setting(vdb, key, body[key])
+                    vdb.commit()
+                with Database(url) as db:
                     return self._send(200, {"four_color": get_setting(db, "four_color") != "0",
-                                            "dashboard_period": get_setting(db, "dashboard_period") or "max",
+                                            "dashboard_period": body.get("dashboard_period") or get_setting(db, "dashboard_period") or "max",
                                             "lang": get_setting(db, "lang"), "theme": get_setting(db, "theme")})
             self._send(404, {"error": "not found"})
 

@@ -4,6 +4,25 @@
 - Replayer: Hero's hole cards sit side by side above Hero's box again instead of one above the other over the
   replay buttons. The Dashboard's tile row shared Hero's seat class and turned the seat into a four-column grid; the
   tiles have their own class now.
+- Release builds test the packaged app before uploading it (`tools/smoke_packaged.py`, macOS and Windows): a clean
+  profile, the demo files imported twice (with all-in EV, so parallel equity inside the frozen binary), the main
+  screens, backup and restore, sample data, and the upgrade of a 0.2.0 database. The packaged binary also runs the
+  command line when given arguments (`PokerTracker serve --port 8790`, `PokerTracker import FOLDER`); new command
+  `serve`: the app's server without a window.
+- Sample data: "Look around on sample data" on the empty Dashboard (and in Settings) opens the app on 40 made-up
+  tournaments (Bounty Hunters, a daily, a turbo, satellites with tickets, late registrations and re-entries, about
+  2,500 hands) in a separate `demo.db` next to your database, which is never touched. A bar on every screen says it
+  is sample data and goes back in one click; importing and backups are off meanwhile. The files are made by
+  `pokertracker/demo.py` in GG's own format and go through the normal importer; older than two weeks, they are made
+  again, so the recent periods are never empty. `python -m pokertracker demo-files FOLDER` writes them out (screenshots,
+  tests).
+- Help: one page (the "?" in the header) with getting started, the dashboard, tournaments, hands and the replayer,
+  every Analysis definition, money (ROI with tickets, the interval, ITM), backup and export, problems and a glossary,
+  in Polish and English. A "?" next to each screen's title opens its section.
+- Settings → Backup: "Make a backup" copies the whole database into Downloads (`poker-tracker-2026-10-14.db`, never
+  overwritten). "Restore from a backup" checks the file first (a Poker Tracker database this version can open; an older
+  one is upgraded, a newer one or a foreign file is refused), keeps the current database next to itself, then replaces
+  it. In the app window a system file dialog picks the file. PostgreSQL users back up with pg_dump.
 - Export: "Copy the hand" in the replayer and "Copy the result" on a tournament give plain text for forums and chats
   (positions instead of opponent ids, stacks in BB, every street and the board, shown cards, the result and the result
   by EV; a provisional result says so). "Export CSV" on the tournament list and in Hands saves what is shown (with the
