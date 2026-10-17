@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- Menu: "How luck works" at the top is now "Help" (Pomoc), opening Help; it stays highlighted on every Help page.
+  How luck is calculated is in Help → How we count.
 - Hand search on PostgreSQL: a test that every filter finds the same hands, totals and order as on SQLite (runs in
   CI); `tools/bench_hand_search.py --db postgresql://… --explain` measures it there too (in its own schema, dropped
   afterwards) and prints how each query is read. 500,000 hands: slowest 91 ms on PostgreSQL 16, 129 ms on SQLite.
