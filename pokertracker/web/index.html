@@ -22,6 +22,7 @@ a{color:var(--blue)}.m{color:var(--muted);font-size:.88rem}
 .k{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
 .k div{background:var(--card);border-radius:10px;padding:10px}.k b{display:block;font-size:1.2rem}
 .box{background:var(--card);border-radius:12px;padding:12px}
+.boxh{margin:0 0 6px;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .scroll{overflow-x:auto}table{border-collapse:collapse;width:100%}
 th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 th:first-child,td:first-child{text-align:left}
@@ -612,7 +613,7 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
   const xs = opts.byIndex ? pts.map(p => p.n) : ts;
   let t0 = Math.min(...xs), t1 = Math.max(...xs);
   if (t1 === t0) t1 = t0 + (opts.byIndex ? 1 : 3600e3);
-  const vals = series.flatMap(s => pts.map(p => p[s.key]));
+  const vals = [...series.map(s => s.key), ...(opts.bands || []).flatMap(b => [b.lo, b.hi])].flatMap(k => pts.map(p => p[k]));
   const step = niceStep((Math.max(0, ...vals) - Math.min(0, ...vals)) / 4 || 1);
   const lo = Math.floor(Math.min(0, ...vals) / step) * step, hi = Math.ceil(Math.max(0, ...vals) / step) * step || step;
   const x = t => L + (t - t0) / (t1 - t0) * iw;
@@ -650,9 +651,12 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
       <text x="${m.mx + (m.end ? -4 : 4)}" y="${ly + 4}" text-anchor="${m.end ? "end" : "start"}"
         style="fill:var(--orange);font-size:11px;font-weight:700">${m.title ? `<title>${esc(m.title)}</title>` : ""}${esc(m.label)}</text>`;
   }).join("");
+  const bands = (opts.bands || []).map(b => `<polygon style="fill:${b.color};fill-opacity:${b.opacity || .16};stroke:none"
+    points="${[...pts.map((p, i) => `${x(xs[i]).toFixed(1)},${y(p[b.hi]).toFixed(1)}`),
+               ...pts.map((p, i) => `${x(xs[i]).toFixed(1)},${y(p[b.lo]).toFixed(1)}`).reverse()].join(" ")}"/>`).join("");
   const lines = series.map(s => `<polyline fill="none" style="stroke:${s.color};stroke-width:2;stroke-linejoin:round${s.dash ? ";stroke-dasharray:6 4" : ""}"
     points="${pts.map((p, i) => `${x(xs[i]).toFixed(1)},${y(p[s.key]).toFixed(1)}`).join(" ")}"/>`).join("");
-  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${marks}${lines}
+  box.innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img"${opts.onPick ? ' style="cursor:pointer"' : ""}>${g}${bands}${marks}${lines}
     <g id="hover" style="display:none"><line y1="${T}" y2="${T + ih}" style="stroke:var(--muted);stroke-dasharray:3 3"/>
       ${series.map(s => `<circle r="4" style="fill:${s.color};stroke:var(--bg);stroke-width:2"/>`).join("")}</g>
     <rect x="${L}" y="${T}" width="${iw}" height="${ih}" fill="transparent"/></svg><div class="tip"></div>`;
@@ -1017,7 +1021,7 @@ const worstList = hands => `<details><summary>${t("find.showWorst", {n: hands.le
   hands.map(x => `<tr class="click" onclick="location.hash='#/hand/${x.hand_id}'"><td>${dateTime(x.at)}</td><td>${esc(x.position || "")}</td>
     <td>${x.cards ? cards(x.cards) : "–"}</td><td>${bbUnit(x.stack_bb, 0)}</td><td>${sgn(x.adj_bb)}</td><td>${sgn(x.net_bb)}</td></tr>`))}</details>`;
 
-const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money"];   // labels: an.tab.<key>
+const ANALYSIS_TABS = ["overview", "preflop", "depth", "leaks", "money", "variance"];   // labels: an.tab.<key>
 
 // Analysis v2 stage 2: a finding as a card (cards only at q <= 0.05), with a mini-trend of the cumulative result by EV
 function spark(values, good) {
@@ -1211,9 +1215,11 @@ async function viewAnalysis(tab) {
       ${m.by_entry && m.by_entry.length ? detailTable("dash.lateVsStart", t("col.entered"), m.by_entry, x => t("entry." + x.key.split(":")[1]))
         + `<p class="m">${t("d3.lateTip")}${m.entry_incomplete ? " " + t("dash.incomplete", {tournaments: t("common.tournaments", {n: m.entry_incomplete})}) : ""}</p>` : ""}`;
   }
+  if (tab === "variance") h += `<div id="var"><p class="m">${t("var.loading")}</p></div>`;
   app.innerHTML = h;
   charts = [];
   if (tab === "overview") showdownChart(a.showdown);
+  if (tab === "variance") loadVariance(mine);
   if (tab === "leaks") document.getElementById("heat").onclick = e => {
     const b = e.target.closest("button[data-k]");
     if (!b) return;
@@ -1221,6 +1227,60 @@ async function viewAnalysis(tab) {
     b.classList.add("on");
     heatPick(b.dataset.k, a.heat, a.min_heat);
   };
+}
+
+// ---- Variance: the next N tournaments drawn from the ones played (pokertracker/variance.py) ----------------------
+const varState = {n: 500, roi: null};
+let varTimer = null;
+const bi = (x, d = 0) => num(x, d) + NB + t("var.bi");
+const biSgn = (x, d = 0) => sgn(x, d, " " + t("var.bi"));
+async function loadVariance(seq) {
+  const box = document.getElementById("var");
+  const v = await api(`/api/variance?n=${varState.n}` + (varState.roi == null ? "" : `&roi=${varState.roi}`));
+  if (seq !== routeSeq || !document.body.contains(box)) return;
+  if (!v.result) { box.innerHTML = `<p class="m">${t("var.none")}</p>`; return; }
+  const usd = x => v.abi_recent ? `≈${NB}${money(x * v.abi_recent, 0)}` : "";
+  const r = v.result, dd = v.drawdown, what = varState.roi != null;
+  const roiNow = what ? varState.roi : v.roi_played;
+  box.innerHTML = `${v.small ? `<p class="warn">${t("var.small", {n: v.tournaments, min: v.small_below})}</p>` : ""}
+    <p class="m">${t("var.intro", {n: t("common.tournaments", {n: v.tournaments}), runs: num(v.runs, 0)})}${v.unknown ? " " + t("var.unknown", {n: v.unknown}) : ""}</p>
+    <div class="hs-row" style="align-items:center;gap:14px;margin:8px 0 12px">
+      <span class="seg" style="margin:0">${v.horizons.map(n => `<button data-n="${n}" class="${n === v.n ? "on" : ""}">${t("var.next", {n: num(n, 0)})}</button>`).join("")}</span>
+      <label style="display:flex;align-items:center;gap:8px">${t("var.whatIf")}
+        <input type="range" id="var-roi" min="${v.roi_min}" max="${v.roi_max}" step="1" value="${Math.round(Math.max(v.roi_min, Math.min(v.roi_max, roiNow)))}" style="width:180px">
+        <b id="var-roi-v">${sgn(roiNow, 0, "%")}</b></label>
+      ${what ? `<button id="var-reset">${t("var.reset", {roi: num(v.roi_played, 0)})}</button>` : `<span class="m">${t("var.played", {roi: num(v.roi_played, 0)})}</span>`}
+    </div>
+    <div class="k">
+      <div>${t("var.median", {n: num(v.n, 0)})}<b>${biSgn(r.median)}</b><span class="m">${usd(r.median)}</span></div>
+      <div>${t("var.range")}<b style="font-size:1rem">${num(r.p5, 0)} … ${num(r.p95, 0)}</b><span class="m">${t("var.bi")}</span></div>
+      <div>${t("var.loss")}<b>${num(r.loss_pct, 0)}%</b><span class="m">${t("var.lossSub", {n: num(v.n, 0)})}</span></div>
+      <div>${t("var.drawdown")}<b>${bi(dd.median)}</b><span class="m">${t("var.drawdownSub", {p95: bi(dd.p95)})}</span></div>
+    </div>
+    <div class="box" style="margin:14px 0"><h3 class="boxh">${t("var.fanTitle", {n: num(v.n, 0)})}</h3><div class="tchart" id="c-var"></div>
+      <p class="m" style="margin:6px 0 0">${t("var.fanNote")}</p></div>
+    <div class="box"><b>${t("var.bankrollTitle")}</b><p style="margin:6px 0 0">${roiNow > 0
+      ? t("var.bankroll", {k: num(v.bankroll, 0), n: num(v.n, 0), usd: v.abi_recent ? money(v.bankroll * v.abi_recent, 0) : "–", abi: money(v.abi_recent), last: v.abi_recent_n})
+      : t("var.bankrollNeg", {roi: num(roiNow, 0)})}</p></div>
+    <h2>${t("var.abiTitle")}</h2><div class="box"><div class="tchart" id="c-abi"></div>
+      <p class="m" style="margin:6px 0 0">${t(v.abi.unit === "week" ? "var.abiWeek" : "var.abiMonth")}</p></div>
+    <h2>${t("var.howTitle")}</h2><div class="box">${t("var.how")}</div>`;
+  charts = [];
+  addChart("c-var", v.fan.map(p => ({...p, at: ""})), [{key: "p50", color: "var(--blue)"}], x => num(x, 0),
+    p => t("var.point", {n: num(p.n, 0), median: num(p.p50, 0), lo50: num(p.p25, 0), hi50: num(p.p75, 0), lo90: num(p.p5, 0), hi90: num(p.p95, 0)}),
+    {byIndex: true, bands: [{lo: "p5", hi: "p95", color: "var(--blue)", opacity: .12}, {lo: "p25", hi: "p75", color: "var(--blue)", opacity: .22}]});
+  addChart("c-abi", v.abi.points.map(p => ({...p, at: (v.abi.unit === "month" ? p.key + "-01" : p.key) + " 00:00"})),
+    [{key: "abi", color: "var(--blue)"}], x => money(x, 0),
+    p => t("var.abiPoint", {key: v.abi.unit === "month" ? p.key : dateTime(p.key), abi: money(p.abi), n: t("common.tournaments", {n: p.tournaments})}));
+  box.querySelectorAll("[data-n]").forEach(b => b.onclick = () => { varState.n = +b.dataset.n; loadVariance(seq); });
+  const slider = document.getElementById("var-roi");
+  slider.oninput = () => {
+    document.getElementById("var-roi-v").innerHTML = sgn(+slider.value, 0, "%");
+    clearTimeout(varTimer);
+    varTimer = setTimeout(() => { varState.roi = +slider.value; loadVariance(seq); }, 250);
+  };
+  const reset = document.getElementById("var-reset");
+  if (reset) reset.onclick = () => { varState.roi = null; loadVariance(seq); };
 }
 
 // ---- Help: one page, a section per screen; "?" next to a screen's title opens its section -----------------------
