@@ -2,6 +2,7 @@ __pycache__/
 *.db
 data/
 exports/
+demo/
 *.pdf
 *.egg-info/
 *.db.bak-*

@@ -45,6 +45,10 @@ python -m pokertracker tournament --html report.html   # latest tournament
 python -m pokertracker dashboard --html dashboard.html
 ```
 
+No exports yet? `python -m pokertracker demo-files demo/` writes 40 made-up tournaments (names start with "DEMO") in
+GG's format; import them into a separate database with `python -m pokertracker --db sqlite:///demo.db import demo/`.
+The app offers the same sample data from its empty dashboard, in its own `demo.db`.
+
 Back up and restore the SQLite database from Settings → Backup in the app (a dated copy in Downloads; restoring keeps the current database next to itself first).
 
 Re-importing the same files is safe: hands are deduplicated by hand id, summaries are upserted.

@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Sample data: "Look around on sample data" on the empty Dashboard (and in Settings) opens the app on 40 made-up
+  tournaments (Bounty Hunters, a daily, a turbo, satellites with tickets, late registrations and re-entries, about
+  2,500 hands) in a separate `demo.db` next to your database, which is never touched. A bar on every screen says it
+  is sample data and goes back in one click; importing and backups are off meanwhile. The files are made by
+  `pokertracker/demo.py` in GG's own format and go through the normal importer; older than two weeks, they are made
+  again, so the recent periods are never empty. `python -m pokertracker demo-files FOLDER` writes them out (screenshots,
+  tests).
 - Help: one page (the "?" in the header) with getting started, the dashboard, tournaments, hands and the replayer,
   every Analysis definition, money (ROI with tickets, the interval, ITM), backup and export, problems and a glossary,
   in Polish and English. A "?" next to each screen's title opens its section.
