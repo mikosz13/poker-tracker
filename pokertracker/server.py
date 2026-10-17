@@ -367,6 +367,14 @@ def make_server(db_url=None, port=0, watch_seconds=None):
                     return self._send(200, hands_of_class(db, (query.get("cards") or [""])[0]))
                 if path == "/api/analysis":                           # always the whole history
                     return self._send(200, analysis_data(db, lang=lang))
+                if path == "/api/variance":                           # ?n=100|500|1000&roi=<what-if ROI %>
+                    from .variance import DEFAULT_N, variance_data
+                    try:
+                        n = int((query.get("n") or [DEFAULT_N])[0])
+                        roi = (query.get("roi") or [""])[0]
+                        return self._send(200, variance_data(db, n=n, roi=float(roi) if roi else None))
+                    except ValueError:
+                        return self._send(400, {"error": "bad n or roi"})
                 if path == "/api/tournaments":
                     return self._send(200, tournaments_list(db))
                 if path.startswith("/api/tournament/"):
