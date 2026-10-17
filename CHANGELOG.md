@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+- Analysis → Sessions: VPIP, PFR, bb/100 by EV and ROI by the number of tournaments played at once (1 / 2 / 3+), the
+  time of day and the time since the session started (first hour, 1–2 h, 2–3 h, 3 h+; a session ends after a break of
+  more than 3 hours, as for "Last session"). Each group is compared with the rest of the hands at the same stack depth
+  (a short stack alone plays fewer hands), the uncertainty is counted by session (hands of one evening are not
+  independent; at least 300 hands from 5 sessions), and the comparisons are corrected together (Benjamini-Hochberg);
+  only differences with q ≤ 0.05 are listed. ROI per group with its interval, not judged. Times are the GG files' own:
+  the player's local time (the file names are UTC, checked 17.10.2026). `/api/context`.
 - Analysis → Variance: 10,000 runs of the next 100 / 500 / 1,000 tournaments drawn from your own (bootstrap; every
   tournament as a result in buy-ins, re-entries and tickets included). The typical result with the half and 9-in-10
   bands, the chance of a loss, the largest drawdown, and how many buy-ins keep the risk of a bigger drawdown under 5 %
