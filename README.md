@@ -22,7 +22,7 @@ see every screen before your first import. The app speaks English and Polish and
   strengths only when they stand out from chance; results with and without showdown; where you finish; money by
   buy-in and entry.
 - **Hands**: filter every hand by period, buy-in, position, starting hand (13×13 grid), stack, preflop action, all-in,
-  showdown and result, then open it in the replayer.
+  showdown and result, then open it in the replayer (a table view, step by step or autoplay, next / previous hand).
 - Also: "copy the hand" as text for forums, CSV export for Excel, a backup of the whole database in one click, a help
   page with every definition, and [how luck is calculated](#all-in-ev-exact-no-monte-carlo) written out in the app.
 
@@ -31,6 +31,8 @@ see every screen before your first import. The app speaks English and Polish and
 <img src="docs/img/analysis.png" alt="Analysis: overview, results with and without showdown, luck" width="32%">
 <img src="docs/img/hands.png" alt="Hands: filters and results" width="32%">
 </p>
+
+<img src="docs/img/replayer.png" alt="Hand replayer: a five-way all-in, step by step" width="66%">
 
 Screenshots are made from the made-up sample data (`python tools/screenshots.py`).
 
