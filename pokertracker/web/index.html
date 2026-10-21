@@ -200,7 +200,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 </head>
 <body>
 <header><nav id="nav">
-  <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/hands" data-i18n="nav.hands"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/luck" data-i18n="nav.luck"></a>
+  <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/hands" data-i18n="nav.hands"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/help" data-i18n="nav.help"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
   <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
   <a href="#/help" class="gear helpq" data-i18n-title="nav.help">?</a>
@@ -1802,7 +1802,8 @@ async function route(keepScroll) {
   const h = location.hash || "#/", y = window.scrollY;
   document.querySelectorAll("#nav a").forEach(a => a.classList.toggle("on",
     a.getAttribute("href") === h || h.startsWith(a.getAttribute("href") + "?")
-      || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))));
+      || (a.getAttribute("href") === "#/tournaments" && /^#\/(t|hand)\//.test(h))
+      || (a.getAttribute("href") === "#/help" && (h.startsWith("#/help/") || h === "#/luck"))));
   if (!h.startsWith("#/hand/")) { replay = null; stopPlay(); }
   try {
     let m;
