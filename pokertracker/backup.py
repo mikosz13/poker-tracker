@@ -45,6 +45,7 @@ def _copy(source, target, uri=False):
     """SQLite's online backup from source into target; both connections closed after (Windows locks open files)."""
     with closing(sqlite3.connect(source, uri=uri)) as src, closing(sqlite3.connect(target)) as dst:
         src.backup(dst)
+        dst.execute("PRAGMA journal_mode=DELETE")                  # one self-contained file (the app's own is WAL)
 
 
 def make_backup(db_url, folder=None):

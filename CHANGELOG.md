@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Fix: while an import was writing, the app could not read the database ("database is locked"), so the import's
+  progress and screens opened meanwhile failed. The SQLite database now runs in WAL mode (reads never wait for a
+  write) and a write waits up to 30 s for another; backups and the copies made before an upgrade stay one plain file.
 - Menu: "How luck works" at the top is now "Help" (Pomoc), opening Help; it stays highlighted on every Help page.
   How luck is calculated is in Help → How we count.
 - Hand search on PostgreSQL: a test that every filter finds the same hands, totals and order as on SQLite (runs in

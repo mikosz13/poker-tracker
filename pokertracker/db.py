@@ -11,6 +11,7 @@ from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
 SQL_DIR = Path(__file__).resolve().parent / "sql"
+SQLITE_TIMEOUT = 30      # seconds a write waits for another write to finish (reads never wait in WAL mode)
 
 
 def data_dir() -> Path:
@@ -57,7 +58,12 @@ class Database:
             self.conn = psycopg.connect(self.url)
         elif self.url.startswith("sqlite:///"):
             self.kind = "sqlite"
-            self.conn = sqlite3.connect(self.url[len("sqlite:///"):])
+            path = self.url[len("sqlite:///"):]
+            self.conn = sqlite3.connect(path, timeout=SQLITE_TIMEOUT)
+            if path != ":memory:":
+                # WAL: reading never waits for a write, so the app answers (e.g. the import's progress) while an import
+                # writes; the setting stays with the file. Copies made from it are switched back to one plain file.
+                self.conn.execute("PRAGMA journal_mode=WAL")
         else:
             raise ValueError(f"Unsupported database URL: {self.url!r}")
 
@@ -102,6 +108,7 @@ class Database:
         target = f"{path}.{suffix}"
         with sqlite3.connect(target) as dst:
             self.conn.backup(dst)
+            dst.execute("PRAGMA journal_mode=DELETE")              # a backup is one self-contained file
         dst.close()
         return target
 
