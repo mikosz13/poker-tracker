@@ -6,5 +6,8 @@ demo/
 *.pdf
 *.egg-info/
 *.db.bak-*
+*.db-wal
+*.db-shm
 .DS_Store
 CLAUDE.md
+.claude/

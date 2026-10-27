@@ -365,7 +365,8 @@ def ensure_demo(real_url, now=None, equity=True):
         fresh = last and str(last)[:10] >= ((now or datetime.now()) - timedelta(days=DEMO_STALE_DAYS)).strftime("%Y-%m-%d")
         if fresh:
             return url
-        path.unlink()
+        for leftover in (path, path.with_name(path.name + "-wal"), path.with_name(path.name + "-shm")):
+            leftover.unlink(missing_ok=True)
     with Database(url) as db:
         db.init_schema()
         build_demo(db, equity=equity)
