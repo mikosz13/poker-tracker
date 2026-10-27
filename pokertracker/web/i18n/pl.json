@@ -983,5 +983,8 @@
  "hs.group.pairs": "Pary",
  "hs.group.suited": "W kolorze",
  "hs.group.offsuit": "Nie w kolorze",
- "hs.group.broadway": "Broadway"
+ "hs.group.broadway": "Broadway",
+ "list.search": "Szukaj po nazwie",
+ "list.noMatch": "Żaden turniej nie pasuje do „{q}” przy wybranych filtrach.",
+ "list.searchTip": "Każde słowo musi być w nazwie, np. „bounty 21”; numer turnieju też działa."
 }
