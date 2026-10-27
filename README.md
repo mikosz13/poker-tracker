@@ -207,8 +207,11 @@ Domain details handled:
 - A later day (Day 2) without its summary counts a prize typed in by hand, marked as provisional, with the place
   unknown, until the summary is imported.
 - The starting stack of a late registration can be unknown.
-- Times are those in the GG files (the player's local time). Around a daylight-saving change the hour that repeats or
-  is skipped can mix up sessions, the 15-minute tilt window and "tournaments at once".
+- Times are those in the GG files, and PokerCraft writes them in the time zone of the moment you **download** the export,
+  not of when you played: an export downloaded after a daylight-saving change shows every hand about 1 hour off from one
+  downloaded before it. Hands imported from exports on both sides of a change can then be about an hour apart in the
+  time of day, in sessions, in "tournaments at once" and in the 15-minute tilt window. The order of hands within a
+  tournament stays right (a tournament comes from one export). Times are not converted for now.
 - Sessions: the blind level stands in for the stage of a tournament, roughly (structures differ in speed).
 
 **Databases**
