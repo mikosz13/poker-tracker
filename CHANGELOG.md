@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hands → Starting hands: always open, in a box of its own under the filters. Square cells of one size, so rows and
+  columns line up; pairs, suited and offsuit hands tinted as in a range chart, with a legend; the clear and group
+  buttons in a column next to the grid (under it in a narrow window); the picked hands listed above it.
 - Fix: while an import was writing, the app could not read the database ("database is locked"), so the import's
   progress and screens opened meanwhile failed. The SQLite database now runs in WAL mode (reads never wait for a
   write) and a write waits up to 30 s for another; backups and the copies made before an upgrade stay one plain file.
