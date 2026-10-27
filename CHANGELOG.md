@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+
+## 0.8.0 (2026-10-27)
+- **Upgrade from 0.7.0:** on the first start the database goes from schema 5 to 8 (a copy from before the upgrade is
+  kept next to it, `pokertracker.db.bak-v5`) and switches to WAL mode: while the app runs, two helper files sit next
+  to it (`pokertracker.db-wal`, `pokertracker.db-shm`). No need to import the files again.
 - README, Known limitations: PokerCraft writes times in the time zone of the moment of download, so exports from
   both sides of a daylight-saving change can be about an hour apart (checked on Mik's exports of 27.10).
 - README screenshots made again on the sample data: the starting-hand grid with picked hands, the dashboard's
