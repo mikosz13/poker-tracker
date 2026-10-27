@@ -983,5 +983,6 @@
  "hs.group.pairs": "Pary",
  "hs.group.suited": "W kolorze",
  "hs.group.offsuit": "Nie w kolorze",
- "hs.group.broadway": "Broadway"
+ "hs.group.broadway": "Broadway",
+ "nav.back": "Wstecz (Alt+← lub Cmd+[)"
 }

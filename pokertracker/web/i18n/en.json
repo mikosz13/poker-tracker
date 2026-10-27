@@ -961,5 +961,6 @@
  "hs.group.pairs": "Pairs",
  "hs.group.suited": "Suited",
  "hs.group.offsuit": "Offsuit",
- "hs.group.broadway": "Broadway"
+ "hs.group.broadway": "Broadway",
+ "nav.back": "Back (Alt+← or Cmd+[)"
 }

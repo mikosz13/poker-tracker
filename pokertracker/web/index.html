@@ -176,7 +176,11 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 .langs{margin-left:auto;display:flex;flex:none;align-items:center}.langs button{padding:4px 8px;font-size:.8rem;border-radius:0}
 .langs button:first-child{border-radius:8px 0 0 8px}.langs button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .langs button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-.langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}nav a.helpq{font-weight:700;font-size:1rem;line-height:17px;padding:4px 9px}
+.langs.themes{margin-left:6px}nav a.gear{display:flex;align-items:center;padding:4px 7px;margin-left:6px;flex:none}nav a.gear svg{width:17px;height:17px}.backbtn{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;padding:0;margin-right:4px;
+  border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+.backbtn svg{width:16px;height:16px}.backbtn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
+.backbtn:disabled{opacity:.35;cursor:default}
+nav a.helpq{font-weight:700;font-size:1rem;line-height:17px;padding:4px 9px}
 .help-q{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);
   font-size:.75rem;font-weight:700;text-decoration:none;color:var(--muted);vertical-align:middle;margin-left:6px}.help-q:hover{color:var(--blue);border-color:var(--blue)}
 .help-layout{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;align-items:start}
@@ -216,6 +220,7 @@ td.vcell{white-space:normal;min-width:6.5em;text-align:left}
 </head>
 <body>
 <header><nav id="nav">
+  <button id="back" class="backbtn" data-i18n-title="nav.back" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
   <a href="#/" data-i18n="nav.dashboard"></a><a href="#/tournaments" data-i18n="nav.tournaments"></a><a href="#/hands" data-i18n="nav.hands"></a><a href="#/analysis" data-i18n="nav.analysis"></a><a href="#/import" data-i18n="nav.import"></a><a href="#/help" data-i18n="nav.help"></a>
   <span id="langs" class="langs"><button data-l="pl" title="Polski">PL</button><button data-l="en" title="English">EN</button></span>
   <span id="themes" class="langs themes"><button data-t="light" data-i18n-title="theme.light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/></svg></button><button data-t="dark" data-i18n-title="theme.dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg></button></span>
@@ -1019,6 +1024,7 @@ function drawStep() {
 }
 document.addEventListener("keydown", e => {
   if (!replay || !location.hash.startsWith("#/hand/") || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.altKey || e.metaKey || e.ctrlKey) return;                  // Alt+← / Cmd+[ go back (see Back below)
   const k = {ArrowRight: "b2", ArrowLeft: "b1", Home: "b0", End: "b3", " ": "bp"}[e.key];
   if (k) { e.preventDefault(); document.getElementById(k).click(); }
 });
@@ -1873,10 +1879,37 @@ async function route(keepScroll) {
     else if (h === "#/settings") await viewSettings();
     else app.innerHTML = `<p>${t("common.notFound")}</p>`;
   } catch (err) { app.innerHTML = `<p class="warn">${t("common.error", {e: esc(err.message)})}</p>`; }
-  window.scrollTo(0, keepScroll === true ? y : 0);
+  window.scrollTo(0, typeof keepScroll === "number" ? keepScroll : keepScroll === true ? y : 0);
   checkNotice();
 }
-window.addEventListener("hashchange", () => route());
+// ---- Back: the app window has no browser buttons, so the header has its own (and Alt+← / Cmd+[) ----------------
+// Each screen visited is remembered with how far it was scrolled; Back goes to the previous one and scrolls there.
+const backBtn = document.getElementById("back"), visited = [{hash: location.hash || "#/", y: 0}];
+let goingBack = false;
+function goBack() {
+  if (visited.length < 2) return;
+  goingBack = true;
+  history.back();
+}
+backBtn.onclick = goBack;
+document.addEventListener("keydown", e => {
+  if ((e.altKey && e.key === "ArrowLeft") || ((e.metaKey || e.ctrlKey) && e.key === "[")) { e.preventDefault(); goBack(); }
+});
+window.addEventListener("hashchange", () => {
+  const hash = location.hash || "#/";
+  let restore;
+  if (goingBack) {
+    goingBack = false;
+    visited.pop();
+    restore = visited[visited.length - 1].y;
+    visited[visited.length - 1].hash = hash;
+  } else {
+    visited[visited.length - 1].y = window.scrollY;                // where the screen being left was scrolled to
+    visited.push({hash, y: 0});
+  }
+  backBtn.disabled = visited.length < 2;
+  route(restore);
+});
 // the saved language, or the system language the first time
 api("/api/settings").then(st => {
   document.body.classList.toggle("two-color", st.four_color === false);
