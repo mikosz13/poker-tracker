@@ -102,6 +102,8 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .hs-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;max-width:480px;user-select:none;touch-action:none}
 .hs-grid button{aspect-ratio:1;padding:0;font-size:.6rem;border-radius:3px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;min-width:0}
 .hs-grid button.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.hs-quick{margin:4px 0 8px}.hs-quick button{padding:3px 9px;font-size:.85rem}
+.recentbox{max-height:15.5rem;margin-top:0}
 td.hs-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.hslist th:nth-child(2){text-align:left}
 .sess-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;align-items:center}
 .sess-nums{display:flex;gap:18px}.sess-nums div{font-size:.78rem;color:var(--muted)}.sess-nums b{display:block;font-size:1.1rem;color:var(--fg)}
@@ -471,8 +473,8 @@ async function viewDashboard(period, from, to) {
   else if (d.trend && d.trend.compared) facts.push(t("d3.trendNone"));
   h += `<div class="cols">${facts.length ? `<div><h2>${t("d3.facts")}</h2><ul class="facts">${facts.slice(0, 3).map(f => `<li>${f}</li>`).join("")}</ul></div>` : ""}
     <div><h2>${t("d3.recent")} <a class="m" style="font-weight:400" href="#/tournaments${periodQuery(d.period, (d.custom || {}).from, (d.custom || {}).to)}">${t("d3.all")}</a></h2>
-      ${table([t("col.tournament"), t("col.place"), t("col.profitUsd")], d.recent.slice(0, 5).map(r => `<tr class="click" onclick="location.hash='#/t/${r.tournament_id}'">
-        <td>${esc(r.name)} <span class="m">${shortDate(r.date)}</span></td><td>${r.place ?? "–"}/${r.players ?? "–"}</td><td>${sgn(r.profit, 2)}</td></tr>`), "wrap1")}</div></div>`;
+      ${table([t("col.tournament"), t("col.place"), t("col.profitUsd")], d.recent.map(r => `<tr class="click" onclick="location.hash='#/t/${r.tournament_id}'">
+        <td>${esc(r.name)} <span class="m">${shortDate(r.date)}</span></td><td>${r.place ?? "–"}/${r.players ?? "–"}</td><td>${sgn(r.profit, 2)}</td></tr>`), "wrap1 scrollbox recentbox")}</div></div>`;
   app.innerHTML = h;
   bindPeriods();
   dashChart(d);
@@ -862,7 +864,7 @@ function bindIgnore(id) {
 // ---- Replayer -----------------------------------------------------------------
 // The server sends full snapshots (pot, stacks, bets, board); this code only draws them.
 let replay = null, step = 0, playTimer = null;
-const SPEEDS = {slow: 1500, normal: 900, fast: 450};
+const SPEEDS = {slow: 1500, normal: 1200, fast: 450};   // ms per step
 const VERBS = {folds: "folds", checks: "checks", calls: "calls", bets: "bets", raises: "raises to"};
 const bbs = (x, bb) => num(x / bb, Math.abs(x / bb) >= 100 ? 0 : 1);
 const pcard = (c, cls = "") => `<span class="pc s-${esc(c[1])} ${cls}">${esc(c[0])}<i>${SUIT[c[1]] || ""}</i></span>`;
@@ -1476,6 +1478,14 @@ function hsNav(id) {                                     // next / previous acro
   return `<p class="ctl m">${t("hs.nav", {i: i + 1, n: num(s.count, 0)})} · ${i > 0 ? `<a href="#/hand/${s.ids[i - 1]}">${t("hs.prev")}</a> ` : ""}${
     i < s.ids.length - 1 ? `<a href="#/hand/${s.ids[i + 1]}">${t("hs.next")}</a> ` : ""}· <a href="${s.back}">${t("hs.back")}</a></p>`;
 }
+// quick groups of starting hands above the grid: labels hs.group.<key>
+const HS_GROUPS = ["pairs", "suited", "offsuit", "broadway"], HS_LIST = 12;
+function hsGroup(k, g) {
+  if (g === "pairs") return k.length === 2;
+  if (g === "suited") return k.endsWith("s");
+  if (g === "offsuit") return k.endsWith("o");
+  return "AKQJT".includes(k[0]) && "AKQJT".includes(k[1]);          // broadway: both cards ten or higher
+}
 async function viewHands(qs) {
   const mine = routeSeq, f = Object.fromEntries(new URLSearchParams(qs));
   const tl = await api("/api/tournaments");
@@ -1504,8 +1514,10 @@ async function viewHands(qs) {
       <label class="m">${t("hs.stack")} ${t("hs.from")} <input id="stack_min" type="number" min="0" step="1" value="${esc(f.stack_min || "")}"></label>
       <label class="m">${t("hs.to")} <input id="stack_max" type="number" min="0" step="1" value="${esc(f.stack_max || "")}"></label>
       <button id="hs-clear">${t("hs.clear")}</button><button id="hs-csv">${t("ex.csv")}</button></div><div id="hs-csv-out"></div>
-    <details ${picked.size ? "open" : ""}><summary>${t("hs.cards")} <span class="m" id="hs-picked">${picked.size ? t("hs.picked", {n: picked.size}) : ""}</span></summary>
-      <p class="m" style="margin:4px 0">${t("hs.cardsTip")}</p><div class="hs-grid" id="hs-grid">${grid.join("")}</div></details></div>
+    <details ${picked.size ? "open" : ""}><summary>${t("hs.cards")} <span class="m" id="hs-picked"></span></summary>
+      <p class="m" style="margin:4px 0">${t("hs.cardsTip")}</p>
+      <div class="hs-row hs-quick" id="hs-quick"><button data-g="none">${t("hs.pickNone")}</button>${HS_GROUPS.map(g => `<button data-g="${g}">${t("hs.group." + g)}</button>`).join("")}</div>
+      <div class="hs-grid" id="hs-grid">${grid.join("")}</div></details></div>
     <p class="m" id="hs-sum"></p><div id="hs-list"></div><p><button id="hs-more" hidden></button></p>`;
   let rows = [], last = null;
   const read = () => {
@@ -1540,11 +1552,32 @@ async function viewHands(qs) {
   app.querySelectorAll(".hs-filters select, .hs-filters input").forEach(el => el.addEventListener(el.type === "number" ? "input" : "change", later));
   document.getElementById("hs-pos").onclick = e => { const b = e.target.closest("button[data-p]"); if (!b) return;
     pos.has(b.dataset.p) ? pos.delete(b.dataset.p) : pos.add(b.dataset.p); b.classList.toggle("on"); later(); };
-  // the grid: click a cell to pick it, drag across cells to pick or drop several at once
+  // the grid: click a cell to pick it, drag across cells to pick or drop several at once; the buttons above it clear
+  // the choice or add a whole group (a group already picked in full is dropped instead)
+  const order = grid.map(x => x.match(/data-k="(\w+)"/)[1]);
+  const showPicked = () => {
+    const list = order.filter(k => picked.has(k));
+    document.getElementById("hs-picked").textContent = list.length
+      ? t("hs.picked", {n: list.length}) + " · " + list.slice(0, HS_LIST).join(", ") + (list.length > HS_LIST ? "…" : "") : "";
+  };
+  const redraw = () => { gridEl.querySelectorAll("button[data-k]").forEach(b => b.classList.toggle("on", picked.has(b.dataset.k))); showPicked(); };
   let painting = null;
   const paint = b => { if (!b || painting === null) return; painting ? picked.add(b.dataset.k) : picked.delete(b.dataset.k);
-    b.classList.toggle("on", painting); document.getElementById("hs-picked").textContent = picked.size ? t("hs.picked", {n: picked.size}) : ""; };
+    b.classList.toggle("on", painting); showPicked(); };
   const gridEl = document.getElementById("hs-grid");
+  showPicked();
+  document.getElementById("hs-quick").onclick = e => {
+    const b = e.target.closest("button[data-g]");
+    if (!b) return;
+    if (b.dataset.g === "none") picked.clear();
+    else {
+      const group = order.filter(k => hsGroup(k, b.dataset.g));
+      const all = group.every(k => picked.has(k));
+      group.forEach(k => all ? picked.delete(k) : picked.add(k));
+    }
+    redraw();
+    later();
+  };
   gridEl.addEventListener("pointerdown", e => { const b = e.target.closest("button[data-k]"); if (!b) return; e.preventDefault();
     painting = !picked.has(b.dataset.k); paint(b); });
   gridEl.addEventListener("pointerover", e => paint(e.target.closest("button[data-k]")));

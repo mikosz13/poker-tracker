@@ -16,6 +16,7 @@ def _f(x):
 
 
 # rolling periods count back from now; "session" is the last session's span, "custom" whole days chosen by the player
+RECENT_SHOWN = 100       # the dashboard's scrolling list of recent tournaments (the CLI report shows 10)
 PERIODS = {"session": None, "24h": timedelta(hours=24), "7d": timedelta(days=7), "14d": timedelta(days=14),
            "30d": timedelta(days=30), "3m": timedelta(days=91), "6m": timedelta(days=182), "max": None, "custom": None}
 LEGACY = {"3d": "7d", "1w": "7d", "2w": "14d", "4w": "30d"}       # stored by 0.7 and older
@@ -246,7 +247,7 @@ def dashboard_data(db, site=SITE, period="max", now=None, bounds=None):
         "recent": [{"tournament_id": t["tournament_id"], "date": str(t["started_at"])[:10], "name": t["name"],
                     "buyin": _f(t["buyin_total"]), "place": t["finish_place"], "players": t["players"],
                     "cash": _f(t["cash_won"]), "ticket": _f(t["ticket_value"]), "profit": _f(t["profit"])}
-                   for t in reversed(trs[-10:])],
+                   for t in reversed(trs[-RECENT_SHOWN:])],
         # the best result of the period, for "Worth knowing" (tickets at face value)
         "best": next(({"tournament_id": t["tournament_id"], "name": t["name"], "place": t["finish_place"],
                        "players": t["players"], "profit": _f(t["profit"])}
@@ -299,7 +300,7 @@ def render_html(d) -> str:
         parts.append(f"<h2>By category</h2><table><tr><th>Tag</th><th>n</th><th>ITM</th><th>ROI</th></tr>{rows}</table>")
     if d["recent"]:
         rows = "".join(f"<tr><td>{r['date'][5:]}</td><td>${r['buyin']:,.0f}</td><td>{r['place']}/{r['players']}</td>"
-                       f"<td>{_sign(r['profit'], '{:+,.0f}')}{' +ticket' if r['ticket'] else ''}</td></tr>" for r in d["recent"])
+                       f"<td>{_sign(r['profit'], '{:+,.0f}')}{' +ticket' if r['ticket'] else ''}</td></tr>" for r in d["recent"][:10])
         parts.append(f"<h2>Recent tournaments</h2><table><tr><th>Date</th><th>Buy-in</th><th>Place</th><th>Profit $</th></tr>{rows}</table>")
     return ("<!doctype html><html lang=en><meta charset=utf-8>"
             "<meta name=viewport content='width=device-width,initial-scale=1'>"

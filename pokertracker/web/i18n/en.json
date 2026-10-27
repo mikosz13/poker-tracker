@@ -776,7 +776,7 @@
  "hs.to": "to",
  "hs.cards": "Starting hands",
  "hs.picked": "{n} picked",
- "hs.cardsTip": "Click a cell to pick it, drag across cells to pick several.",
+ "hs.cardsTip": "Click a cell to pick it; drag across cells to pick several. A group button adds the whole group, or drops it when it is already picked.",
  "hs.clear": "Clear filters",
  "hs.summary": "{hands} · result {net} BB · by EV {adj} BB",
  "hs.more": "Show more ({n} left)",
@@ -956,5 +956,10 @@
  "ctx.after.big_loss": "After losing 20+ BB",
  "ctx.after.bust": "After a bust",
  "ctx.after.calm": "Calm hands",
- "ctx.col.moments": "Moments"
+ "ctx.col.moments": "Moments",
+ "hs.pickNone": "Clear the hands",
+ "hs.group.pairs": "Pairs",
+ "hs.group.suited": "Suited",
+ "hs.group.offsuit": "Offsuit",
+ "hs.group.broadway": "Broadway"
 }

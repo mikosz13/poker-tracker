@@ -10,3 +10,4 @@ demo/
 *.db-shm
 .DS_Store
 CLAUDE.md
+.claude/

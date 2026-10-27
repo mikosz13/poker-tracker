@@ -4,6 +4,11 @@
 - Fix: while an import was writing, the app could not read the database ("database is locked"), so the import's
   progress and screens opened meanwhile failed. The SQLite database now runs in WAL mode (reads never wait for a
   write) and a write waits up to 30 s for another; backups and the copies made before an upgrade stay one plain file.
+- Hands → Starting hands: "Clear the hands" and quick groups above the grid (pairs, suited, offsuit, broadway; a group
+  already picked in full is dropped); the picked hands are listed next to their count.
+- Replayer: "Normal" plays a little slower (1.2 s a step instead of 0.9 s).
+- Dashboard → Recent tournaments: every tournament of the period (up to 100) in a scrolling list with a fixed header,
+  instead of the last five. The CLI dashboard report keeps its last ten.
 - Menu: "How luck works" at the top is now "Help" (Pomoc), opening Help; it stays highlighted on every Help page.
   How luck is calculated is in Help → How we count.
 - Hand search on PostgreSQL: a test that every filter finds the same hands, totals and order as on SQLite (runs in

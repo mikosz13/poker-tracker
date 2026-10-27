@@ -795,7 +795,7 @@
  "hs.to": "do",
  "hs.cards": "Ręce startowe",
  "hs.picked": "wybrane: {n}",
- "hs.cardsTip": "Kliknij pole, żeby je wybrać; przeciągnij po polach, żeby wybrać kilka.",
+ "hs.cardsTip": "Kliknij pole, żeby je wybrać; przeciągnij po polach, żeby wybrać kilka. Przycisk grupy dodaje całą grupę albo ją odznacza, jeśli jest już wybrana.",
  "hs.clear": "Wyczyść filtry",
  "hs.summary": "{hands} · wynik {net} BB · wg EV {adj} BB",
  "hs.more": "Pokaż kolejne (zostało {n})",
@@ -978,5 +978,10 @@
  "ctx.after.big_loss": "Po przegranej 20+ BB",
  "ctx.after.bust": "Po odpadnięciu",
  "ctx.after.calm": "Spokojne ręce",
- "ctx.col.moments": "Momenty"
+ "ctx.col.moments": "Momenty",
+ "hs.pickNone": "Odznacz wszystkie",
+ "hs.group.pairs": "Pary",
+ "hs.group.suited": "W kolorze",
+ "hs.group.offsuit": "Nie w kolorze",
+ "hs.group.broadway": "Broadway"
 }
