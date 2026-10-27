@@ -99,10 +99,24 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .hs-filters{display:grid;gap:8px}.hs-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .hs-row select,.hs-row input{font:inherit;font-size:.88rem;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .hs-row input[type=number]{width:5.5em}.hs-filters details summary{cursor:pointer;color:var(--blue);font-size:.9rem}
-.hs-grid{display:grid;grid-template-columns:repeat(13,1fr);gap:2px;max-width:480px;user-select:none;touch-action:none}
-.hs-grid button{aspect-ratio:1;padding:0;font-size:.6rem;border-radius:3px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;min-width:0}
+.hs-cards{margin-top:10px}.hs-cards-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:10px}
+.hs-cards-head .boxh{margin:0}
+.hs-cards-body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
+.hs-grid{--cell:clamp(25px,3.1vw,34px);display:grid;grid-template-columns:repeat(13,var(--cell));grid-auto-rows:var(--cell);gap:3px;
+  user-select:none;touch-action:none}
+.hs-grid button{width:var(--cell);height:var(--cell);padding:0;font-size:.68rem;font-weight:600;letter-spacing:-.02em;border-radius:5px;
+  border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer;transition:background .08s,color .08s}
+.hs-grid button.pair{background:color-mix(in srgb,var(--blue) 22%,var(--bg))}
+.hs-grid button.suited{background:color-mix(in srgb,var(--pos) 18%,var(--bg))}
+.hs-grid button:hover{border-color:var(--blue)}
 .hs-grid button.on{background:var(--blue);border-color:var(--blue);color:#fff}
-.hs-quick{margin:4px 0 8px}.hs-quick button{padding:3px 9px;font-size:.85rem}
+.hs-side{display:grid;gap:12px;align-content:start;min-width:0}
+.hs-quick{display:grid;gap:6px}.hs-quick button{text-align:left;padding:6px 10px;font-size:.88rem}
+.hs-legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.82rem;color:var(--muted)}.hs-legend span{display:inline-flex;align-items:center;gap:6px}
+.hs-legend i{width:14px;height:14px;border-radius:4px;border:1px solid var(--line);background:var(--bg)}
+.hs-legend i.pair{background:color-mix(in srgb,var(--blue) 22%,var(--bg))}.hs-legend i.suited{background:color-mix(in srgb,var(--pos) 18%,var(--bg))}
+.hs-side p{margin:0;font-size:.82rem}
+@media (max-width:720px){.hs-cards-body{grid-template-columns:1fr}}
 .recentbox{max-height:15.5rem;margin-top:0}
 td.hs-name{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left}.hslist th:nth-child(2){text-align:left}
 .sess-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 18px;align-items:center}
@@ -1499,7 +1513,7 @@ async function viewHands(qs) {
   const R = "AKQJT98765432", grid = [];
   for (let i = 0; i < 13; i++) for (let j = 0; j < 13; j++) {
     const k = i === j ? R[i] + R[j] : i < j ? R[i] + R[j] + "s" : R[j] + R[i] + "o";
-    grid.push(`<button data-k="${k}" class="${picked.has(k) ? "on" : ""}">${k}</button>`);
+    grid.push(`<button data-k="${k}" class="${i === j ? "pair" : i < j ? "suited" : "off"}${picked.has(k) ? " on" : ""}">${k}</button>`);
   }
   app.innerHTML = `<h1>${t("hs.title")}${helpLink("hands")}</h1><div class="box hs-filters">
     <div class="hs-row">${sel("period", PERIODS.filter(k => k !== "custom").map(k => `<option value="${k === "max" ? "" : k}" ${(f.period || "") === (k === "max" ? "" : k) ? "selected" : ""}>${t(k === "max" ? "filter.anyTime" : `period.${k}.last`)}</option>`).join(""))}
@@ -1513,11 +1527,12 @@ async function viewHands(qs) {
       <label class="m"><input id="ev" type="checkbox" ${f.ev === "1" ? "checked" : ""}> ${t("hs.byEv")}</label>
       <label class="m">${t("hs.stack")} ${t("hs.from")} <input id="stack_min" type="number" min="0" step="1" value="${esc(f.stack_min || "")}"></label>
       <label class="m">${t("hs.to")} <input id="stack_max" type="number" min="0" step="1" value="${esc(f.stack_max || "")}"></label>
-      <button id="hs-clear">${t("hs.clear")}</button><button id="hs-csv">${t("ex.csv")}</button></div><div id="hs-csv-out"></div>
-    <details ${picked.size ? "open" : ""}><summary>${t("hs.cards")} <span class="m" id="hs-picked"></span></summary>
-      <p class="m" style="margin:4px 0">${t("hs.cardsTip")}</p>
-      <div class="hs-row hs-quick" id="hs-quick"><button data-g="none">${t("hs.pickNone")}</button>${HS_GROUPS.map(g => `<button data-g="${g}">${t("hs.group." + g)}</button>`).join("")}</div>
-      <div class="hs-grid" id="hs-grid">${grid.join("")}</div></details></div>
+      <button id="hs-clear">${t("hs.clear")}</button><button id="hs-csv">${t("ex.csv")}</button></div><div id="hs-csv-out"></div></div>
+    <div class="box hs-cards"><div class="hs-cards-head"><h3 class="boxh">${t("hs.cards")}</h3><span class="m" id="hs-picked"></span></div>
+      <div class="hs-cards-body"><div class="hs-grid" id="hs-grid">${grid.join("")}</div>
+        <div class="hs-side"><div class="hs-quick" id="hs-quick"><button data-g="none">${t("hs.pickNone")}</button>${HS_GROUPS.map(g => `<button data-g="${g}">${t("hs.group." + g)}</button>`).join("")}</div>
+          <div class="hs-legend">${["pair", "suited", "off"].map(c => `<span><i class="${c}"></i>${t("hs.group." + {pair: "pairs", suited: "suited", off: "offsuit"}[c])}</span>`).join("")}</div>
+          <p class="m">${t("hs.cardsTip")}</p></div></div></div>
     <p class="m" id="hs-sum"></p><div id="hs-list"></div><p><button id="hs-more" hidden></button></p>`;
   let rows = [], last = null;
   const read = () => {
