@@ -3,6 +3,9 @@
 ## Unreleased
 - README, Known limitations: PokerCraft writes times in the time zone of the moment of download, so exports from
   both sides of a daylight-saving change can be about an hour apart (checked on Mik's exports of 27.10).
+- README screenshots made again on the sample data: the starting-hand grid with picked hands, the dashboard's
+  scrolling recent tournaments, the Back button and Help in the menu (`tools/screenshots.py`: the dashboard on 30 days,
+  Hands with a few picked hands).
 - Back: a "←" button at the start of the menu (and Alt+← or Cmd+[) goes to the previous screen and scrolls it to where
   it was, e.g. from Help back to the hand in the replayer. Greyed out on the first screen. In the replayer the plain
   arrows still step through the hand.

@@ -33,7 +33,7 @@ see every screen before your first import. The app speaks English and Polish and
 <p>
 <img src="docs/img/tournament.png" alt="Tournament: the stack with every all-in marked" width="32%">
 <img src="docs/img/analysis.png" alt="Analysis: overview, results with and without showdown, luck" width="32%">
-<img src="docs/img/hands.png" alt="Hands: filters and results" width="32%">
+<img src="docs/img/hands.png" alt="Hands: the starting-hand grid, filters and results" width="32%">
 </p>
 
 <img src="docs/img/replayer.png" alt="Hand replayer: a five-way all-in, step by step" width="66%">
