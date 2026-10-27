@@ -44,6 +44,7 @@ def main():
             build_demo(db)
             set_setting(db, "lang", "en")
             set_setting(db, "theme", args.theme)
+            set_setting(db, "dashboard_period", "30d")             # the date fields of "More" stay closed
             db.commit()
             # the tournament with the most all-ins (stack chart with markers) and its biggest all-in (replayer)
             tid = db.scalar("SELECT h.tournament_id FROM allin_ev e JOIN hands h ON h.site = e.site AND h.hand_id = e.hand_id "
@@ -51,7 +52,7 @@ def main():
             hand = db.scalar("SELECT e.hand_id FROM allin_ev e JOIN hands h ON h.site = e.site AND h.hand_id = e.hand_id "
                              "WHERE e.is_hero AND h.tournament_id = ? ORDER BY ABS(e.ev_net) DESC LIMIT 1", (tid,))
         server, base = serve_in_background(url)
-        shots = [("dashboard", "#/", 1300), ("analysis", "#/analysis", 1150), ("hands", "#/hands", 900),
+        shots = [("dashboard", "#/", 1300), ("analysis", "#/analysis", 1150), ("hands", "#/hands?cards=AA,KK,QQ,JJ,AKs,AKo", 1000),
                  ("tournament", f"#/t/{tid}", 1100), ("replayer", f"#/hand/{hand}", 800)]
         try:
             for name, route, height in shots:
