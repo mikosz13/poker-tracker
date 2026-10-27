@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Back: a "←" button at the start of the menu (and Alt+← or Cmd+[) goes to the previous screen and scrolls it to where
+  it was, e.g. from Help back to the hand in the replayer. Greyed out on the first screen. In the replayer the plain
+  arrows still step through the hand.
 - Tournaments: a search by name, as you type, with the other filters. Every word must be in the name, without case or
   Polish letters ("bounty 21" finds "Bounty Hunters $21.60"); a tournament number finds that tournament. The summary
   above the list and "Export CSV" follow the search; it stays when you open a tournament and come back.
