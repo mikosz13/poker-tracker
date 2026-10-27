@@ -99,6 +99,7 @@ body.two-color .pc.s-d{color:#c62828}body.two-color .pc.s-c{color:#14161a}
 .hs-filters{display:grid;gap:8px}.hs-row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
 .hs-row select,.hs-row input{font:inherit;font-size:.88rem;padding:4px 6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .hs-row input[type=number]{width:5.5em}.hs-filters details summary{cursor:pointer;color:var(--blue);font-size:.9rem}
+.tsearch{flex:1 1 220px;min-width:180px;font:inherit;font-size:.92rem;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--fg)}
 .hs-cards{margin-top:10px}.hs-cards-head{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;margin-bottom:10px}
 .hs-cards-head .boxh{margin:0}
 .hs-cards-body{display:grid;grid-template-columns:auto minmax(0,1fr);gap:20px;align-items:start}
@@ -712,7 +713,7 @@ function drawTimeChart(box, pts, series, fmtY, tip, opts = {}) {
 
 
 // ---- Tournaments ------------------------------------------------------------
-let filters = {buyin: "", format: "", entry: "", period: "max", from: "", to: ""};
+let filters = {q: "", buyin: "", format: "", entry: "", period: "max", from: "", to: ""};
 // the period's bounds come from the server, so the list and the dashboard agree (sessions, custom days, time zone)
 let bounds = {since: null, until: null};
 const inPeriod = date => (!bounds.since || String(date) >= bounds.since.slice(0, 16)) && (!bounds.until || String(date) <= bounds.until.slice(0, 16));
@@ -730,12 +731,18 @@ async function viewTournaments() {
   if (mine !== routeSeq) return;
   const opts = (vals, cur, label, show) => `<option value="">${label}</option>` + [...new Set(vals)].filter(v => v !== "" && v != null)
     .sort((a, b) => a - b).map(v => `<option value="${esc(v)}" ${String(v) === cur ? "selected" : ""}>${show(v)}</option>`).join("");
+  // the name search: every word in the name, without case or Polish letters; a number also finds the tournament id
+  const nameMatch = x => {
+    const words = fold(filters.q).split(/\s+/).filter(Boolean), hay = fold(x.name || "") + " #" + x.tournament_id;
+    return words.every(w => hay.includes(w));
+  };
   const draw = () => {
-    const rows = all.filter(x => inPeriod(x.date) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
+    const rows = all.filter(x => inPeriod(x.date) && nameMatch(x) && (!filters.buyin || String(x.buyin_total) === filters.buyin)
       && (!filters.format || x.format === filters.format)
       && (!filters.entry || x.tags.includes("entry:" + filters.entry)));
     const done = rows.filter(x => x.profit != null);
     const cost = done.reduce((a, x) => a + Number(x.total_cost), 0), profit = done.reduce((a, x) => a + Number(x.profit), 0);
+    if (!rows.length && filters.q) { document.getElementById("list").innerHTML = `<p class="m">${t("list.noMatch", {q: esc(filters.q)})}</p>`; return; }
     document.getElementById("list").innerHTML = `<p class="m">${t("list.summary", {tournaments: t("common.tournaments", {n: rows.length}),
         profit: sgn(profit, 2, " $"), roi: cost ? sgn(100 * profit / cost, 0, "%") : "–"})}</p>` +
       table([t("col.date"), t("col.tournament"), t("col.buyin"), t("col.place"), t("col.profitUsd"), t("col.kos"), t("col.luckBb")],
@@ -748,6 +755,7 @@ async function viewTournaments() {
         <td>${x.hands ? (x.knockouts || 0) : "–"}</td><td>${x.luck_bb == null ? "–" : sgn(x.luck_bb)}</td></tr>`));
   };
   app.innerHTML = `<h1>${t("nav.tournaments")}${helpLink("tournaments")}</h1><div class="filters">
+    <input id="fq" type="search" class="tsearch" placeholder="${esc(t("list.search"))}" title="${esc(t("list.searchTip"))}" aria-label="${esc(t("list.search"))}" value="${esc(filters.q)}">
     <select id="fp">${PERIODS.filter(k => k !== "custom" || (filters.period === "custom" && filters.from)).map(k => `<option value="${k}" ${filters.period === k ? "selected" : ""}>${
       k === "max" ? t("filter.anyTime") : k === "custom" ? `${t("period.custom")}: ${dateTime(filters.from)} – ${dateTime(filters.to)}` : t(`period.${k}.last`)}</option>`).join("")}</select>
     <select id="fb">${opts(all.map(x => x.buyin_total), filters.buyin, t("filter.allBuyins"), money)}</select>
@@ -756,7 +764,9 @@ async function viewTournaments() {
       <option value="late" ${filters.entry === "late" ? "selected" : ""}>${t("filter.late")}</option></select>
     <button id="csv">${t("ex.csv")}</button></div><div id="csv-out"></div><div id="list"></div>`;
   document.getElementById("csv").onclick = () => exportCsv("tournaments", hsQuery({period: filters.period === "max" ? "" : filters.period,
-    from: filters.from, to: filters.to, buyin: filters.buyin, format: filters.format, entry: filters.entry}), "csv-out");
+    from: filters.from, to: filters.to, buyin: filters.buyin, format: filters.format, entry: filters.entry, q: filters.q}), "csv-out");
+  let typing = null;
+  document.getElementById("fq").oninput = e => { clearTimeout(typing); typing = setTimeout(() => { filters.q = e.target.value.trim(); draw(); }, 120); };
   for (const [id, key] of [["fp", "period"], ["fb", "buyin"], ["ff", "format"], ["fe", "entry"]])
     document.getElementById(id).onchange = async e => {
       filters[key] = e.target.value;

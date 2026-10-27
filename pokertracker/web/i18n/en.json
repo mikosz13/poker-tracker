@@ -961,5 +961,8 @@
  "hs.group.pairs": "Pairs",
  "hs.group.suited": "Suited",
  "hs.group.offsuit": "Offsuit",
- "hs.group.broadway": "Broadway"
+ "hs.group.broadway": "Broadway",
+ "list.search": "Search by name",
+ "list.noMatch": "No tournament matches “{q}” with these filters.",
+ "list.searchTip": "Every word must be in the name, e.g. “bounty 21”; a tournament number works too."
 }
