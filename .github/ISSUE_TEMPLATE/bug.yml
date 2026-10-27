@@ -1,0 +1,91 @@
+name: Bug report
+description: Something in Poker Tracker is wrong, unclear or broken.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing Poker Tracker. Please **do not paste or attach PokerCraft exports**: they are your hands.
+        For a single hand, use **Copy the hand** in the replayer; it shows opponents by position only.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: In the app, Help → About (top of the page).
+      placeholder: "0.8.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - macOS (Apple Silicon)
+        - Windows 11
+        - Windows 10
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: system_version
+    attributes:
+      label: System version
+      placeholder: "macOS 15.1, Windows 11 24H2 …"
+    validations:
+      required: false
+  - type: dropdown
+    id: data
+    attributes:
+      label: Which data
+      description: Sample data is the "Look around on sample data" button; it holds made-up tournaments only.
+      options:
+        - Sample data (made-up tournaments)
+        - My own data
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "1: the app cannot be used"
+        - "2: a number is wrong"
+        - "3: something is unclear"
+        - "4: cosmetic"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, step by step.
+      placeholder: |
+        1. Open Tournaments
+        2. Search for "bounty 21"
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: What you expected to see.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: What you saw instead (the exact number or message helps).
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: >-
+        Drag an image here. Crop it to the problem and leave out anything private: file paths with your user name,
+        account details, other windows.
+    validations:
+      required: false
