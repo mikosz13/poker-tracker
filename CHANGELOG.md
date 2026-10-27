@@ -4,6 +4,9 @@
 - Back: a "←" button at the start of the menu (and Alt+← or Cmd+[) goes to the previous screen and scrolls it to where
   it was, e.g. from Help back to the hand in the replayer. Greyed out on the first screen. In the replayer the plain
   arrows still step through the hand.
+- Tournaments: a search by name, as you type, with the other filters. Every word must be in the name, without case or
+  Polish letters ("bounty 21" finds "Bounty Hunters $21.60"); a tournament number finds that tournament. The summary
+  above the list and "Export CSV" follow the search; it stays when you open a tournament and come back.
 - Hands → Starting hands: always open, in a box of its own under the filters. Square cells of one size, so rows and
   columns line up; pairs, suited and offsuit hands tinted as in a range chart, with a legend; the clear and group
   buttons in a column next to the grid (under it in a narrow window); the picked hands listed above it.

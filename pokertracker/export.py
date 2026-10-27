@@ -6,6 +6,7 @@ offers no summary) is marked as provisional wherever it leaves the app.
 """
 import csv
 import io
+import unicodedata
 from datetime import date
 from pathlib import Path
 
@@ -115,11 +116,26 @@ def _f(x):
     return None if x is None else float(x)
 
 
+def fold(text):
+    """Text for matching: no case, no accents or Polish letters (the Tournaments tab's search does the same)."""
+    text = unicodedata.normalize("NFD", str(text)).replace("ł", "l").replace("Ł", "L")
+    return "".join(c for c in text if not unicodedata.combining(c)).lower()
+
+
+def name_matches(row, query):
+    """Every word of the query is in the tournament's name (or "#id")."""
+    hay = fold(row.get("name") or "") + f" #{row['tournament_id']}"
+    return all(w in hay for w in fold(query or "").split())
+
+
 def tournaments_csv(db, f, lang="en", site=SITE):
-    """The tournament list with its filters (since / until, buy-in, format, entry), as the Tournaments tab shows it."""
+    """The tournament list with its filters (name search, since / until, buy-in, format, entry), as the Tournaments
+    tab shows it."""
     from .server import tournaments_list                 # here: the server imports this module
     rows = []
     for r in tournaments_list(db, site):
+        if f.get("q") and not name_matches(r, f["q"]):
+            continue
         when = str(r["date"])
         if (f.get("since") and when < f["since"][:16]) or (f.get("until") and when > f["until"][:16]):
             continue

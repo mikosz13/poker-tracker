@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from pokertracker.db import Database
-from pokertracker.export import csv_text, hand_text, hands_csv, save, tournament_text, tournaments_csv
+from pokertracker.export import csv_text, hand_text, hands_csv, name_matches, save, tournament_text, tournaments_csv
 from pokertracker.importer import import_texts, set_provisional_prize
 from tests.fixtures import HISTORY, SUMMARY_BOUNTY
 from tests.test_analysis import gg_hand
@@ -73,6 +73,20 @@ class CsvTests(unittest.TestCase):
         text, n = hands_csv(db, {"cards": "KK"}, "en")
         rows = read_csv(text, "en")
         self.assertEqual((n, rows[1][4], rows[1][7]), (1, "Kc Kd", "yes"))   # the KK all-in
+
+    def test_the_name_search_of_the_tournament_list(self):
+        row = {"name": "$15 Mini Wednesday Wonderbox [Mystery BIG Bounty]", "tournament_id": 320223914}
+        for q in ("", "wonderbox", "BOUNTY mini", "mystery big", "3202239", "#320223914"):
+            self.assertTrue(name_matches(row, q), q)
+        for q in ("sunday", "bounty sunday", "999"):
+            self.assertFalse(name_matches(row, q), q)
+        self.assertTrue(name_matches({"name": "Żółw Łódź Turbo", "tournament_id": 1}, "zolw lodz"))   # no Polish letters needed
+        db = Database("sqlite:///:memory:")
+        self.addCleanup(db.close)
+        db.init_schema()
+        import_texts(db, [("h", HISTORY), ("b", SUMMARY_BOUNTY)])
+        self.assertEqual(tournaments_csv(db, {"q": "hunters"}, "en")[1], 1)       # the CSV holds what the list shows
+        self.assertEqual(tournaments_csv(db, {"q": "satellite"}, "en")[1], 0)
 
     def test_saving_never_overwrites(self):
         with tempfile.TemporaryDirectory() as tmp:

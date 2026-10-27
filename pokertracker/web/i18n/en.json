@@ -962,5 +962,8 @@
  "hs.group.suited": "Suited",
  "hs.group.offsuit": "Offsuit",
  "hs.group.broadway": "Broadway",
- "nav.back": "Back (Alt+← or Cmd+[)"
+ "nav.back": "Back (Alt+← or Cmd+[)",
+ "list.search": "Search by name",
+ "list.noMatch": "No tournament matches “{q}” with these filters.",
+ "list.searchTip": "Every word must be in the name, e.g. “bounty 21”; a tournament number works too."
 }
