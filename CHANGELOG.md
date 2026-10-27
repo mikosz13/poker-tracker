@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- GitHub: a bug report form (`.github/ISSUE_TEMPLATE/bug.yml`): app version, system, sample or own data (no exports
+  pasted), severity 1–4, steps, expected and actual, a screenshot.
 
 ## 0.8.0 (2026-10-27)
 - **Upgrade from 0.7.0:** on the first start the database goes from schema 5 to 8 (a copy from before the upgrade is
