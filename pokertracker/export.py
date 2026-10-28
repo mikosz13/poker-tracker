@@ -10,6 +10,7 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
+from .cards import sort_hole_cards
 from .i18n import money, num, t
 from .tournament_report import SITE
 
@@ -50,7 +51,7 @@ def hand_text(db, hand_id, lang="en", site=SITE):
                  f"{who[p['nick']]}{' (' + p['position'] + ')' if p['is_hero'] and p['position'] else ''} "
                  f"{_bb(lang, p['stack'], bb)}" for p in players)]
     if hero and hero["hole_cards"]:
-        lines.append(f"Hero: {hero['hole_cards']}")
+        lines.append(f"Hero: {sort_hole_cards(hero['hole_cards'])}")
     board = (h["board"] or "").split()
     actions = db.query("SELECT nick, street, action_type, amount, all_in FROM actions WHERE site = ? AND hand_id = ? "
                        "ORDER BY action_order", (site, hand_id))
@@ -66,7 +67,7 @@ def hand_text(db, hand_id, lang="en", site=SITE):
         lines.append(f"{street.capitalize()}{cards}: " + ", ".join(said))
     if board:                                     # the whole board, also when an all-in left no later actions
         lines.append(f"Board: {' '.join(board)}")
-    shown = [f"{who[p['nick']]} {p['hole_cards']}" for p in players if not p["is_hero"] and p["hole_cards"]]
+    shown = [f"{who[p['nick']]} {sort_hole_cards(p['hole_cards'])}" for p in players if not p["is_hero"] and p["hole_cards"]]
     if shown:
         lines.append(t(lang, "ht.shown") + " " + ", ".join(shown))
     if hero:

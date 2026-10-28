@@ -5,6 +5,7 @@ Every filter is a fixed piece of SQL with "?" placeholders; values never become 
 preflop actions come from a fixed list. The preflop counts are the Analysis v2 definitions (preflop.hand_stats), so
 "3-bet" here finds exactly the hands Analysis counts as 3-bets.
 """
+from .cards import sort_hole_cards
 from .dashboard import hand_class
 from .tournament_report import SITE
 
@@ -117,5 +118,5 @@ def search(db, f, site=SITE, offset=0, limit=100):
     num = lambda x: round(float(x or 0), 1)
     return {"count": int(total["n"]), "net_bb": num(total["net"]), "adj_bb": num(total["adj"]),
             "offset": int(offset), "limit": int(limit), "ids": ids,
-            "hands": [{**r, "played_at": str(r["played_at"])[:16], "stack_bb": num(r["stack_bb"]),
+            "hands": [{**r, "played_at": str(r["played_at"])[:16], "cards": sort_hole_cards(r["cards"]), "stack_bb": num(r["stack_bb"]),
                        "net_bb": num(r["net_bb"]), "adj_bb": num(r["adj_bb"])} for r in page]}

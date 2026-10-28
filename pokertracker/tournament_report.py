@@ -6,6 +6,8 @@ only format it, so the numbers are identical everywhere.
 import html
 from collections import defaultdict
 
+from .cards import sort_hole_cards
+
 SITE = "GGPoker"
 HERO = "Hero"
 MIN_POSITION_HANDS = 8        # smaller samples are shown but never called "best" or "worst"
@@ -49,12 +51,12 @@ def _strongest_showdown(rows, folded):
     cat, nib = score >> 20, [(score >> k) & 15 for k in (16, 12)]
     # "hand" in English for the CLI; the app builds the name from the category and ranks (hand.cat.<n>)
     return {"hand_id": r["hand_id"], "hand": describe_hand(score), "category": cat,
-            "ranks": [RANK_CHARS[n] for n in nib], "hole_cards": r["hole_cards"], "board": r["board"],
+            "ranks": [RANK_CHARS[n] for n in nib], "hole_cards": sort_hole_cards(r["hole_cards"]), "board": r["board"],
             "played_at": str(r["played_at"])[:16], "net_bb": r["net_bb"]}
 
 
 def _moment(r):
-    return {"hand_id": r["hand_id"], "hole_cards": r["hole_cards"], "board": r["board"] or "", "position": r["position"],
+    return {"hand_id": r["hand_id"], "hole_cards": sort_hole_cards(r["hole_cards"]), "board": r["board"] or "", "position": r["position"],
             "net_bb": round(r["net_bb"], 1), "pot_bb": round(r["pot_bb"], 1), "played_at": str(r["played_at"])[:16],
             "level": r["level"], "showdown": bool(r["showdown"])}
 
@@ -121,7 +123,7 @@ def tournament_data(db, tournament_id, site=SITE):
                      "levels": [r["level"] for r in rows] + [last["level"]],
                      # one point per hand for the app's chart: stack after the hand, with what happened in it
                      "points": [{"at": str(r["played_at"])[:19], "hand_id": r["hand_id"], "level": r["level"],
-                                 "position": r["position"], "cards": r["hole_cards"] or "", "net_bb": round(r["net_bb"], 1),
+                                 "position": r["position"], "cards": sort_hole_cards(r["hole_cards"] or ""), "net_bb": round(r["net_bb"], 1),
                                  "before_bb": round(r["stack_bb"], 1),
                                  "after_bb": round(max(0.0, r["stack_bb"] + r["net_bb"]), 1),
                                  # the same in chips: a deep run can grow in chips while falling in big blinds
@@ -161,7 +163,7 @@ def tournament_data(db, tournament_id, site=SITE):
         "luck_bb": sum(_f(a["luck_bb"]) for a in allins),
         "won": sum(1 for a in allins if a["result"] == "win"),
         "expected_won": sum(_f(a["equity"]) or 0 for a in allins),
-        "notable": [{"hand_id": a["hand_id"], "kind": "bad beat" if a["bad_beat"] else "suckout", "hole_cards": a["hole_cards"],
+        "notable": [{"hand_id": a["hand_id"], "kind": "bad beat" if a["bad_beat"] else "suckout", "hole_cards": sort_hole_cards(a["hole_cards"]),
                      "board": a["board_at_lock"], "street": a["lock_street"], "equity": _f(a["equity"]),
                      "luck_bb": _f(a["luck_bb"]), "played_at": str(a["played_at"])[:16]}
                     for a in allins if a["bad_beat"] or a["suckout"]]}
@@ -170,10 +172,10 @@ def tournament_data(db, tournament_id, site=SITE):
     rivals = {}
     for r in db.query("SELECT e.hand_id, e.hole_cards FROM allin_ev e JOIN hands h ON h.site = e.site AND h.hand_id = e.hand_id "
                       "WHERE e.site = ? AND h.tournament_id = ? AND NOT e.is_hero ORDER BY e.nick", (site, tournament_id)):
-        rivals.setdefault(r["hand_id"], []).append(r["hole_cards"] or "")
+        rivals.setdefault(r["hand_id"], []).append(sort_hole_cards(r["hole_cards"] or ""))
     data["allins"]["hands"] = [{"hand_id": a["hand_id"], "result": a["result"], "equity": _f(a["equity"]),
                                 "luck_bb": round(_f(a["luck_bb"]), 1), "net_bb": round(_f(a["net_bb"]), 1),
-                                "hole_cards": a["hole_cards"] or "", "rivals": rivals.get(a["hand_id"], []),
+                                "hole_cards": sort_hole_cards(a["hole_cards"] or ""), "rivals": rivals.get(a["hand_id"], []),
                                 "board": a["board_at_lock"] or "", "street": a["lock_street"]} for a in allins]
     return data
 
