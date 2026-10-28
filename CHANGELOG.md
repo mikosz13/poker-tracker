@@ -1,6 +1,9 @@
 # Changelog
 
 ## Unreleased
+- Hole cards show the higher card on the left everywhere ("Ac 7h", not "7h Ac"): replayer, tournament screen,
+  Hands, Analysis, session review, tooltips, text and CSV exports, also opponents' cards shown at showdown. A pair
+  keeps the order of the hand history. Display only: the database and imports are unchanged, boards are not sorted.
 - GitHub: a bug report form (`.github/ISSUE_TEMPLATE/bug.yml`): app version, system, sample or own data (no exports
   pasted), severity 1–4, steps, expected and actual, a screenshot.
 
