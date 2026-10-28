@@ -18,6 +18,7 @@ from datetime import datetime, timedelta
 import numpy as np
 
 from . import preflop
+from .cards import sort_hole_cards
 from .dashboard import INCOMPLETE, hand_class, luck_badge, pending_results
 from .i18n import num, t
 from .places import place_split
@@ -183,7 +184,7 @@ def _sample(n):
 
 
 def _worst(hands, k=5):
-    return [{"hand_id": h["hand_id"], "at": h["at"], "position": h["position"], "cards": h["cards"],
+    return [{"hand_id": h["hand_id"], "at": h["at"], "position": h["position"], "cards": sort_hole_cards(h["cards"]),
              "stack_bb": round(h["stack_bb"], 1), "net_bb": round(h["net_bb"], 1), "adj_bb": round(h["adj_bb"], 1)}
             for h in sorted(hands, key=lambda h: h["adj_bb"])[:k]]
 

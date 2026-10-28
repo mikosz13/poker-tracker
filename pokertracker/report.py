@@ -1,4 +1,5 @@
 """Plain-text report built from the SQL views."""
+from .cards import sort_hole_cards
 
 
 def _f(x, nd=2):
@@ -69,6 +70,6 @@ def build_report(db) -> str:
                 f"suckouts {int(luck['so'])}"]
         for r in db.query("SELECT * FROM hero_allins WHERE bad_beat = 1 OR suckout = 1 ORDER BY played_at"):
             kind = "bad beat" if r["bad_beat"] else "suckout"
-            out.append(f"    {str(r['played_at'])[:16]}  {kind:<8} {r['hole_cards']} on {r['board_at_lock'] or 'preflop'} "
+            out.append(f"    {str(r['played_at'])[:16]}  {kind:<8} {sort_hole_cards(r['hole_cards'])} on {r['board_at_lock'] or 'preflop'} "
                        f"({r['lock_street']}) equity {_f(100 * float(r['equity']), 1)}%  {_f(r['luck_bb'], 1)} BB")
     return "\n".join(out) if out else "Database is empty. Run: pokertracker import <folder>"

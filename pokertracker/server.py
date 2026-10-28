@@ -11,6 +11,7 @@ from urllib.parse import parse_qs
 
 from .analysis import analysis_data
 from .backup import supported as backup_supported
+from .cards import sort_hole_cards
 from .session import session_insights
 from .tickets import ticket_entries, tickets_won
 from .dashboard import DAY, PERIODS, dashboard_data, normal_period, period_bounds
@@ -169,7 +170,7 @@ def hands_of_class(db, cards, site=SITE, limit=300):
                                                              (site,))}
     return {"cards": cards, "n": len(rows), "hands": [
         {"hand_id": h["hand_id"], "at": h["at"], "name": names.get(h["tournament_id"]), "position": h["position"],
-         "cards": h["cards"], "stack_bb": round(h["stack_bb"], 1), "vs_fold": round(h["adj_bb"] + h["posted_bb"], 2),
+         "cards": sort_hole_cards(h["cards"]), "stack_bb": round(h["stack_bb"], 1), "vs_fold": round(h["adj_bb"] + h["posted_bb"], 2),
          "net_bb": round(h["net_bb"], 1)} for h in reversed(rows[-limit:])]}
 
 
@@ -205,11 +206,11 @@ def tournament_detail(db, tournament_id, site=SITE):
     won = tickets_won(db, site)
     data["satellite_win"] = next((x for x in won if x["tournament_id"] == tournament_id), None)
     data["ticket_entry"] = next((x for x in won if x["used_in"] and x["used_in"]["tournament_id"] == tournament_id), None)
-    data["hand_list"] = db.query(
+    data["hand_list"] = [{**r, "hole_cards": sort_hole_cards(r["hole_cards"])} for r in db.query(
         "SELECT hh.hand_id, hh.played_at, hh.level, hh.position, hh.net_bb, hp.hole_cards, h.board "
         "FROM hero_hands hh JOIN hands h ON h.site = hh.site AND h.hand_id = hh.hand_id "
         "JOIN hand_players hp ON hp.site = hh.site AND hp.hand_id = hh.hand_id AND hp.is_hero "
-        "WHERE hh.site = ? AND hh.tournament_id = ? ORDER BY hh.played_at, hh.hand_id", (site, tournament_id))
+        "WHERE hh.site = ? AND hh.tournament_id = ? ORDER BY hh.played_at, hh.hand_id", (site, tournament_id))]
     return data
 
 

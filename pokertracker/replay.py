@@ -3,6 +3,7 @@
 Every step is a full snapshot (board, pot, stacks, chips committed on the street, who acted), so the UI only
 draws snapshots and never re-implements poker accounting.
 """
+from .cards import sort_hole_cards
 from .equity import card_int, equity as exact_equity, parse_cards
 
 SITE = "GGPoker"
@@ -51,7 +52,7 @@ def hand_replay(db, hand_id, site=SITE):
                 "nick": name[p["nick"]], "seat": p["seat"], "position": p["position"], "hero": p["nick"] == HERO,
                 "stack": round(stack[p["nick"]], 2), "commit": round(commit[p["nick"]], 2),
                 "folded": p["nick"] in folded, "all_in": p["nick"] in allin, "acting": p["nick"] == acting,
-                "cards": (p["hole_cards"] or "").split() if (p["nick"] == HERO or reveal or revealed) else [],
+                "cards": sort_hole_cards((p["hole_cards"] or "").split()) if (p["nick"] == HERO or reveal or revealed) else [],
                 "equity": equity.get(p["nick"]),
                 "net": round(_n(p["net_won"]), 2) if result else None,
             } for p in players]})

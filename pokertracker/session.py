@@ -6,6 +6,7 @@ Opponents are named by position only (as in the replayer); hashed IDs never leav
 from datetime import datetime
 
 from .analysis import confidence, load_hands
+from .cards import sort_hole_cards
 from .dashboard import luck_badge
 from .i18n import money, num, t
 from .summary import satellite_target
@@ -41,8 +42,8 @@ def _hand_story(db, hand_id, site, hero_equity=None):
         row = db.query("SELECT equity FROM allin_ev WHERE site = ? AND hand_id = ? AND is_hero", (site, hand_id))
         hero_equity = _f(row[0]["equity"]) if row and row[0]["equity"] is not None else None
     cards = (rival["hole_cards"] or "") if rival else ""
-    return {"hand_id": hand_id, "hero_cards": hero["hole_cards"] or "", "rival": rival["position"] if rival else None,
-            "rival_cards": cards if len(cards.split()) == 2 else "", "board": hand["board"] or "",
+    return {"hand_id": hand_id, "hero_cards": sort_hole_cards(hero["hole_cards"] or ""), "rival": rival["position"] if rival else None,
+            "rival_cards": sort_hole_cards(cards) if len(cards.split()) == 2 else "", "board": hand["board"] or "",
             "equity": round(hero_equity, 3) if hero_equity is not None else None,
             "net_bb": round(_f(hero["net_won"]) / _f(hand["big_blind"]), 1)}
 
